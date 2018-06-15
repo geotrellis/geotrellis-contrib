@@ -54,7 +54,5 @@ lazy val root = Project("geotrellis-contrib", file(".")).
 lazy val async = project
   .settings(commonSettings)
 
-
-// lazy val bench = project
-//   .dependsOn(spark)
-//   .settings(commonSettings)
+lazy val benchmark = (project in file("benchmark"))
+  .settings(commonSettings: _*)
