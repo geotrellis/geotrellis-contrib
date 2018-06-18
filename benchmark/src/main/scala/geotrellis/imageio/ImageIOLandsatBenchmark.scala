@@ -26,7 +26,7 @@ import scala.collection.mutable
 
 
 @State(Scope.Thread)
-class ImageIOBench {
+class ImageIOLandsatBenchmark {
 
   var reader: ImageReader = null
   var image: BufferedImage = null
