@@ -26,7 +26,7 @@ class GeoTrellisLandsatBenchmark {
   @Setup(Level.Trial)
   def setup(): Unit = {
     val cwd = (new File(".").getCanonicalPath)
-    geoTiff = GeoTiffReader.readSingleband(cwd + "/src/main/resources/" + fileName, true, true)
+    geoTiff = GeoTiffReader.readSingleband(cwd + "/src/main/resources/" + fileName, true)
   }
 
   @TearDown(Level.Trial)
@@ -47,8 +47,7 @@ class GeoTrellisLandsatBenchmark {
   @BenchmarkMode(Array(Mode.Throughput))
   @OutputTimeUnit(TimeUnit.SECONDS)
   def singleAlignedTile(blackhole: Blackhole): Unit = {
-    val extent: Extent = Extent(0, 0, 512-1, 512-1)
-    val tile: Tile = geoTiff.crop(extent).tile
+    val tile: Tile = geoTiff.crop(0, 0, 512-1, 512-1).tile
     blackhole.consume(tile.toArray)
   }
 
@@ -57,8 +56,7 @@ class GeoTrellisLandsatBenchmark {
   @BenchmarkMode(Array(Mode.Throughput))
   @OutputTimeUnit(TimeUnit.SECONDS)
   def singleUnalignedTile(blackhole: Blackhole): Unit = {
-    val extent: Extent = Extent(251, 257, 251+512-1, 257+512-1)
-    val tile: Tile = geoTiff.crop(extent).tile
+    val tile: Tile = geoTiff.crop(251, 257, 251+512-1, 257+512-1).tile
     blackhole.consume(tile.toArray)
   }
 
@@ -72,8 +70,7 @@ class GeoTrellisLandsatBenchmark {
       Range(0, 9111/512).foreach({ j =>
         val x = i*512
         val y = j*512
-        val extent: Extent = Extent(x, y, x+512-1, y+512-1)
-        val tile: Tile = geoTiff.crop(extent).tile
+        val tile: Tile = geoTiff.crop(x, y, x+512-1, y+512-1).tile
         tiles.append(tile.toArray)
       })
     })
@@ -90,8 +87,7 @@ class GeoTrellisLandsatBenchmark {
       Range(0, 9111/512).foreach({ j =>
         val x = 251+(i*512)
         val y = 257+(j*512)
-        val extent: Extent = Extent(x, y, x+512-1, y+512-1)
-        val tile: Tile = geoTiff.crop(extent).tile
+        val tile: Tile = geoTiff.crop(x, y, x+512-1, y+512-1).tile
         tiles.append(tile.toArray)
       })
     })

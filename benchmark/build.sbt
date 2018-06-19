@@ -18,5 +18,5 @@ unmanagedJars in Compile ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.locationtech.geotrellis" %% "geotrellis-raster" % "1.2.1"
+  "org.locationtech.geotrellis" %% "geotrellis-raster" % "2.0.0-RC1"
 )
