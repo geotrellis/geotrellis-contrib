@@ -33,9 +33,9 @@ lazy val commonSettings = Seq(
   dependencyUpdatesFilter := moduleFilter(organization = "org.scala-lang"),
   resolvers ++= Seq(
     "geosolutions" at "http://maven.geo-solutions.it/",
-    "osgeo" at "http://download.osgeo.org/webdav/geotools/",
-    "locationtech-releases" at "https://repo.locationtech.org/content/groups/releases"
-    // "locationtech-snapshots" at "https://repo.locationtech.org/content/groups/snapshots"
+    "locationtech-releases" at "https://repo.locationtech.org/content/groups/releases",
+    "locationtech-snapshots" at "https://repo.locationtech.org/content/groups/snapshots",
+    "osgeo" at "http://download.osgeo.org/webdav/geotools/"
   ),
   headerLicense := Some(HeaderLicense.ALv2("2018", "Azavea"))
 )
@@ -54,7 +54,5 @@ lazy val root = Project("geotrellis-contrib", file(".")).
 lazy val async = project
   .settings(commonSettings)
 
-
-// lazy val bench = project
-//   .dependsOn(spark)
-//   .settings(commonSettings)
+lazy val benchmark = (project in file("benchmark"))
+  .settings(commonSettings: _*)
