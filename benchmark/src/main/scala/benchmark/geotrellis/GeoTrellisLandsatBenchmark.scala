@@ -39,7 +39,7 @@ class GeoTrellisLandsatBenchmark {
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def wholeImage(blackhole: Blackhole): Unit = {
     val tile: Tile = geoTiff.tile
-    blackhole.consume(tile.toArray)
+    blackhole.consume(tile)
   }
 
   // Aligned load of 512✕512 tile
@@ -48,7 +48,7 @@ class GeoTrellisLandsatBenchmark {
   @OutputTimeUnit(TimeUnit.SECONDS)
   def singleAlignedTile(blackhole: Blackhole): Unit = {
     val tile: Tile = geoTiff.crop(0, 0, 512-1, 512-1).tile
-    blackhole.consume(tile.toArray)
+    blackhole.consume(tile)
   }
 
   // Unaligned load of 512✕512 tile
@@ -57,7 +57,7 @@ class GeoTrellisLandsatBenchmark {
   @OutputTimeUnit(TimeUnit.SECONDS)
   def singleUnalignedTile(blackhole: Blackhole): Unit = {
     val tile: Tile = geoTiff.crop(251, 257, 251+512-1, 257+512-1).tile
-    blackhole.consume(tile.toArray)
+    blackhole.consume(tile)
   }
 
   // Aligned load of many 512✕512 tiles
@@ -65,13 +65,13 @@ class GeoTrellisLandsatBenchmark {
   @BenchmarkMode(Array(Mode.AverageTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def manyAlignedTiles(blackhole: Blackhole): Unit = {
-    val tiles = mutable.ArrayBuffer.empty[Array[Int]]
+    val tiles = mutable.ArrayBuffer.empty[Tile]
     Range(0,9121/512).foreach({ i =>
       Range(0, 9111/512).foreach({ j =>
         val x = i*512
         val y = j*512
         val tile: Tile = geoTiff.crop(x, y, x+512-1, y+512-1).tile
-        tiles.append(tile.toArray)
+        tiles.append(tile)
       })
     })
     blackhole.consume(tiles.toArray)
@@ -82,13 +82,13 @@ class GeoTrellisLandsatBenchmark {
   @BenchmarkMode(Array(Mode.AverageTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def manyUnalignedTiles(blackhole: Blackhole): Unit = {
-    val tiles = mutable.ArrayBuffer.empty[Array[Int]]
+    val tiles = mutable.ArrayBuffer.empty[Tile]
     Range(0,9121/512).foreach({ i =>
       Range(0, 9111/512).foreach({ j =>
         val x = 251+(i*512)
         val y = 257+(j*512)
         val tile: Tile = geoTiff.crop(x, y, x+512-1, y+512-1).tile
-        tiles.append(tile.toArray)
+        tiles.append(tile)
       })
     })
     blackhole.consume(tiles.toArray)
