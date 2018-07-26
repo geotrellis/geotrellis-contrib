@@ -42,3 +42,9 @@ The test data can be found [here](https://landsatonaws.com/L8/001/003/LC08_L1GT_
 ```bash
 GDAL_DATA=$(pwd)/benchmark/gdal/gdal-data LD_LIBRARY_PATH=$(pwd)/benchmark/gdal/native:$LD_LIBRARY_PATH ./sbt "project benchmark" "jmh:run"
 ```
+
+# Using JMH #
+
+We use JMH to wire up all benchmarks. Understanding the semantics of the JMH
+annotations takes some time. For clues, take a look at this
+[cheatsheet](http://leogomes.github.io/assets/JMH_cheatsheet.pdf)
