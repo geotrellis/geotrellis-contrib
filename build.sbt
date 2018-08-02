@@ -42,7 +42,7 @@ lazy val commonSettings = Seq(
 
 lazy val root = Project("geotrellis-contrib", file(".")).
   aggregate(
-    async
+    vlm
   ).
   settings(commonSettings: _*).
   settings(
@@ -51,7 +51,7 @@ lazy val root = Project("geotrellis-contrib", file(".")).
       """
   )
 
-lazy val async = project
+lazy val vlm = project
   .settings(commonSettings)
 
 lazy val benchmark = (project in file("benchmark"))
