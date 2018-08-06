@@ -18,6 +18,7 @@ package geotrellis.contrib.vlm
 
 import geotrellis.vector._
 import geotrellis.raster._
+import geotrellis.proj4._
 import cats.effect.IO
 
 
@@ -27,7 +28,7 @@ import java.net.URI
 * Single threaded instance of a reader that is able to read windows from larger raster.
 * Some initilization step is expected to provide metadata about source raster
 */
-trait RasterReader[T] {
+trait RasterReader2[T] {
     def uri: URI
     def extent: Extent
     def crs: CRS
@@ -42,4 +43,11 @@ trait RasterReader[T] {
 
     // TODO: read tiles in underlying layout ?
     // TODO: should we be validating?
+}
+
+
+object RasterReader2 {
+  trait Options {
+    def partitionBytes: Option[Long]
+  }
 }
