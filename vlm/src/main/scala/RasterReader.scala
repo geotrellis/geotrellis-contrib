@@ -18,6 +18,7 @@ package geotrellis.contrib.vlm
 
 import geotrellis.vector._
 import geotrellis.raster._
+import geotrellis.raster.reproject.Reproject
 import geotrellis.proj4._
 import cats.effect.IO
 
@@ -28,18 +29,27 @@ import java.net.URI
 * Single threaded instance of a reader that is able to read windows from larger raster.
 * Some initilization step is expected to provide metadata about source raster
 */
-trait RasterReader2[T] {
-    def uri: URI
+trait RasterReader2[T] extends Serializable {
+    def fileURI: String
     def extent: Extent
     def crs: CRS
     def cols: Int
     def rows: Int
+    def bandCount: Int
+    def cellType: CellType
+    def rasterExtent = RasterExtent(extent, cols, rows)
 
     //def read(windows: Traversable[GridBounds]): IO[Option[T]]
     // maybe this will just upgrade an Iterator, maybe it'll actually be parallel
 
+    // read windows in native CRS
+    def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]]
+
     // read windows in non-native CRS
-    def read(windows: Traversable[RasterExtent], crs: CRS): Iterator[Raster[MultibandTile]]
+    def read(windows: Traversable[RasterExtent], crs: CRS, options: Reproject.Options): Iterator[Raster[MultibandTile]]
+
+    def read(windows: Traversable[RasterExtent], crs: CRS): Iterator[Raster[MultibandTile]] =
+      read(windows, crs, Reproject.Options.DEFAULT)
 
     // TODO: read tiles in underlying layout ?
     // TODO: should we be validating?

@@ -35,6 +35,4 @@ import java.net.URI
 
 private [geotrellis] trait InfoReader extends LazyLogging with Serializable {
   def getGeoTiffInfo(uri: URI): GeoTiffInfo
-
-  def getGeoTiffTags(uri: URI): TiffTags
 }

@@ -4,6 +4,7 @@ name := "vlm"
 
 libraryDependencies ++= Seq(
   geotrellisSpark,
+  geotrellisSparkTestKit % Test,
   geotrellisS3,
   geotrellisRaster,
   geotrellisVector,
@@ -16,3 +17,7 @@ libraryDependencies ++= Seq(
   fs2Io,
   scalatest % Test
 )
+
+Test / fork := true
+
+javaOptions ++= Seq("-Xms1024m", "-Xmx6144m")

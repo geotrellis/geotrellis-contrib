@@ -18,29 +18,90 @@ package geotrellis.contrib.vlm
 
 import geotrellis.vector._
 import geotrellis.raster._
+import geotrellis.raster.reproject.{Reproject, ReprojectRasterExtent}
+import geotrellis.spark._
+import geotrellis.spark.tiling._
 import geotrellis.proj4._
+import geotrellis.util._
+
 import cats.effect.IO
 
+import org.apache.spark._
+import org.apache.spark.rdd._
 
-class VirtualRaster[T](readers: RasterReader2[T]) {
-    // - we can read multiple files in parallel
-    def crs: CRS = ??? // all tiles come out in CRS
-    def extent: Extent = ???
-    def cols: Int = ???
-    def rows: Int = ???
 
-    def read(windows: Traversable[GridBounds]): IO[Option[T]] = {
-        // I guess we let each reader perform the CRS conversion.
+class VirtualRaster[T](
+  readers: Seq[RasterReader2[T]],
+  layout: LayoutDefinition,
+  targetCRS: CRS, // the target CRS for all outputted tiles.
+  reprojectOptions: Reproject.Options
+) extends Serializable {
 
-        ???
-    }
+  val mapTransform = layout.mapTransform
 
-    def asCRS(crs: CRS, cellSize: CellSize): VirtualRaster[T] = ??? // same data in different CRS
+  def extent: Extent = layout.extent
+  def cols: Int = layout.tileCols
+  def rows: Int = layout.tileRows
+
+  def readRDD(targetCellType: CellType)(implicit sc: SparkContext): RDD[(SpatialKey, Raster[MultibandTile])] = {
+    val numPartitions = readers.size
+
+    sc.parallelize(readers, numPartitions)
+      .flatMap { reader =>
+        val backTransform = Transform(targetCRS, reader.crs)
+        val footprint: Polygon = ReprojectRasterExtent.reprojectExtent(reader.rasterExtent, backTransform)
+        val keys = mapTransform.keysForGeometry(footprint)
+
+        val rasterExtents = keys.map { key => RasterExtent(mapTransform(key), cols, rows) }
+        val rasters = reader.read(rasterExtents, targetCRS, reprojectOptions)
+
+        rasters.map { raster =>
+          val center = raster.extent.center
+          val k = mapTransform.pointToKey(center)
+          (k, raster)
+        }
+      }
+  }
+
+  def readKey(key: SpatialKey): Iterator[T] = ???
+
+  def read(windows: Traversable[RasterExtent]): Iterator[T] = {
+    ???
+  }
+
+  def asCRS(crs: CRS, cellSize: CellSize): VirtualRaster[T] = ??? // same data in different CRS
 }
 
 object VirtualRaster {
-    case class Source[T](reader: RasterReader2[T], footprint: Polygon)
-    object Source {
-        def apply[T](reader: RasterReader2[T], target: CRS): Source[T] = ???
-    }
+  def apply[T](
+    readers: Seq[RasterReader2[T]],
+    layout: LayoutDefinition,
+    targetCRS: CRS,
+    reprojectOptions: Reproject.Options
+  ): VirtualRaster[T] =
+    new VirtualRaster[T](readers, layout, targetCRS, reprojectOptions)
+
+  def apply[T](
+    readers: Seq[RasterReader2[T]],
+    layout: LayoutDefinition,
+    targetCRS: CRS
+  ): VirtualRaster[T] =
+    new VirtualRaster[T](readers, layout, targetCRS, Reproject.Options.DEFAULT)
+
+  def apply[T](
+    readers: Seq[RasterReader2[T]],
+    layout: LayoutDefinition
+  ): VirtualRaster[T] = {
+    val crss = readers.map { _.crs }.toSet
+
+    if (crss.size > 1)
+      throw new Exception(s"The given RaterReaders have multiple CRS's: $crss, but they must have only one")
+    else
+      apply(readers, layout, crss.head)
+  }
+
+  case class Source[T](reader: RasterReader2[T], footprint: Polygon)
+  object Source {
+    def apply[T](reader: RasterReader2[T], target: CRS): Source[T] = ???
+  }
 }
