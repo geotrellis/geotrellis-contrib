@@ -25,9 +25,9 @@ import cats.effect.IO
 class VirtualRaster[T](readers: RasterReader2[T]) {
     // - we can read multiple files in parallel
     def crs: CRS = ??? // all tiles come out in CRS
-    def extent: Extent
-    def cols: Int
-    def rows: Int
+    def extent: Extent = ???
+    def cols: Int = ???
+    def rows: Int = ???
 
     def read(windows: Traversable[GridBounds]): IO[Option[T]] = {
         // I guess we let each reader perform the CRS conversion.

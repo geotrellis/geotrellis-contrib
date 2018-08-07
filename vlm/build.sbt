@@ -13,5 +13,6 @@ libraryDependencies ++= Seq(
   catsCore,
   catsEffect,
   fs2Core,
-  fs2Io
+  fs2Io,
+  scalatest % Test
 )

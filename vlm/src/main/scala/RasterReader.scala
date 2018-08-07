@@ -35,11 +35,11 @@ trait RasterReader2[T] {
     def cols: Int
     def rows: Int
 
-    def read(windows: Traversable[GridBounds]): IO[Option[T]]
+    //def read(windows: Traversable[GridBounds]): IO[Option[T]]
     // maybe this will just upgrade an Iterator, maybe it'll actually be parallel
 
     // read windows in non-native CRS
-    def read(windows: Traversable[ProjectedExtent]): IO[Option[T]]
+    def read(windows: Traversable[RasterExtent], crs: CRS): Iterator[Raster[MultibandTile]]
 
     // TODO: read tiles in underlying layout ?
     // TODO: should we be validating?
