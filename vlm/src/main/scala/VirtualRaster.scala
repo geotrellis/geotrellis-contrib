@@ -17,6 +17,7 @@
 package geotrellis.contrib.vlm
 
 import geotrellis.vector._
+import geotrellis.vector.reproject.{Reproject => VectorReproject}
 import geotrellis.raster._
 import geotrellis.raster.reproject.{Reproject, ReprojectRasterExtent}
 import geotrellis.spark._
@@ -43,9 +44,46 @@ class VirtualRaster[T](
   def cols: Int = layout.tileCols
   def rows: Int = layout.tileRows
 
-  def readRDD(targetCellType: CellType)(implicit sc: SparkContext): RDD[(SpatialKey, Raster[MultibandTile])] = {
-    val numPartitions = readers.size
+  def numPartitions = readers.size
 
+  def getKeysRDD(
+    keys: Seq[SpatialKey],
+    targetCellType: CellType
+  )(implicit sc: SparkContext): RDD[(SpatialKey, Raster[MultibandTile])] = {
+    val sortedKeys: Seq[SpatialKey] = keys.sortBy { key => (key.col, key.row) }
+
+    // Determine the Extent that the keys cover
+    val keysExtent: Extent =
+      mapTransform(sortedKeys.head)
+        .combine(mapTransform(sortedKeys(sortedKeys.size - 1)))
+
+    val keyGridBounds = mapTransform.extentToBounds(keysExtent)
+    val targetCols = keyGridBounds.width
+    val targetRows = keyGridBounds.height
+
+    sc.parallelize(readers, numPartitions)
+      .flatMap { reader =>
+        val backTransform = Transform(reader.crs, targetCRS)
+        val footprint: Extent = ReprojectRasterExtent.reprojectExtent(reader.rasterExtent, backTransform)
+
+        keysExtent.intersection(footprint) match {
+          case Some(intersection) =>
+            val keys = mapTransform.keysForGeometry(intersection.toPolygon())
+
+            val rasterExtents = keys.map { key => RasterExtent(mapTransform(key), targetCols, targetRows) }
+            val rasters = reader.read(rasterExtents, targetCRS, reprojectOptions)
+
+            rasters.map { raster =>
+              val center = raster.extent.center
+              val k = mapTransform.pointToKey(center)
+              (k, raster)
+            }
+          case None => Seq()
+        }
+      }
+  }
+
+  def readRDD(targetCellType: CellType)(implicit sc: SparkContext): RDD[(SpatialKey, Raster[MultibandTile])] =
     sc.parallelize(readers, numPartitions)
       .flatMap { reader =>
         val backTransform = Transform(targetCRS, reader.crs)
@@ -61,7 +99,6 @@ class VirtualRaster[T](
           (k, raster)
         }
       }
-  }
 
   def readKey(key: SpatialKey): Iterator[T] = ???
 
