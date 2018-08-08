@@ -40,14 +40,21 @@ class VirtualRasterSpec extends FunSpec with TestEnvironment {
         Extent(
           sourceExtent.xmin,
           sourceExtent.ymin,
-          sourceExtent.xmin + 1000,
-          sourceExtent.ymin + 1000
+          sourceExtent.xmin + 10000,
+          sourceExtent.ymin + 10000
         )
 
       val targetKeys = layout.mapTransform.keysForGeometry(targetExtent.toPolygon).toSeq
 
-      val actual = virtualRaster.getKeysRDD(targetKeys, rasterReader.cellType).keys.collect()
-      val expected = targetKeys
+      val actualKeys = virtualRaster.getKeysRDD(targetKeys, rasterReader.cellType).keys.collect()
+      val expectedKeys = targetKeys
+
+      val actual = actualKeys.sortBy { key => (key.col, key.row) }
+      val expected = expectedKeys.sortBy { key => (key.col, key.row) }
+
+      for ((a, e) <- actual.zip(expected)) {
+        a should be (e)
+      }
 
       actual should be (expected)
     }

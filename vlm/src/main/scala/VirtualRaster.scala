@@ -57,10 +57,6 @@ class VirtualRaster[T](
       mapTransform(sortedKeys.head)
         .combine(mapTransform(sortedKeys(sortedKeys.size - 1)))
 
-    val keyGridBounds = mapTransform.extentToBounds(keysExtent)
-    val targetCols = keyGridBounds.width
-    val targetRows = keyGridBounds.height
-
     sc.parallelize(readers, numPartitions)
       .flatMap { reader =>
         val backTransform = Transform(reader.crs, targetCRS)
@@ -69,6 +65,10 @@ class VirtualRaster[T](
         keysExtent.intersection(footprint) match {
           case Some(intersection) =>
             val keys = mapTransform.keysForGeometry(intersection.toPolygon())
+
+            val intersectionGridBounds = mapTransform.extentToBounds(intersection)
+            val targetCols = intersectionGridBounds.width
+            val targetRows = intersectionGridBounds.height
 
             val rasterExtents = keys.map { key => RasterExtent(mapTransform(key), targetCols, targetRows) }
             val rasters = reader.read(rasterExtents, targetCRS, reprojectOptions)
