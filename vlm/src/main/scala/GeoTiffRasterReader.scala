@@ -60,7 +60,12 @@ class GeoTiffRasterReader(val fileURI: String) extends RasterReader2[Raster[Mult
     }
   }
 
-  def read(windows: Traversable[RasterExtent], crs: CRS, options: Reproject.Options): Iterator[Raster[MultibandTile]] = {
+  def read(
+    windows: Traversable[RasterExtent],
+    crs: CRS,
+    targetCellType: CellType,
+    options: Reproject.Options
+  ): Iterator[Raster[MultibandTile]] = {
     val transform = Transform(tiff.crs, crs)
     val backTransform = Transform(crs, tiff.crs)
     // we have multiple footprints that may intersect or be out of bounds
@@ -81,7 +86,7 @@ class GeoTiffRasterReader(val fileURI: String) extends RasterReader2[Raster[Mult
 
     tiff.crop(intersectingWindows.keys.toSeq).map { case (gb, tile) =>
       val targetRasterExtent = intersectingWindows(gb)
-      val sourceRaster = Raster(tile, tiff.rasterExtent.extentFor(gb))
+      val sourceRaster = Raster(tile.convert(targetCellType), tiff.rasterExtent.extentFor(gb))
       sourceRaster.reproject(targetRasterExtent, transform, backTransform, options)
     }
   }

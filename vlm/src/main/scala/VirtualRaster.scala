@@ -91,7 +91,7 @@ class VirtualRaster[T](
         val keys = mapTransform.keysForGeometry(footprint)
 
         val rasterExtents = keys.map { key => RasterExtent(mapTransform(key), cols, rows) }
-        val rasters = reader.read(rasterExtents, targetCRS, reprojectOptions)
+        val rasters = reader.read(rasterExtents, targetCRS, targetCellType, reprojectOptions)
 
         rasters.map { raster =>
           val center = raster.extent.center

@@ -46,10 +46,22 @@ trait RasterReader2[T] extends Serializable {
     def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]]
 
     // read windows in non-native CRS
-    def read(windows: Traversable[RasterExtent], crs: CRS, options: Reproject.Options): Iterator[Raster[MultibandTile]]
+    def read(
+      windows: Traversable[RasterExtent],
+      crs: CRS,
+      targetCellType: CellType,
+      options: Reproject.Options
+    ): Iterator[Raster[MultibandTile]]
+
+    def read(
+      windows: Traversable[RasterExtent],
+      crs: CRS,
+      options: Reproject.Options
+    ): Iterator[Raster[MultibandTile]] =
+      read(windows, crs, cellType, options)
 
     def read(windows: Traversable[RasterExtent], crs: CRS): Iterator[Raster[MultibandTile]] =
-      read(windows, crs, Reproject.Options.DEFAULT)
+      read(windows, crs, cellType, Reproject.Options.DEFAULT)
 
     // TODO: read tiles in underlying layout ?
     // TODO: should we be validating?
