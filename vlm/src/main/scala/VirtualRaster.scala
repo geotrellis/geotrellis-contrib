@@ -17,7 +17,6 @@
 package geotrellis.contrib.vlm
 
 import geotrellis.vector._
-import geotrellis.vector.reproject.{Reproject => VectorReproject}
 import geotrellis.raster._
 import geotrellis.raster.reproject.{Reproject, ReprojectRasterExtent}
 import geotrellis.spark._
@@ -35,6 +34,7 @@ class VirtualRaster[T](
   readers: Seq[RasterReader2[T]],
   layout: LayoutDefinition,
   targetCRS: CRS, // the target CRS for all outputted tiles.
+  partitionBytes: Long = VirtualRaster.DEFAULT_PARTITION_BYTES,
   reprojectOptions: Reproject.Options
 ) extends Serializable {
 
@@ -44,7 +44,73 @@ class VirtualRaster[T](
   def cols: Int = layout.tileCols
   def rows: Int = layout.tileRows
 
-  def numPartitions = readers.size
+  private def numPartitions = readers.size
+
+  private def getRasterExtents(
+    reader: RasterReader2[T],
+    targetExtent: Option[Extent]
+  ): Traversable[RasterExtent] = {
+    val regionExtent = targetExtent.getOrElse(extent)
+    val transform = Transform(reader.crs, targetCRS)
+    val footprint: Extent = ReprojectRasterExtent.reprojectExtent(reader.rasterExtent, transform)
+
+    regionExtent.intersection(footprint) match {
+      case Some(intersection) =>
+        val keys = mapTransform.keysForGeometry(intersection.toPolygon)
+
+          keys.map { key =>
+            val keyExtent = mapTransform.keyToExtent(key)
+            val keyGridBounds = mapTransform.extentToBounds(keyExtent)
+
+            RasterExtent(keyExtent, keyGridBounds.width, keyGridBounds.height)
+          }
+      case None => Array[RasterExtent]()
+    }
+  }
+
+  private def readInRDD(
+    targetCellType: CellType,
+    targetExtent: Option[Extent]
+  )(implicit sc: SparkContext): RDD[(SpatialKey, Raster[MultibandTile])] = {
+    val readersRDD: RDD[(RasterReader2[T], Array[RasterExtent])] =
+      sc.parallelize(readers, numPartitions)
+        .flatMap { reader =>
+          val rasterExtents = getRasterExtents(reader, targetExtent)
+
+          val totalRasterExtents = rasterExtents.size * reader.bandCount
+
+          val maxPartitionBytes =
+            partitionBytes / math.max(targetCellType.bytes * totalRasterExtents, totalRasterExtents)
+
+          RasterExtentPartitioner.partitionRasterExtents(rasterExtents, maxPartitionBytes).map { res =>
+            (reader, res)
+          }
+        }
+
+    readersRDD.persist()
+
+    val repartitioned = {
+      val count = readersRDD.count.toInt
+      if (count > readersRDD.partitions.size)
+        readersRDD.repartition(count)
+      else
+        readersRDD
+    }
+
+    val result =
+      repartitioned.flatMap { case (reader, rasterExtents) =>
+        val rasters = reader.read(rasterExtents, targetCRS, targetCellType, reprojectOptions)
+
+        rasters.map { raster =>
+          val center = raster.extent.center
+          val k = mapTransform.pointToKey(center)
+          (k, raster)
+        }
+      }
+
+    readersRDD.unpersist()
+    result
+  }
 
   def getKeysRDD(
     keys: Seq[SpatialKey],
@@ -57,48 +123,11 @@ class VirtualRaster[T](
       mapTransform(sortedKeys.head)
         .combine(mapTransform(sortedKeys(sortedKeys.size - 1)))
 
-    sc.parallelize(readers, numPartitions)
-      .flatMap { reader =>
-        val backTransform = Transform(reader.crs, targetCRS)
-        val footprint: Extent = ReprojectRasterExtent.reprojectExtent(reader.rasterExtent, backTransform)
-
-        keysExtent.intersection(footprint) match {
-          case Some(intersection) =>
-            val keys = mapTransform.keysForGeometry(intersection.toPolygon())
-
-            val intersectionGridBounds = mapTransform.extentToBounds(intersection)
-            val targetCols = intersectionGridBounds.width
-            val targetRows = intersectionGridBounds.height
-
-            val rasterExtents = keys.map { key => RasterExtent(mapTransform(key), targetCols, targetRows) }
-            val rasters = reader.read(rasterExtents, targetCRS, reprojectOptions)
-
-            rasters.map { raster =>
-              val center = raster.extent.center
-              val k = mapTransform.pointToKey(center)
-              (k, raster)
-            }
-          case None => Seq()
-        }
-      }
+    readInRDD(targetCellType, Some(keysExtent))
   }
 
   def readRDD(targetCellType: CellType)(implicit sc: SparkContext): RDD[(SpatialKey, Raster[MultibandTile])] =
-    sc.parallelize(readers, numPartitions)
-      .flatMap { reader =>
-        val backTransform = Transform(targetCRS, reader.crs)
-        val footprint: Polygon = ReprojectRasterExtent.reprojectExtent(reader.rasterExtent, backTransform)
-        val keys = mapTransform.keysForGeometry(footprint)
-
-        val rasterExtents = keys.map { key => RasterExtent(mapTransform(key), cols, rows) }
-        val rasters = reader.read(rasterExtents, targetCRS, targetCellType, reprojectOptions)
-
-        rasters.map { raster =>
-          val center = raster.extent.center
-          val k = mapTransform.pointToKey(center)
-          (k, raster)
-        }
-      }
+    readInRDD(targetCellType, None)
 
   def readKey(key: SpatialKey): Iterator[T] = ???
 
@@ -110,20 +139,23 @@ class VirtualRaster[T](
 }
 
 object VirtualRaster {
+  final val DEFAULT_PARTITION_BYTES: Long = 128l * 1024 * 1024
+
   def apply[T](
     readers: Seq[RasterReader2[T]],
     layout: LayoutDefinition,
     targetCRS: CRS,
+    partitionBytes: Long,
     reprojectOptions: Reproject.Options
   ): VirtualRaster[T] =
-    new VirtualRaster[T](readers, layout, targetCRS, reprojectOptions)
+    new VirtualRaster[T](readers, layout, targetCRS, partitionBytes, reprojectOptions)
 
   def apply[T](
     readers: Seq[RasterReader2[T]],
     layout: LayoutDefinition,
     targetCRS: CRS
   ): VirtualRaster[T] =
-    new VirtualRaster[T](readers, layout, targetCRS, Reproject.Options.DEFAULT)
+    new VirtualRaster[T](readers, layout, targetCRS, reprojectOptions = Reproject.Options.DEFAULT)
 
   def apply[T](
     readers: Seq[RasterReader2[T]],
