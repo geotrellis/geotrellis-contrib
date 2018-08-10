@@ -18,15 +18,16 @@ package geotrellis.contrib.vlm
 
 import geotrellis.vector._
 import geotrellis.raster._
+import geotrellis.proj4._
 import cats.effect.IO
 
 
-class VirtualRaster[T](readers: RasterReader[T]) {
+class VirtualRaster[T](readers: RasterReader2[T]) {
     // - we can read multiple files in parallel
     def crs: CRS = ??? // all tiles come out in CRS
-    def extent: Extent
-    def cols: Int
-    def rows: Int
+    def extent: Extent = ???
+    def cols: Int = ???
+    def rows: Int = ???
 
     def read(windows: Traversable[GridBounds]): IO[Option[T]] = {
         // I guess we let each reader perform the CRS conversion.
@@ -38,8 +39,8 @@ class VirtualRaster[T](readers: RasterReader[T]) {
 }
 
 object VirtualRaster {
-    case class Source[T](reader: RasterReader[T], footprint: Polygon)
+    case class Source[T](reader: RasterReader2[T], footprint: Polygon)
     object Source {
-        def apply(reader: RasterReader[T], target: CRS): Source[T] = ???
+        def apply[T](reader: RasterReader2[T], target: CRS): Source[T] = ???
     }
 }
