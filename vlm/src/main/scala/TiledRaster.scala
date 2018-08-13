@@ -23,21 +23,10 @@ import geotrellis.proj4._
 import cats.effect.IO
 
 
-/**
-* Single threaded instance of a reader that is able to read windows from larger raster.
-* Some initilization step is expected to provide metadata about source raster
-*/
-trait RasterRaster extends Serializable {
-    def uri: String
-    def extent: Extent
-    def crs: CRS
-    def cols: Int
-    def rows: Int
-    def bandCount: Int
-    def cellType: CellType
-    def rasterExtent = RasterExtent(extent, cols, rows)
+trait TiledRaster extends RasterReader Serializable {
+  def layout: LayoutDefinition
+  // ... layout could be much larger than underlying raster
 
-    def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]]
-    // def asCRS(crs: CRS): RasterReader[T]
-    // def asCRS(crs: CRS, rasterExtent: RasterExtent): RasterReader[T]
+  def read(key: SpatialKey): Option[Raster[MultibandTile]]
+  // ... key could be not part of this raster
 }

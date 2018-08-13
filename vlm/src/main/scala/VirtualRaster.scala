@@ -30,10 +30,9 @@ import org.apache.spark._
 import org.apache.spark.rdd._
 
 
-class VirtualRaster[T](
-  readers: Seq[RasterReader2[T]],
+class VirtualRaster(
+  readers: Seq[RasterReader],
   layout: LayoutDefinition,
-  targetCRS: CRS, // the target CRS for all outputted tiles.
   partitionBytes: Long = VirtualRaster.DEFAULT_PARTITION_BYTES,
   reprojectOptions: Reproject.Options
 ) extends Serializable {
@@ -45,28 +44,6 @@ class VirtualRaster[T](
   def rows: Int = layout.tileRows
 
   private def numPartitions = readers.size
-
-  private def getRasterExtents(
-    reader: RasterReader2[T],
-    targetExtent: Option[Extent]
-  ): Traversable[RasterExtent] = {
-    val regionExtent = targetExtent.getOrElse(extent)
-    val transform = Transform(reader.crs, targetCRS)
-    val footprint: Extent = ReprojectRasterExtent.reprojectExtent(reader.rasterExtent, transform)
-
-    regionExtent.intersection(footprint) match {
-      case Some(intersection) =>
-        val keys = mapTransform.keysForGeometry(intersection.toPolygon)
-
-          keys.map { key =>
-            val keyExtent = mapTransform.keyToExtent(key)
-            val keyGridBounds = mapTransform.extentToBounds(keyExtent)
-
-            RasterExtent(keyExtent, keyGridBounds.width, keyGridBounds.height)
-          }
-      case None => Array[RasterExtent]()
-    }
-  }
 
   private def readInRDD(
     targetCellType: CellType,
@@ -130,10 +107,6 @@ class VirtualRaster[T](
     readInRDD(targetCellType, None)
 
   def readKey(key: SpatialKey): Iterator[T] = ???
-
-  def read(windows: Traversable[RasterExtent]): Iterator[T] = {
-    ???
-  }
 
   def asCRS(crs: CRS, cellSize: CellSize): VirtualRaster[T] = ??? // same data in different CRS
 }
