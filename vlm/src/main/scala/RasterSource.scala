@@ -21,14 +21,14 @@ import geotrellis.raster._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.proj4._
 import cats.effect.IO
-
+import java.net.URI
 
 /**
 * Single threaded instance of a reader that is able to read windows from larger raster.
 * Some initilization step is expected to provide metadata about source raster
 */
-trait RasterRaster extends Serializable {
-    def uri: String
+trait RasterSource extends Serializable {
+    def uri: URI
     def extent: Extent
     def crs: CRS
     def cols: Int

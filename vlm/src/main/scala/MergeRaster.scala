@@ -7,7 +7,8 @@ import geotrellis.proj4._
 import cats.effect.IO
 
 
-class MergeRaster(rasters: RasterReader, grid: GridExtent) extends RasterReader Serializable {
+trait MergeRaster extends RasterSource {
+  def rasters: Seq[RasterSource]
   def grid: GridExtent
   // ... our rasters must be pixel aligned (or look like they are?)
 

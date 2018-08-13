@@ -19,14 +19,16 @@ package geotrellis.contrib.vlm
 import geotrellis.vector._
 import geotrellis.raster._
 import geotrellis.raster.reproject.Reproject
+import geotrellis.spark._
+import geotrellis.spark.tiling._
 import geotrellis.proj4._
 import cats.effect.IO
 
 
-trait TiledRaster extends RasterReader Serializable {
+trait TiledRaster extends RasterSource {
   def layout: LayoutDefinition
   // ... layout could be much larger than underlying raster
 
-  def read(key: SpatialKey): Option[Raster[MultibandTile]]
+  def read(col: Int, row: Int): Option[Raster[MultibandTile]]
   // ... key could be not part of this raster
 }

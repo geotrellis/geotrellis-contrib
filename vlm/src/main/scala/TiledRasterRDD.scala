@@ -4,6 +4,10 @@ import geotrellis.vector._
 import geotrellis.raster._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.proj4._
+import geotrellis.spark._
+import geotrellis.spark.tiling._
+import org.apache.spark._
+import org.apache.spark.rdd._
 import cats.effect.IO
 
 
@@ -15,5 +19,6 @@ object TiledRasterRDD {
     // => I probably shouldn't enumerate the keys because that places a fixed upper bound on how big RDD can be.
 
     // how do I not produce empty tiles?
+    ???
   }
 }

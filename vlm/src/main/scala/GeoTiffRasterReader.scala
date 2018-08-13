@@ -13,7 +13,7 @@ import java.nio.file.Paths
 
 import geotrellis.util.{FileRangeReader, RangeReader, StreamingByteReader}
 
-class GeoTiffRasterReader(val fileURI: String) extends RasterReader2[Raster[MultibandTile]] {
+class GeoTiffRasterSource(val fileURI: String) extends RasterSource {
   // TODO: uri on RasterReader2 should be String, because java.net.URI does not admit all valid S3 URIs
 
   private def getByteReader(): StreamingByteReader = {
