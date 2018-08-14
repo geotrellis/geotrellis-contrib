@@ -4,6 +4,7 @@ scalaVersion := Version.scala
 scalaVersion in ThisBuild := Version.scala
 
 lazy val commonSettings = Seq(
+  version := Version.geotrellisContrib,
   scalaVersion := Version.scala,
   description := Info.description,
   organization := "org.locationtech.geotrellis",
