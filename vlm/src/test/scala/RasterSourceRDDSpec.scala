@@ -21,7 +21,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
 
   describe("reading in GeoTiffs as RDDs") {
     it("should have the right number of tiles") {
-      val rdd = RasterSourceRDD(rasterSource, layout)
+      val rdd = RasterSourceRDD.apply2(Seq(rasterSource), layout)
       val keys = layout.mapTransform.keysForGeometry(rasterSource.extent.toPolygon)
 
       rdd.count should be (keys.size)
