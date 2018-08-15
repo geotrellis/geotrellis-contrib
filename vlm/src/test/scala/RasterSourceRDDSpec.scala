@@ -13,7 +13,7 @@ import org.scalatest._
 import org.apache.spark._
 
 class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
-  val uri = "file:///tmp/landsat-multiband-pixel.tiff"
+  val uri = "file:///tmp/landsat-tiled-multiband.tiff"
   val rasterSource = new GeoTiffRasterSource(uri)
 
   val scheme = ZoomedLayoutScheme(CRS.fromEpsgCode(3857))

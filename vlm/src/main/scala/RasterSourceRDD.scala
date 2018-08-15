@@ -69,16 +69,10 @@ object RasterSourceRDD {
 
         if (rasterExtents.isEmpty)
           Seq((source, rasterExtents.toArray))
-        else {
-          val totalRasterExtents = rasterExtents.size * source.bandCount
-
-          val maxPartitionBytes =
-            partitionBytes / math.max(source.cellType.bytes * totalRasterExtents, totalRasterExtents)
-
+        else
           RasterExtentPartitioner
-            .partitionRasterExtents(rasterExtents, maxPartitionBytes)
+            .partitionRasterExtents(rasterExtents, partitionBytes)
             .map { res => (source, res) }
-        }
       }
 
     sourcesRDD.persist()
