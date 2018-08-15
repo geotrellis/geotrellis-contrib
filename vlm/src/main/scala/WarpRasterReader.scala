@@ -2,38 +2,57 @@ package geotrellis.contrib.vlm
 
 import geotrellis.proj4._
 import geotrellis.raster._
-import geotrellis.raster.reproject.{ReprojectRasterExtent}
+import geotrellis.raster.reproject.{ReprojectRasterExtent, Reproject}
 import geotrellis.vector._
 
-trait WarpRasterReader extends RasterSource {
-  def base: RasterSource
-  def crs: CRS
-  def rasterExtent: RasterExtent
+import java.net.URI
+
+
+class WarpRasterSource(
+  val base: RasterSource,
+  val crs: CRS,
+  val options: Reproject.Options
+) extends RasterSource {
+
+  def uri: URI = base.uri
+  def cols: Int = base.cols
+  def rows: Int = base.rows
+  def cellType: CellType = base.cellType
+  def bandCount: Int = base.bandCount
+
+  def extent: Extent = {
+    val oldProjectedExtent = ProjectedExtent(base.extent, base.crs)
+
+    oldProjectedExtent.reprojectAsPolygon(crs).envelope
+  }
+
+  private val transform = Transform(base.crs, crs)
+  private val backTransform = Transform(crs, base.crs)
 
   def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
-    val transform = Transform(base.crs, crs)
-    val backTransform = Transform(crs, base.crs)
+    val rasterExtents: Traversable[RasterExtent] =
+      windows.map { case targetRasterExtent =>
+        val projectedExtent = ProjectedExtent(targetRasterExtent.extent, crs)
 
-    val intersectingWindows: Map[GridBounds, RasterExtent] =
-      windows.flatMap { case targetRasterExtent =>
-        val sourceExtent: Extent = ReprojectRasterExtent.reprojectExtent(targetRasterExtent, backTransform)
-        if (sourceExtent.intersects(base.extent)) {
-          val sourcePixelBounds: GridBounds = base.rasterExtent.gridBoundsFor(sourceExtent, clamp = true)
-          Some((sourcePixelBounds, targetRasterExtent))
-        } else None
-        // should I even filter here ?
-      }.toMap
+        val sourceExtent: Extent = projectedExtent.reprojectAsPolygon(base.crs).envelope
 
-    ???
-    // tiff.crop(intersectingWindows.keys.toSeq).map { case (gb, tile) =>
-    //   val targetRasterExtent = intersectingWindows(gb)
-    //   val sourceRaster = Raster(tile.convert(targetCellType), tiff.rasterExtent.extentFor(gb))
-    //   // !!! Here we need reproject type class on T
-    //   sourceRaster.reproject(targetRasterExtent, transform, backTransform, options)
+        RasterExtent(sourceExtent, targetRasterExtent.cols, targetRasterExtent.rows)
+      }
 
-    // }
-    // NEED: HasCellType[T],
-    // NEED: Raster[T](tile: T, extent: Extent), HasCells[T]
-    // this is VERY quickly spinning out of control because of T
+    base.read(rasterExtents).map { raster =>
+      raster.reproject(base.crs, crs, options)
+    }
   }
+}
+
+object WarpRasterSource {
+  def apply(
+    rasterSource: RasterSource,
+    crs: CRS,
+    options: Reproject.Options
+  ): WarpRasterSource =
+    new WarpRasterSource(rasterSource, crs, options)
+
+  def apply(rasterSource: RasterSource, crs: CRS): WarpRasterSource =
+    apply(rasterSource, crs, Reproject.Options.DEFAULT)
 }
