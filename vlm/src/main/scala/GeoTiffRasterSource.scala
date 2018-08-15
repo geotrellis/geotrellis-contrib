@@ -45,21 +45,17 @@ class GeoTiffRasterSource(val fileURI: String) extends RasterSource {
   def cellType: CellType = tiff.cellType
 
   def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
-    val intersectingWindows: Map[GridBounds, RasterExtent] =
-      windows.flatMap { case targetRasterExtent =>
-        if (targetRasterExtent.extent.intersects(extent)) {
-          val sourceGridBounds: GridBounds = tiff.rasterExtent.gridBoundsFor(targetRasterExtent.extent, clamp = true)
+    val intersectionWindows: Traversable[GridBounds] =
+      windows.map { case targetRasterExtent =>
+        rasterExtent.gridBoundsFor(targetRasterExtent.extent, clamp = true)
+      }
 
-          Some((sourceGridBounds, targetRasterExtent))
-        } else None
-      }.toMap
-
-    tiff.crop(intersectingWindows.keys.toSeq).map { case (gb, tile) =>
-      val targetRasterExtent = intersectingWindows(gb)
-      Raster(tile, tiff.rasterExtent.extentFor(gb))
+    tiff.crop(intersectionWindows.toSeq).map { case (gb, tile) =>
+      Raster(tile, rasterExtent.extentFor(gb))
     }
   }
 
+  /*
   def read(
     windows: Traversable[RasterExtent],
     crs: CRS,
@@ -90,4 +86,5 @@ class GeoTiffRasterSource(val fileURI: String) extends RasterSource {
       sourceRaster.reproject(targetRasterExtent, transform, backTransform, options)
     }
   }
+  */
 }
