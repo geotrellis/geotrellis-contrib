@@ -13,14 +13,26 @@ import org.apache.spark.rdd._
 
 
 object RasterSourceRDD {
+  final val PARTITION_BYTES: Long = 64l * 1024 * 1024
+
   def apply(
     sources: Seq[RasterSource],
-    layout: LayoutDefinition
+    layout: LayoutDefinition,
+    partitionBytes: Long = PARTITION_BYTES
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] = {
     val mapTransform = layout.mapTransform
     val extent = mapTransform.extent
     val combinedExtents = sources.map { _.extent }.reduce { _ combine _ }
-    val cellType = sources.map { source => Set(source.cellType) }.reduce { _ ++ _ }.head
+
+    val cellType = {
+      val cellTypes = sources.map { source => Set(source.cellType) }.reduce { _ ++ _ }
+
+      if (cellTypes.size > 1)
+        throw new Exception(s"All RasterSources must have the same CellType, but multiple ones were found: $cellTypes")
+      else
+        cellTypes.head
+    }
+
     val crs = {
       val projections = sources.map { source => Set(source.crs) }.reduce { _ ++ _ }
 
@@ -44,101 +56,55 @@ object RasterSourceRDD {
     val layerMetadata =
       TileLayerMetadata[SpatialKey](cellType, layout, combinedExtents, crs, layerKeyBounds)
 
-    val partitioner = SpacePartitioner[SpatialKey](layerKeyBounds)
-
-    val sourcesRDD: RDD[(SpatialKey, RasterSource)] =
+    val sourcesRDD: RDD[(RasterSource, Array[RasterExtent])] =
       sc.parallelize(sources).flatMap { source =>
-        val keys: Set[SpatialKey] =
+        val rasterExtents: Traversable[RasterExtent] =
           extent.intersection(source.extent) match {
             case Some(intersection) =>
-              mapTransform.keysForGeometry(intersection.toPolygon)
-            case None => Set[SpatialKey]()
+              val keys = mapTransform.keysForGeometry(intersection.toPolygon)
+
+              keys.map { key => RasterExtent(mapTransform(key), layout.tileCols, layout.tileRows) }
+            case None => Seq[RasterExtent]()
           }
-        keys.map { key => (key, source) }
-      }
 
-    val groupedRDD: RDD[(SpatialKey, Iterable[RasterSource])] =
-      sourcesRDD.groupByKey(partitioner)
+        if (rasterExtents.isEmpty)
+          Seq((source, rasterExtents.toArray))
+        else {
+          val totalRasterExtents = rasterExtents.size * source.bandCount
 
-    val keyedRDD: RDD[(SpatialKey, MultibandTile)] =
-      groupedRDD.flatMap { case (key, sources) =>
-        val keyExtent = mapTransform(key)
-        val rasterExtent = RasterExtent(keyExtent, layout.tileCols, layout.tileRows)
+          val maxPartitionBytes =
+            partitionBytes / math.max(source.cellType.bytes * totalRasterExtents, totalRasterExtents)
 
-        sources.flatMap { source =>
-          source.read(Seq(rasterExtent)).map { raster =>
-            val center = raster.extent.center
-            val k = mapTransform.pointToKey(center)
-
-            (k, raster.tile)
-          }
+          RasterExtentPartitioner
+            .partitionRasterExtents(rasterExtents, maxPartitionBytes)
+            .map { res => (source, res) }
         }
       }
 
-    ContextRDD(keyedRDD, layerMetadata)
-  }
+    sourcesRDD.persist()
 
-  def apply2(
-    sources: Seq[RasterSource],
-    layout: LayoutDefinition
-  )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] = {
-    val mapTransform = layout.mapTransform
-    val extent = mapTransform.extent
-    val combinedExtents = sources.map { _.extent }.reduce { _ combine _ }
-    val cellType = sources.map { source => Set(source.cellType) }.reduce { _ ++ _ }.head
-    val crs = {
-      val projections = sources.map { source => Set(source.crs) }.reduce { _ ++ _ }
-
-      if (projections.size > 1)
-        throw new Exception(s"All RasterSources must be in the same projection, but multiple ones were found: $projections")
+    val repartitioned = {
+      val count = sourcesRDD.count.toInt
+      if (count > sourcesRDD.partitions.size)
+        sourcesRDD.repartition(count)
       else
-        projections.head
+        sourcesRDD
     }
 
-    val layerKeyBounds = {
-      val bounds =
-        sources.map { source =>
-          val projectedExtent = ProjectedExtent(source.extent, source.crs)
-          val boundsKey = projectedExtent.translate(SpatialKey(0, 0))
-          KeyBounds(boundsKey, boundsKey)
-        }.reduce { _ combine _ }
-
-      bounds.setSpatialBounds(KeyBounds(mapTransform(combinedExtents)))
-    }
-
-    val layerMetadata =
-      TileLayerMetadata[SpatialKey](cellType, layout, combinedExtents, crs, layerKeyBounds)
-
-    val partitioner = SpacePartitioner[SpatialKey](layerKeyBounds)
-
-    val sourcesRDD: RDD[(RasterSource, Set[RasterExtent])] =
-      sc.parallelize(sources).map { source =>
-        val keys: Set[RasterExtent] =
-          extent.intersection(source.extent) match {
-            case Some(intersection) =>
-              mapTransform
-                .keysForGeometry(intersection.toPolygon)
-                .map { k => RasterExtent(mapTransform(k), layout.tileCols, layout.tileRows) }
-            case None => Set[RasterExtent]()
-          }
-
-        (source, keys)
-        //keys.map { key => (key, source) }
-      }
-
-    val keyedRDD: RDD[(SpatialKey, MultibandTile)] =
-      sourcesRDD.flatMap { case (source, extents) =>
-        source.read(extents).map { raster =>
+    val result: RDD[(SpatialKey, MultibandTile)] =
+      repartitioned.flatMap { case (source, rasterExtents) =>
+        source.read(rasterExtents).map { raster =>
           val center = raster.extent.center
-          val k = mapTransform.pointToKey(center)
+          val key = mapTransform.pointToKey(center)
 
-          (k, raster.tile)
+          (key, raster.tile)
         }
       }
 
-    ContextRDD(keyedRDD, layerMetadata)
-  }
+    sourcesRDD.unpersist()
 
+    ContextRDD(result, layerMetadata)
+  }
 
   def apply(source: RasterSource, layout: LayoutDefinition)(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
     apply(Seq(source), layout)
