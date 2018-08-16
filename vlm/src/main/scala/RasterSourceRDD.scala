@@ -20,38 +20,24 @@ object RasterSourceRDD {
     layout: LayoutDefinition,
     partitionBytes: Long = PARTITION_BYTES
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] = {
+
+    val cellTypes = sources.map { _.cellType }.toSet
+    require(cellTypes.size == 1, s"All RasterSources must have the same CellType, but multiple ones were found: $cellTypes")
+
+    val projections = sources.map { _.crs }.toSet
+    require(
+      projections.size == 1,
+      s"All RasterSources must be in the same projection, but multiple ones were found: $projections"
+    )
+
+    val cellType = cellTypes.head
+    val crs = projections.head
+
     val mapTransform = layout.mapTransform
     val extent = mapTransform.extent
     val combinedExtents = sources.map { _.extent }.reduce { _ combine _ }
 
-    val cellType = {
-      val cellTypes = sources.map { source => Set(source.cellType) }.reduce { _ ++ _ }
-
-      if (cellTypes.size > 1)
-        throw new Exception(s"All RasterSources must have the same CellType, but multiple ones were found: $cellTypes")
-      else
-        cellTypes.head
-    }
-
-    val crs = {
-      val projections = sources.map { source => Set(source.crs) }.reduce { _ ++ _ }
-
-      if (projections.size > 1)
-        throw new Exception(s"All RasterSources must be in the same projection, but multiple ones were found: $projections")
-      else
-        projections.head
-    }
-
-    val layerKeyBounds = {
-      val bounds =
-        sources.map { source =>
-          val projectedExtent = ProjectedExtent(source.extent, source.crs)
-          val boundsKey = projectedExtent.translate(SpatialKey(0, 0))
-          KeyBounds(boundsKey, boundsKey)
-        }.reduce { _ combine _ }
-
-      bounds.setSpatialBounds(KeyBounds(mapTransform(combinedExtents)))
-    }
+    val layerKeyBounds = KeyBounds(mapTransform(combinedExtents))
 
     val layerMetadata =
       TileLayerMetadata[SpatialKey](cellType, layout, combinedExtents, crs, layerKeyBounds)
@@ -64,15 +50,12 @@ object RasterSourceRDD {
               val keys = mapTransform.keysForGeometry(intersection.toPolygon)
 
               keys.map { key => RasterExtent(mapTransform(key), layout.tileCols, layout.tileRows) }
-            case None => Seq[RasterExtent]()
+            case None => Seq.empty[RasterExtent]
           }
 
-        if (rasterExtents.isEmpty)
-          Seq((source, rasterExtents.toArray))
-        else
-          RasterExtentPartitioner
-            .partitionRasterExtents(rasterExtents, partitionBytes)
-            .map { res => (source, res) }
+        RasterExtentPartitioner
+          .partitionRasterExtents(rasterExtents, partitionBytes)
+          .map { res => (source, res) }
       }
 
     sourcesRDD.persist()
