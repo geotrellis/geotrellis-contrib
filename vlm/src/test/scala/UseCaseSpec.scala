@@ -12,7 +12,8 @@ import org.scalatest._
 
 import org.apache.spark._
 
-class VirtualRasterSpec extends FunSpec with TestEnvironment {
+class UseCaseSpec extends FunSpec with TestEnvironment {
+  /*
   val landsat1: RasterReader = ??? // LC8 scene in UTM 15
   val landsat2: RasterReader = ??? // LC8 scene in UTM 14
 
@@ -42,4 +43,5 @@ class VirtualRasterSpec extends FunSpec with TestEnvironment {
 
   // TODO:
   // 1. Consider how we avoid re-re-resample stack
+  */
 }

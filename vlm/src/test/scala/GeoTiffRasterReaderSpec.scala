@@ -9,6 +9,7 @@ import geotrellis.vector._
 import org.scalatest._
 
 class GeoTiffRasterReaderSpec extends FunSpec {
+  /*
     val uri = "file:/Users/eugene/Downloads/LC08_L1TP_128034_20170814_20170825_01_T1_B3.TIF"
     val reader = new GeoTiffRasterReader(uri)
 
@@ -38,4 +39,5 @@ class GeoTiffRasterReaderSpec extends FunSpec {
         assert(tiles.length == 1)
     }
 
+  */
 }

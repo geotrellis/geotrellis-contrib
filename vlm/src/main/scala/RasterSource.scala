@@ -36,6 +36,8 @@ trait RasterSource extends Serializable {
     def bandCount: Int
     def cellType: CellType
     def rasterExtent = RasterExtent(extent, cols, rows)
+    def cellSize = CellSize(extent, cols, rows)
+    def gridExtent = GridExtent(extent, cellSize)
 
     def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]]
     // def asCRS(crs: CRS): RasterReader[T]
