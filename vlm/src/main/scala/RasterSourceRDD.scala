@@ -13,7 +13,7 @@ import org.apache.spark.rdd._
 
 
 object RasterSourceRDD {
-  final val PARTITION_BYTES: Long = 64l * 1024 * 1024
+  final val PARTITION_BYTES: Long = 128l * 1024 * 1024
 
   def apply(
     sources: Seq[RasterSource],
