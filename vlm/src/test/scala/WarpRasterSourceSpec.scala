@@ -4,7 +4,7 @@ package geotrellis.contrib.vlm
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.resample._
-import geotrellis.raster.reproject._ //Reproject.Options
+import geotrellis.raster.reproject._
 import geotrellis.raster.testkit._
 import geotrellis.vector._
 import geotrellis.proj4._
@@ -22,38 +22,32 @@ import spire.syntax.cfor._
 
 class WarpRasterSourceSpec extends FunSpec with TestEnvironment with RasterMatchers {
   describe("Reprojecting a RasterSource") {
-    val uri = "file:///tmp/aspect.tif"
+    val uri = "file:///tmp/aspect-tiled.tif"
     val rasterSource = new GeoTiffRasterSource(uri)
 
-    val sourceTiff = GeoTiffReader.readMultiband("/tmp/aspect.tif")
+    val sourceTiff = GeoTiffReader.readMultiband("/tmp/aspect-tiled.tif")
 
     val transform = Transform(rasterSource.crs, LatLng)
-    //val sourceProjectedExtent = ProjectedExtent(rasterSource.extent, rasterSource.crs)
-    //val reprojectedExtent = sourceProjectedExtent.reprojectAsPolygon(LatLng).envelope
-    val reprojectedExtent = ReprojectRasterExtent.reprojectExtent(rasterSource.rasterExtent, transform)
 
-    val cellSize = CellSize(reprojectedExtent, rasterSource.cols, rasterSource.rows)
+    val reprojectedRasterExtent = ReprojectRasterExtent(rasterSource.rasterExtent, transform)
 
-    val scheme = FloatingLayoutScheme(rasterSource.cols, rasterSource.rows)
-    val layout = scheme.levelFor(reprojectedExtent, cellSize).layout
+    val cellSize = CellSize(reprojectedRasterExtent.extent, reprojectedRasterExtent.cols, reprojectedRasterExtent.rows)
 
-    println(layout.tileLayout)
+    val scheme = FloatingLayoutScheme(reprojectedRasterExtent.cols, reprojectedRasterExtent.rows)
+    val layout = scheme.levelFor(reprojectedRasterExtent.extent, cellSize).layout
 
     def testReprojection(method: ResampleMethod): Unit = {
       val expected: Raster[MultibandTile] =
         ProjectedRaster(sourceTiff.raster, rasterSource.crs)
           .reproject(
             LatLng,
-            Reproject.Options(method = method, parentGridExtent = Some(layout))
+            Reproject.Options(method = method)
           )
 
-      val warpRasterSource = WarpRasterSource(rasterSource, LatLng, layout, method)
+      val warpRasterSource = WarpRasterSource(rasterSource, LatLng, method)
       val rdd: MultibandTileLayerRDD[SpatialKey] = RasterSourceRDD(warpRasterSource, layout)
 
       val actual: Raster[MultibandTile] = rdd.stitch
-
-      println(expected.extent)
-      println(actual.extent)
 
       val expectedTile = expected.tile.band(0)
       val actualTile = actual.tile.band(0)
@@ -92,20 +86,21 @@ class WarpRasterSourceSpec extends FunSpec with TestEnvironment with RasterMatch
         fail("Too many pixels do not agree.  Error log follows.\n" ++ errors.reduce(_++_))
       }
 
-      //actual.extent.covers(expected.extent) should be (true)
+      actual.extent.covers(expected.extent) should be (true)
       actual.rasterExtent.extent.xmin should be (expected.rasterExtent.extent.xmin +- 0.00001)
       actual.rasterExtent.extent.ymax should be (expected.rasterExtent.extent.ymax +- 0.00001)
       actual.rasterExtent.cellwidth should be (expected.rasterExtent.cellwidth +- 0.00001)
       actual.rasterExtent.cellheight should be (expected.rasterExtent.cellheight +- 0.00001)
 
-      //println(actual.cols, expected.cols)
-      //println(actual.rows, expected.rows)
-
-      //assertEqual(actual, expected)
+      assertEqual(actual, expected)
     }
 
-    it("should reproject NearestNeighbor") {
+    it("should reproject using NearestNeighbor") {
       testReprojection(NearestNeighbor)
+    }
+
+    it("should reproject using Bilinear") {
+      testReprojection(Bilinear)
     }
   }
 }
