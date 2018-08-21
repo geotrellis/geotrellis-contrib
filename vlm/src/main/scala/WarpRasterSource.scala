@@ -25,9 +25,9 @@ case class WarpRasterSource(
   private val transform = Transform(base.crs, crs)
   private val backTransform = Transform(crs, base.crs)
 
-  override def rasterExtent = ReprojectRasterExtent(base.rasterExtent, transform)
-  def extent = rasterExtent.extent
+  override lazy val rasterExtent = ReprojectRasterExtent(base.rasterExtent, transform)
 
+  def extent: Extent = rasterExtent.extent
   def cols: Int = rasterExtent.cols
   def rows: Int = rasterExtent.rows
 
