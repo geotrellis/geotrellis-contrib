@@ -43,12 +43,12 @@ class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
       for (bound <- testBounds) yield {
         withClue(s"Read window ${bound}: ") {
           val targetExtent = reprojectedRasterExtent.extentFor(bound)
-          val testRasterExtent = RasterExtent(targetExtent, bound.width, bound.height)
+          val testRasterExtent = RasterExtent(targetExtent, cols = bound.width, rows = bound.height)
 
-          val expected: Raster[MultibandTile] = sourceTiff.raster.reproject(
-            targetRasterExtent = testRasterExtent,
-            transform = Transform(rasterSource.crs, LatLng),
-            inverseTransform = Transform(LatLng, rasterSource.crs))
+          val expected: Raster[MultibandTile] = {
+            val rr = implicitly[RasterRegionReproject[MultibandTile]]
+            rr.regionReproject(sourceTiff.raster, sourceTiff.crs, LatLng, testRasterExtent, testRasterExtent.extent.toPolygon, method)
+          }
 
           val actual = warpRasterSource.read(List(testRasterExtent)).next
 

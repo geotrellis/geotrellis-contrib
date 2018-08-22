@@ -38,6 +38,7 @@ case class WarpGeoTiffRasterSource(
     val intersectingWindows: Map[GridBounds, RasterExtent] =
       windows.flatMap { case targetRasterExtent: RasterExtent =>
         val sourceExtent: Extent = ReprojectRasterExtent(targetRasterExtent, backTransform).extent
+
         // sourceExtent may be covering pixels that we won't actually need. Tragic, but we only read in squares.
         if (sourceExtent.intersects(tiff.extent)) {
           val sourceGridBounds: GridBounds = tiff.rasterExtent.gridBoundsFor(sourceExtent, clamp = true)
@@ -49,7 +50,9 @@ case class WarpGeoTiffRasterSource(
     tiff.crop(intersectingWindows.keys.toSeq).map { case (gb, tile) =>
       val targetRasterExtent = intersectingWindows(gb)
       val sourceRaster = Raster(tile, tiff.rasterExtent.extentFor(gb))
-      sourceRaster.reproject(targetRasterExtent, transform, backTransform, resampleMethod)
+      // sourceRaster.reproject(targetRasterExtent, transform, backTransform, resampleMethod)
+      val rr = implicitly[RasterRegionReproject[MultibandTile]]
+      rr.regionReproject(sourceRaster, tiff.crs, crs, targetRasterExtent, targetRasterExtent.extent.toPolygon, resampleMethod)
     }
   }
 }
