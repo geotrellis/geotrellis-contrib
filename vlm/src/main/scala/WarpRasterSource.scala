@@ -9,14 +9,13 @@ import geotrellis.spark.tiling._
 
 import java.net.URI
 
-
 case class WarpRasterSource(
   base: RasterSource,
   crs: CRS,
   resampleMethod: ResampleMethod = NearestNeighbor
 ) extends RasterSource {
 
-  def uri: URI = base.uri
+  def uri = base.uri
   def cellType: CellType = base.cellType
   def bandCount: Int = base.bandCount
 

@@ -28,7 +28,7 @@ import java.net.URI
 * Some initilization step is expected to provide metadata about source raster
 */
 trait RasterSource extends Serializable {
-    def uri: URI
+    def uri: String
     def extent: Extent
     def crs: CRS
     def cols: Int
