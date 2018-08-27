@@ -18,6 +18,7 @@ package geotrellis.contrib.vlm
 
 import geotrellis.vector._
 import geotrellis.raster._
+import geotrellis.raster.resample._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.proj4._
 import cats.effect.IO
@@ -38,6 +39,8 @@ trait RasterSource extends Serializable {
     def rasterExtent = RasterExtent(extent, cols, rows)
     def cellSize = CellSize(extent, cols, rows)
     def gridExtent = GridExtent(extent, cellSize)
+
+    def withCRS(targetCRS: CRS, resampleMethod: ResampleMethod = NearestNeighbor): RasterSource
 
     def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]]
     // def asCRS(crs: CRS): RasterReader[T]

@@ -2,7 +2,8 @@ package geotrellis.contrib.vlm
 
 import geotrellis.vector._
 import geotrellis.raster._
-import geotrellis.raster.reproject.{ReprojectRasterExtent, Reproject}
+import geotrellis.raster.reproject.{ReprojectRasterExtent, RasterRegionReproject, Reproject}
+import geotrellis.raster.resample.{ResampleMethod, NearestNeighbor}
 import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.MultibandGeoTiff
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
@@ -14,7 +15,6 @@ import java.nio.file.Paths
 import geotrellis.util.{FileRangeReader, RangeReader, StreamingByteReader}
 
 class GeoTiffRasterSource(val fileURI: String) extends RasterSource {
-  // TODO: uri on RasterReader2 should be String, because java.net.URI does not admit all valid S3 URIs
 
   private def getByteReader(): StreamingByteReader = {
     val javaURI = new URI(fileURI)
@@ -44,6 +44,56 @@ class GeoTiffRasterSource(val fileURI: String) extends RasterSource {
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = tiff.cellType
 
+  def withCRS(targetCRS: CRS, resampleMethod: ResampleMethod = NearestNeighbor): GeoTiffRasterSource =
+    new GeoTiffRasterSource(fileURI) {
+      @transient private lazy val tiff: MultibandGeoTiff = GeoTiffReader.readMultiband(getByteReader, streaming = true)
+
+      private val baseCols: Int = tiff.cols
+      private val baseRows: Int = tiff.rows
+      private val baseCRS: CRS = tiff.crs
+      private val baseExtent: Extent = tiff.extent
+      private val baseRasterExtent: RasterExtent = RasterExtent(baseExtent, baseCols, baseRows)
+
+      override def bandCount: Int = tiff.bandCount
+      override def cellType: CellType = tiff.cellType
+
+      override def crs: CRS = targetCRS
+
+      private val transform: Transform = Transform(baseCRS, targetCRS)
+      private val backTransform: Transform = Transform(targetCRS, baseCRS)
+
+      override lazy val rasterExtent: RasterExtent = ReprojectRasterExtent(baseRasterExtent, transform)
+      override def extent: Extent = rasterExtent.extent
+
+      override def cols: Int = rasterExtent.cols
+      override def rows: Int = rasterExtent.rows
+
+      override def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
+        val intersectingWindows: Map[GridBounds, RasterExtent] =
+          windows.map { case targetRasterExtent =>
+            val sourceExtent = ReprojectRasterExtent.reprojectExtent(targetRasterExtent, backTransform)
+            val sourceGridBounds = tiff.rasterExtent.gridBoundsFor(sourceExtent, clamp = true)
+
+            (sourceGridBounds, targetRasterExtent)
+          }.toMap
+
+        tiff.crop(intersectingWindows.keys.toSeq).map { case (gb, tile) =>
+          val targetRasterExtent = intersectingWindows(gb)
+          val sourceRaster = Raster(tile, baseRasterExtent.extentFor(gb))
+
+          val rr = implicitly[RasterRegionReproject[MultibandTile]]
+          rr.regionReproject(
+            sourceRaster,
+            baseCRS,
+            targetCRS,
+            targetRasterExtent,
+            targetRasterExtent.extent.toPolygon,
+            resampleMethod
+          )
+        }
+      }
+    }
+
   def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
     val intersectionWindows: Traversable[GridBounds] =
       windows.map { case targetRasterExtent =>
@@ -54,37 +104,16 @@ class GeoTiffRasterSource(val fileURI: String) extends RasterSource {
       Raster(tile, rasterExtent.extentFor(gb))
     }
   }
+}
 
-  /*
-  def read(
-    windows: Traversable[RasterExtent],
-    crs: CRS,
-    targetCellType: CellType,
-    options: Reproject.Options
-  ): Iterator[Raster[MultibandTile]] = {
-    val transform = Transform(tiff.crs, crs)
-    val backTransform = Transform(crs, tiff.crs)
-    // we have multiple footprints that may intersect or be out of bounds
+object GeoTiffRasterSource {
+  def apply(fileURI: String): GeoTiffRasterSource =
+    new GeoTiffRasterSource(fileURI)
 
-    /* TODO: we could save a lot of work  here if we burned directly from segments to tiles in target projection
-     * The actual work that we can parallize over is dealing with TIFF segments.
-     */
-    val intersectingWindows: Map[GridBounds, RasterExtent] =
-      windows.flatMap { case targetRasterExtent =>
-        val sourceExtent: Extent = ReprojectRasterExtent.reprojectExtent(targetRasterExtent, backTransform)
-        // sourceExtent may be covering pixels that we won't actually need. Tragic, but we only read in squares.
-        if (sourceExtent.intersects(tiff.extent)) {
-          val sourceGridBounds: GridBounds = tiff.rasterExtent.gridBoundsFor(sourceExtent, clamp = true)
-          // sourceGridBounds will contribute to this region
-          Some((sourceGridBounds, targetRasterExtent))
-        } else None
-      }.toMap
-
-    tiff.crop(intersectingWindows.keys.toSeq).map { case (gb, tile) =>
-      val targetRasterExtent = intersectingWindows(gb)
-      val sourceRaster = Raster(tile.convert(targetCellType), tiff.rasterExtent.extentFor(gb))
-      sourceRaster.reproject(targetRasterExtent, transform, backTransform, options)
-    }
-  }
-  */
+  def apply(
+    fileURI: String,
+    targetCRS: CRS,
+    resampleMethod: ResampleMethod = NearestNeighbor
+  ): GeoTiffRasterSource =
+    apply(fileURI).withCRS(targetCRS, resampleMethod)
 }
