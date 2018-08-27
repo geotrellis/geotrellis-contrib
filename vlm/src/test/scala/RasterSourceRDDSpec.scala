@@ -40,24 +40,5 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
 
       layout.extent.covers(actualExtent) should be (true)
     }
-
-    it("should have the right number of tiles when reprojecting") {
-      val crs = CRS.fromEpsgCode(4326)
-
-      val scheme = ZoomedLayoutScheme(crs)
-      val layout = scheme.levelForZoom(13).layout
-
-      val reprojectedExtent =
-        ProjectedExtent(rasterSource.extent, rasterSource.crs)
-          .reprojectAsPolygon(crs)
-          .envelope
-
-      val keys = layout.mapTransform.keysForGeometry(reprojectedExtent.toPolygon)
-
-      val warpRasterSource = WarpRasterSource(rasterSource, crs)
-      val rdd = RasterSourceRDD(warpRasterSource, layout)
-
-      rdd.count should be (keys.size)
-    }
   }
 }
