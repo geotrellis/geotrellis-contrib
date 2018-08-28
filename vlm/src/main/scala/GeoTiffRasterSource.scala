@@ -79,7 +79,7 @@ class GeoTiffRasterSource(val fileURI: String) extends RasterSource {
 
         tiff.crop(intersectingWindows.keys.toSeq).map { case (gb, tile) =>
           val targetRasterExtent = intersectingWindows(gb)
-          val sourceRaster = Raster(tile, baseRasterExtent.extentFor(gb))
+          val sourceRaster = Raster(tile, baseRasterExtent.extentFor(gb, clamp = false))
 
           val rr = implicitly[RasterRegionReproject[MultibandTile]]
           rr.regionReproject(
@@ -101,7 +101,7 @@ class GeoTiffRasterSource(val fileURI: String) extends RasterSource {
       }
 
     tiff.crop(intersectionWindows.toSeq).map { case (gb, tile) =>
-      Raster(tile, rasterExtent.extentFor(gb))
+      Raster(tile, rasterExtent.extentFor(gb, clamp = false))
     }
   }
 }
