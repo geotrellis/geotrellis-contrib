@@ -72,7 +72,7 @@ class GeoTiffRasterSource(val fileURI: String) extends RasterSource {
         val intersectingWindows: Map[GridBounds, RasterExtent] =
           windows.map { case targetRasterExtent =>
             val sourceExtent = ReprojectRasterExtent.reprojectExtent(targetRasterExtent, backTransform)
-            val sourceGridBounds = tiff.rasterExtent.gridBoundsFor(sourceExtent, clamp = true)
+            val sourceGridBounds = tiff.rasterExtent.gridBoundsFor(sourceExtent, clamp = false)
 
             (sourceGridBounds, targetRasterExtent)
           }.toMap
@@ -97,7 +97,7 @@ class GeoTiffRasterSource(val fileURI: String) extends RasterSource {
   def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
     val intersectionWindows: Traversable[GridBounds] =
       windows.map { case targetRasterExtent =>
-        rasterExtent.gridBoundsFor(targetRasterExtent.extent, clamp = true)
+        rasterExtent.gridBoundsFor(targetRasterExtent.extent, clamp = false)
       }
 
     tiff.crop(intersectionWindows.toSeq).map { case (gb, tile) =>
