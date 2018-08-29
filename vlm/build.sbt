@@ -15,7 +15,8 @@ libraryDependencies ++= Seq(
   catsEffect,
   fs2Core,
   fs2Io,
-  scalatest % Test
+  scalatest % Test,
+  gdal
 )
 
 Test / fork := true
