@@ -3,9 +3,12 @@ package geotrellis.contrib.vlm.gdal
 import geotrellis.contrib.vlm._
 import geotrellis.proj4._
 import geotrellis.raster._
+import geotrellis.raster.resample.{ResampleMethod, NearestNeighbor}
 import geotrellis.vector._
 
 import org.gdal.osr.SpatialReference
+
+import java.net.URI
 
 
 class GDALRasterSource(fileURI: String) extends RasterSource {
@@ -18,6 +21,8 @@ class GDALRasterSource(fileURI: String) extends RasterSource {
     colsLong * rowsLong <= Int.MaxValue,
     s"Cannot read this raster, cols * rows is greater than the maximum array index: ${colsLong * rowsLong}"
   )
+
+  def uri: URI = new URI(fileURI)
 
   def cols: Int = colsLong.toInt
   def rows: Int = rowsLong.toInt
@@ -47,4 +52,25 @@ class GDALRasterSource(fileURI: String) extends RasterSource {
     }.getOrElse(CRS.fromEpsgCode(4326))
   }
 
+  private lazy val datatype: GDALDataType = {
+    val band = dataset.GetRasterBand(1)
+    band.getDataType()
+  }
+
+  private lazy val reader: GDALReader = GDALReader(dataset, datatype)
+
+  lazy val cellType: CellType = GDAL.deriveGTCellType(datatype)
+
+  def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
+    val gridBounds: Traversable[GridBounds] =
+      windows.map { case targetRasterExtent =>
+        rasterExtent.gridBoundsFor(targetRasterExtent.extent, clamp = true)
+      }
+
+    gridBounds.map { gb =>
+      Raster(reader.read(gb), rasterExtent.extentFor(gb))
+    }.toIterator
+  }
+
+  def withCRS(targetCRS: CRS, resampleMethod: ResampleMethod = NearestNeighbor): GDALRasterSource = ???
 }
