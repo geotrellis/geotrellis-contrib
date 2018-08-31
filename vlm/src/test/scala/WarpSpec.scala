@@ -1,6 +1,5 @@
 package geotrellis.contrib.vlm
 
-
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.io.geotiff._
@@ -19,7 +18,6 @@ import org.scalatest._
 import org.apache.spark._
 
 import spire.syntax.cfor._
-
 
 class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
   describe("Reprojecting a RasterSource") {

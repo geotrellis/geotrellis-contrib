@@ -2,40 +2,15 @@ package geotrellis.contrib.vlm
 
 import geotrellis.vector._
 import geotrellis.raster._
-import geotrellis.raster.reproject.{ReprojectRasterExtent, RasterRegionReproject, Reproject}
+import geotrellis.raster.reproject.{ReprojectRasterExtent, RasterRegionReproject}
 import geotrellis.raster.resample.{ResampleMethod, NearestNeighbor}
 import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.MultibandGeoTiff
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
-import cats.effect.IO
 
-import java.net.URI
-import java.nio.file.Paths
-
-import geotrellis.util.{FileRangeReader, RangeReader, StreamingByteReader}
-
-class GeoTiffRasterSource(val fileURI: String) extends RasterSource {
-
-  private def getByteReader(): StreamingByteReader = {
-    val javaURI = new URI(fileURI)
-    val rr =  javaURI.getScheme match {
-      case "file" | null =>
-        FileRangeReader(Paths.get(javaURI).toFile)
-
-      case "s3" => ???
-      //     val s3Uri = new AmazonS3URI(java.net.URLDecoder.decode(uri, "UTF-8"))
-      //     val s3Client = new AmazonS3Client(new AWSAmazonS3Client(new DefaultAWSCredentialsProviderChain))
-      //     S3RangeReader(s3Uri.getBucket, s3Uri.getKey, s3Client)
-
-      case scheme =>
-        throw new IllegalArgumentException(s"Unable to read scheme $scheme at $uri")
-    }
-    new StreamingByteReader(rr)
-  }
-
-  @transient private lazy val tiff: MultibandGeoTiff = GeoTiffReader.readMultiband(getByteReader, streaming = true)
-
-  def uri: URI = new URI(fileURI)
+case class GeoTiffRasterSource(uri: String) extends RasterSource {
+  @transient private lazy val tiff: MultibandGeoTiff =
+    GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 
   def extent: Extent = tiff.extent
   def crs: CRS = tiff.crs
@@ -45,8 +20,8 @@ class GeoTiffRasterSource(val fileURI: String) extends RasterSource {
   def cellType: CellType = tiff.cellType
 
   def withCRS(targetCRS: CRS, resampleMethod: ResampleMethod = NearestNeighbor): GeoTiffRasterSource =
-    new GeoTiffRasterSource(fileURI) {
-      @transient private lazy val tiff: MultibandGeoTiff = GeoTiffReader.readMultiband(getByteReader, streaming = true)
+    new GeoTiffRasterSource(uri) {
+      @transient private lazy val tiff: MultibandGeoTiff = GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 
       private val baseCols: Int = tiff.cols
       private val baseRows: Int = tiff.rows
@@ -107,13 +82,10 @@ class GeoTiffRasterSource(val fileURI: String) extends RasterSource {
 }
 
 object GeoTiffRasterSource {
-  def apply(fileURI: String): GeoTiffRasterSource =
-    new GeoTiffRasterSource(fileURI)
-
   def apply(
-    fileURI: String,
+    uri: String,
     targetCRS: CRS,
     resampleMethod: ResampleMethod = NearestNeighbor
   ): GeoTiffRasterSource =
-    apply(fileURI).withCRS(targetCRS, resampleMethod)
+    GeoTiffRasterSource(uri).withCRS(targetCRS, resampleMethod)
 }

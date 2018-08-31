@@ -29,7 +29,7 @@ import java.net.URI
 * Some initilization step is expected to provide metadata about source raster
 */
 trait RasterSource extends Serializable {
-    def uri: URI
+    def uri: String
     def extent: Extent
     def crs: CRS
     def cols: Int
@@ -43,6 +43,4 @@ trait RasterSource extends Serializable {
     def withCRS(targetCRS: CRS, resampleMethod: ResampleMethod = NearestNeighbor): RasterSource
 
     def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]]
-    // def asCRS(crs: CRS): RasterReader[T]
-    // def asCRS(crs: CRS, rasterExtent: RasterExtent): RasterReader[T]
 }
