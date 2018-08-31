@@ -2,30 +2,24 @@ package geotrellis.contrib.vlm
 
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
-import geotrellis.raster.io.geotiff._
 import geotrellis.raster.resample._
 import geotrellis.raster.reproject._
 import geotrellis.raster.testkit._
-import geotrellis.vector._
 import geotrellis.proj4._
-import geotrellis.spark._
-import geotrellis.spark.tiling._
-import geotrellis.spark.stitch._
 import geotrellis.spark.testkit._
-
 import org.scalatest._
 
-import org.apache.spark._
+import java.io.File
 
-import spire.syntax.cfor._
 
 class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
   describe("Reprojecting a RasterSource") {
-    val uri = "file:///tmp/aspect-tiled.tif"
+    val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
+    val schemeURI = s"file://$uri"
 
-    val rasterSource = new GeoTiffRasterSource(uri)
+    val rasterSource = new GeoTiffRasterSource(schemeURI)
 
-    val sourceTiff = GeoTiffReader.readMultiband("/tmp/aspect-tiled.tif")
+    val sourceTiff = GeoTiffReader.readMultiband(uri)
 
     val reprojectedRasterExtent = {
       val re = ReprojectRasterExtent(rasterSource.rasterExtent, Transform(rasterSource.crs, LatLng))

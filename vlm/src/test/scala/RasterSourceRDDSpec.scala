@@ -1,6 +1,5 @@
 package geotrellis.contrib.vlm
 
-
 import geotrellis.raster._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.vector._
@@ -11,11 +10,13 @@ import geotrellis.spark.tiling._
 import geotrellis.spark.testkit._
 
 import org.scalatest._
-
 import org.apache.spark._
 
+import java.io.File
+
+
 class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
-  val uri = "file:///tmp/aspect-tiled.tif"
+  val uri = s"file://${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
   val rasterSource = new GeoTiffRasterSource(uri)
 
   val targetCRS = CRS.fromEpsgCode(3857)
