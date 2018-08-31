@@ -1,7 +1,7 @@
 package geotrellis.contrib.vlm.gdal
 
 
-import geotrellis.raster.{GridBounds, CellType, Tile, ArrayTile, MultibandTile}
+import geotrellis.raster._
 
 import org.gdal.gdal.Dataset
 
@@ -11,13 +11,14 @@ import spire.syntax.cfor._
 abstract class GDALReader(dataset: Dataset, dataType: GDALDataType) {
   protected val bandCount = dataset.getRasterCount()
 
-  def read(gridBounds: GridBounds): MultibandTile
-
-  private lazy val noDataValue: Option[Double] = {
+  protected lazy val noDataValue: Option[Double] = {
     val arr = Array.ofDim[java.lang.Double](1)
     dataset.GetRasterBand(1).GetNoDataValue(arr)
-    Some(arr(0))
+
+    Option(arr(0))
   }
+
+  def read(gridBounds: GridBounds): MultibandTile
 }
 
 object GDALReader {
@@ -68,7 +69,24 @@ case class ShortGDALReader(dataset: Dataset, dataType: GDALDataType) extends GDA
       index += 1
     }
 
-    MultibandTile(bands.map { band => ArrayTile(band, gridBounds.width, gridBounds.height) })
+    def updateTile: ShortArrayTile => ShortArrayTile =
+      noDataValue match {
+        case Some(nd) =>
+          (tile: ShortArrayTile) =>
+            cfor(0)(_ < tile.cols, _ + 1) { col =>
+              cfor(0)(_ < tile.rows, _ + 1) { row =>
+                if (tile.getDouble(col, row) == nd) { tile.set(col, row, NODATA) }
+              }
+            }
+
+            tile
+        case None => (tile: ShortArrayTile) => tile
+      }
+
+    val tiles: Array[ShortArrayTile] =
+      bands.map { band => updateTile(ShortArrayTile(band, gridBounds.width, gridBounds.height)) }
+
+    MultibandTile(tiles)
   }
 }
 
@@ -107,7 +125,24 @@ case class IntGDALReader(dataset: Dataset, dataType: GDALDataType) extends GDALR
       index += 1
     }
 
-    MultibandTile(bands.map { band => ArrayTile(band, gridBounds.width, gridBounds.height) })
+    def updateTile: IntArrayTile => IntArrayTile =
+      noDataValue match {
+        case Some(nd) =>
+          (tile: IntArrayTile) =>
+            cfor(0)(_ < tile.cols, _ + 1) { col =>
+              cfor(0)(_ < tile.rows, _ + 1) { row =>
+                if (tile.getDouble(col, row) == nd) { tile.set(col, row, NODATA) }
+              }
+            }
+
+            tile
+        case None => (tile: IntArrayTile) => tile
+      }
+
+    val tiles: Array[IntArrayTile] =
+      bands.map { band => updateTile(IntArrayTile(band, gridBounds.width, gridBounds.height)) }
+
+    MultibandTile(tiles)
   }
 }
 
@@ -146,7 +181,24 @@ case class FloatGDALReader(dataset: Dataset, dataType: GDALDataType) extends GDA
       index += 1
     }
 
-    MultibandTile(bands.map { band => ArrayTile(band, gridBounds.width, gridBounds.height) })
+    def updateTile: FloatArrayTile => FloatArrayTile =
+      noDataValue match {
+        case Some(nd) =>
+          (tile: FloatArrayTile) =>
+            cfor(0)(_ < tile.cols, _ + 1) { col =>
+              cfor(0)(_ < tile.rows, _ + 1) { row =>
+                if (tile.getDouble(col, row) == nd) { tile.set(col, row, NODATA) }
+              }
+            }
+
+            tile
+        case None => (tile: FloatArrayTile) => tile
+      }
+
+    val tiles: Array[FloatArrayTile] =
+      bands.map { band => updateTile(FloatArrayTile(band, gridBounds.width, gridBounds.height)) }
+
+    MultibandTile(tiles)
   }
 }
 
@@ -185,6 +237,23 @@ case class DoubleGDALReader(dataset: Dataset, dataType: GDALDataType) extends GD
       index += 1
     }
 
-    MultibandTile(bands.map { band => ArrayTile(band, gridBounds.width, gridBounds.height) })
+    def updateTile: DoubleArrayTile => DoubleArrayTile =
+      noDataValue match {
+        case Some(nd) =>
+          (tile: DoubleArrayTile) =>
+            cfor(0)(_ < tile.cols, _ + 1) { col =>
+              cfor(0)(_ < tile.rows, _ + 1) { row =>
+                if (tile.getDouble(col, row) == nd) { tile.set(col, row, NODATA) }
+              }
+            }
+
+            tile
+        case None => (tile: DoubleArrayTile) => tile
+      }
+
+    val tiles: Array[DoubleArrayTile] =
+      bands.map { band => updateTile(DoubleArrayTile(band, gridBounds.width, gridBounds.height)) }
+
+    MultibandTile(tiles)
   }
 }
