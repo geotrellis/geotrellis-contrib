@@ -8,11 +8,9 @@ import geotrellis.vector._
 
 import org.gdal.osr.SpatialReference
 
-import java.net.URI
 
-
-class GDALRasterSource(fileURI: String) extends RasterSource {
-  @transient private lazy val dataset = GDAL.open(fileURI)
+case class GDALRasterSource(uri: String) extends RasterSource {
+  @transient private lazy val dataset = GDAL.open(uri)
 
   private val colsLong: Long = dataset.getRasterXSize
   private val rowsLong: Long = dataset.getRasterYSize
@@ -21,8 +19,6 @@ class GDALRasterSource(fileURI: String) extends RasterSource {
     colsLong * rowsLong <= Int.MaxValue,
     s"Cannot read this raster, cols * rows is greater than the maximum array index: ${colsLong * rowsLong}"
   )
-
-  def uri: URI = new URI(fileURI)
 
   def cols: Int = colsLong.toInt
   def rows: Int = rowsLong.toInt
