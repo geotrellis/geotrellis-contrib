@@ -93,7 +93,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
 
   describe("reading in GeoTiffs as RDDs using GDALRasterSource") {
     val uri = "/tmp/aspect-tiled.tif"
-    val rasterSource = new GDALRasterSource(uri)
+    val rasterSource = GDALRasterSource(uri)
 
     it("should have the right number of tiles") {
       val expectedKeys =
