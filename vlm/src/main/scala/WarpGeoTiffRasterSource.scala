@@ -55,4 +55,6 @@ case class WarpGeoTiffRasterSource(
       rr.regionReproject(sourceRaster, tiff.crs, crs, targetRasterExtent, targetRasterExtent.extent.toPolygon, resampleMethod)
     }
   }
+
+  def withCRS(targetCRS: CRS, resampleMethod: ResampleMethod): RasterSource = ???
 }

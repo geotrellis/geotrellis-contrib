@@ -1,6 +1,5 @@
 package geotrellis.contrib.vlm
 
-
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.io.geotiff._
@@ -20,11 +19,9 @@ import org.apache.spark._
 
 import spire.syntax.cfor._
 
-
 class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
   describe("Reprojecting a RasterSource") {
     val uri = "file:///tmp/aspect-tiled.tif"
-
 
     val rasterSource = new GeoTiffRasterSource(uri)
 
@@ -37,7 +34,7 @@ class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
     }
 
     def testReprojection(method: ResampleMethod) = {
-      val warpRasterSource = WarpGeoTiffRasterSource(uri, LatLng, method)
+      val warpRasterSource = rasterSource.withCRS(LatLng, method)
       val testBounds = GridBounds(0, 0, reprojectedRasterExtent.cols, reprojectedRasterExtent.rows).split(64,64).toSeq
 
       for (bound <- testBounds) yield {

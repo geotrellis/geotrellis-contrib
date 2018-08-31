@@ -5,9 +5,6 @@ import geotrellis.raster._
 import geotrellis.raster.reproject.{ReprojectRasterExtent, Reproject}
 import geotrellis.raster.resample.{ResampleMethod, NearestNeighbor}
 import geotrellis.vector._
-import geotrellis.spark.tiling._
-
-import java.net.URI
 
 case class WarpRasterSource(
   base: RasterSource,
@@ -43,4 +40,6 @@ case class WarpRasterSource(
       raster.reproject(base.crs, crs, options)
     }
   }
+
+  def withCRS(targetCRS: CRS, resampleMethod: ResampleMethod): RasterSource = ???
 }

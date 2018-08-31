@@ -1,10 +1,8 @@
 package geotrellis.contrib.vlm
 
-
 import geotrellis.raster.RasterExtent
 
 import scala.collection.mutable.ArrayBuilder
-
 
 private[vlm] object RasterExtentPartitioner {
   def partitionRasterExtents(
