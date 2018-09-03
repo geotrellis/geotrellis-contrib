@@ -49,40 +49,55 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
 
       values.map { value => (value.cols, value.rows) should be ((256, 256)) }
     }
+  }
 
-    it("should be the same as a tiled HadoopGeoTiffRDD") {
-      val floatingLayout = FloatingLayoutScheme(256)
+  describe("Match reprojection from HadoopGeoTiffRDD") {
+    val floatingLayout = FloatingLayoutScheme(256)
+    val geoTiffRDD = HadoopGeoTiffRDD.spatialMultiband(uri)
+    val md = geoTiffRDD.collectMetadata[SpatialKey](floatingLayout)._2
 
-      val geoTiffRDD = HadoopGeoTiffRDD.spatialMultiband(uri)
-      val md = geoTiffRDD.collectMetadata[SpatialKey](floatingLayout)._2
-      val geoTiffTiledRDD = geoTiffRDD.tileToLayout(md)
+    val reprojectedExpectedRDD: MultibandTileLayerRDD[SpatialKey] = {
+      geoTiffRDD
+        .tileToLayout(md)
+        .reproject(
+          targetCRS,
+          layout,
+          Reproject.Options(targetCellSize = Some(layout.cellSize))
+        )._2.persist()
+    }
 
-      val reprojected: MultibandTileLayerRDD[SpatialKey] =
-        geoTiffTiledRDD
-          .reproject(
-            targetCRS,
-            layout,
-            Reproject.Options(targetCellSize = Some(layout.cellSize))
-          )._2
-
-      val rasterSourceRDD: MultibandTileLayerRDD[SpatialKey] = RasterSourceRDD(rasterSource, md.layout)
-
-      val reprojectedSource =
-        rasterSourceRDD
-          .reproject(
-            targetCRS,
-            layout,
-            Reproject.Options(targetCellSize = Some(layout.cellSize))
-          )._2
-
-      val joinedRDD = reprojected.leftOuterJoin(reprojectedSource)
+    def assertRDDLayersEqual(
+      expected: MultibandTileLayerRDD[SpatialKey],
+      actual: MultibandTileLayerRDD[SpatialKey]
+    ): Unit = {
+      val joinedRDD = expected.leftOuterJoin(actual)
 
       joinedRDD.collect().map { case (key, (expected, actualTile)) =>
         actualTile match {
           case Some(actual) => assertEqual(expected, actual)
-          case None => throw new Exception(s"Key: key does not exist in the rasterSourceRDD")
+          case None => throw new Exception(s"$key does not exist in the rasterSourceRDD")
         }
       }
+    }
+
+    it("should reproduce tileToLayout") {
+      // This should be the same as result of .tileToLayout(md.layout)
+      val rasterSourceRDD: MultibandTileLayerRDD[SpatialKey] =
+        RasterSourceRDD(rasterSource, md.layout)
+
+      // Complete the reprojection
+      val reprojectedSource =
+        rasterSourceRDD.reproject(targetCRS, layout)._2
+
+      assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSource)
+    }
+
+    it("should reproduce tileToLayout followed by reproject") {
+      // This should be the same as .tileToLayout(md.layout).reproject(crs, layout)
+      val reprojectedSourceRDD: MultibandTileLayerRDD[SpatialKey] =
+        RasterSourceRDD(rasterSource.withCRS(targetCRS), layout)
+
+      assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSourceRDD)
     }
   }
 }
