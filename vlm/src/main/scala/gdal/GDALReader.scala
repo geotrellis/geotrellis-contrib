@@ -1,259 +1,164 @@
 package geotrellis.contrib.vlm.gdal
 
-
 import geotrellis.raster._
 
-import org.gdal.gdal.Dataset
-
 import spire.syntax.cfor._
+import org.gdal.gdal.Dataset
+import org.gdal.gdal.gdal
+import org.gdal.gdalconst.gdalconstConstants
 
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
-abstract class GDALReader(dataset: Dataset, dataType: GDALDataType) {
-  protected val bandCount = dataset.getRasterCount()
+case class GDALReader(dataset: Dataset) {
+  protected val bandCount: Int = dataset.getRasterCount()
 
   protected lazy val noDataValue: Option[Double] = {
     val arr = Array.ofDim[java.lang.Double](1)
     dataset.GetRasterBand(1).GetNoDataValue(arr)
 
-    Option(arr(0))
+    arr.headOption.map(_.doubleValue)
   }
 
-  def read(gridBounds: GridBounds): MultibandTile
-}
+  def read(gridBounds: GridBounds, bands: Seq[Int] = 0 until bandCount): MultibandTile = {
+    // NOTE: Bands are not 0-base indexed, so we must add 1// NOTE: Bands are not 0-base indexed, so we must add 1
+    val baseBand = dataset.GetRasterBand(1)
 
-object GDALReader {
-  def apply(dataset: Dataset, dataType: GDALDataType): GDALReader =
-    dataType match {
-      case (ByteConstantNoDataCellType | IntConstantNoDataCellType16) => ShortGDALReader(dataset, dataType)
-      case (TypeUInt16 | IntConstantNoDataCellType32) => IntGDALReader(dataset, dataType)
-      case (TypeUInt32 | FloatConstantNoDataCellType32) => FloatGDALReader(dataset, dataType)
-      case (TypeUnknown | FloatConstantNoDataCellType64) => DoubleGDALReader(dataset, dataType)
-      case (TypeCInt16 | TypeCInt32 | TypeCFloat32 | TypeCFloat64) =>
-        throw new Exception("Complex datatypes are not supported")
-    }
-}
+    val bandCount = bands.size
+    val indexBand = bands.zipWithIndex.map { case (v, i) => (i, v) }.toMap
 
+    // setting buffer properties
+    val pixelCount = gridBounds.size.toInt
+    // sampleFormat
+    val bufferType = baseBand.getDataType
+    // samples per pixel
+    val samplesPerPixel = dataset.getRasterCount
+    // bits per sample
+    val typeSizeInBits = gdal.GetDataTypeSize(bufferType)
+    val typeSizeInBytes = gdal.GetDataTypeSize(bufferType) / 8
+    val bufferSize = bandCount * pixelCount * typeSizeInBytes
 
-case class ShortGDALReader(dataset: Dataset, dataType: GDALDataType) extends GDALReader(dataset, dataType) {
-  def read(gridBounds: GridBounds): MultibandTile = {
-    val pixelCount: Int = gridBounds.width * gridBounds.height
+    /** TODO: thing about how to handle UByte case **/
+    if (bufferType == gdalconstConstants.GDT_Byte) {
+      // in the byte case we can strictly use
+      val bandsDataArray = Array.ofDim[Array[Byte]](bandCount)
+      cfor(0)(_ < bandCount, _ + 1) { i =>
+        val rBand = dataset.GetRasterBand(indexBand(i) + 1)
+        val dataBuffer = new Array[Byte](bufferSize.toInt)
+        val returnVal = rBand.ReadRaster(
+          gridBounds.colMin,
+          gridBounds.rowMin,
+          gridBounds.width,
+          gridBounds.height,
+          gridBounds.width,
+          gridBounds.height,
+          bufferType,
+          dataBuffer
+        )
 
-    // This array will hold all of the data for the given region for each band
-    val sourceArray: Array[Short] = Array.ofDim[Short](pixelCount * bandCount)
+        if(returnVal != gdalconstConstants.CE_None)
+          throw new Exception("An error happened during the GDAL Read.")
 
-    val bands: Array[Array[Short]] = Array.ofDim[Array[Short]](bandCount)
-
-    dataset.ReadRaster(
-      gridBounds.colMin,
-      gridBounds.rowMin,
-      gridBounds.width,
-      gridBounds.height,
-      gridBounds.width,
-      gridBounds.height,
-      dataType.code,
-      sourceArray,
-      1 to bands.size toArray,
-      0,
-      0,
-      0
-    )
-
-    var index = 0
-
-    cfor(0)(_ < sourceArray.size, _ + pixelCount) { offset =>
-      val bandArray: Array[Short] = Array.ofDim[Short](pixelCount)
-
-      System.arraycopy(sourceArray, offset, bandArray, 0, bandArray.size)
-      bands(index) = bandArray
-
-      index += 1
-    }
-
-    def updateTile: ShortArrayTile => ShortArrayTile =
-      noDataValue match {
-        case Some(nd) =>
-          (tile: ShortArrayTile) =>
-            cfor(0)(_ < tile.cols, _ + 1) { col =>
-              cfor(0)(_ < tile.rows, _ + 1) { row =>
-                if (tile.getDouble(col, row) == nd) { tile.set(col, row, NODATA) }
-              }
-            }
-
-            tile
-        case None => (tile: ShortArrayTile) => tile
+        bandsDataArray(i) = dataBuffer
       }
 
-    val tiles: Array[ShortArrayTile] =
-      bands.map { band => updateTile(ShortArrayTile(band, gridBounds.width, gridBounds.height)) }
+      if(typeSizeInBits == 1) {
+        MultibandTile(bandsDataArray.map { b => BitArrayTile(b, gridBounds.width, gridBounds.height) })
+      } else {
+        val ct = noDataValue match {
+          case Some(nd) => ByteUserDefinedNoDataCellType(nd.toByte)
+          case _ => ByteCellType
+        }
+        MultibandTile(bandsDataArray.map { b => ByteArrayTile(b, gridBounds.width, gridBounds.height, ct) })
+      }
+    } else {
+      // for these types we need buffers
+      val bandsDataBuffer = Array.ofDim[ByteBuffer](bandCount)
+      cfor(0)(_ < bandCount, _ + 1) { i =>
+        val rBand = dataset.GetRasterBand(indexBand(i) + 1)
+        val dataBuffer = new Array[Byte](bufferSize.toInt)
+        val returnVal = rBand.ReadRaster(
+          gridBounds.colMin,
+          gridBounds.rowMin,
+          gridBounds.width,
+          gridBounds.height,
+          gridBounds.width,
+          gridBounds.height,
+          bufferType,
+          dataBuffer
+        )
 
-    MultibandTile(tiles)
-  }
-}
+        if(returnVal != gdalconstConstants.CE_None)
+          throw new Exception("An error happened during the GDAL Read.")
 
-case class IntGDALReader(dataset: Dataset, dataType: GDALDataType) extends GDALReader(dataset, dataType) {
-  def read(gridBounds: GridBounds): MultibandTile = {
-    val pixelCount: Int = gridBounds.width * gridBounds.height
-
-    // This array will hold all of the data for the given region for each band
-    val sourceArray: Array[Int] = Array.ofDim[Int](pixelCount * bandCount)
-
-    val bands: Array[Array[Int]] = Array.ofDim[Array[Int]](bandCount)
-
-    dataset.ReadRaster(
-      gridBounds.colMin,
-      gridBounds.rowMin,
-      gridBounds.width,
-      gridBounds.height,
-      gridBounds.width,
-      gridBounds.height,
-      dataType.code,
-      sourceArray,
-      1 to bands.size toArray,
-      0,
-      0,
-      0
-    )
-
-    var index = 0
-
-    cfor(0)(_ < sourceArray.size, _ + pixelCount) { offset =>
-      val bandArray: Array[Int] = Array.ofDim[Int](pixelCount)
-
-      System.arraycopy(sourceArray, offset, bandArray, 0, bandArray.size)
-      bands(index) = bandArray
-
-      index += 1
-    }
-
-    def updateTile: IntArrayTile => IntArrayTile =
-      noDataValue match {
-        case Some(nd) =>
-          (tile: IntArrayTile) =>
-            cfor(0)(_ < tile.cols, _ + 1) { col =>
-              cfor(0)(_ < tile.rows, _ + 1) { row =>
-                if (tile.getDouble(col, row) == nd) { tile.set(col, row, NODATA) }
-              }
-            }
-
-            tile
-        case None => (tile: IntArrayTile) => tile
+        bandsDataBuffer(i) = ByteBuffer.wrap(dataBuffer,0, dataBuffer.length)
       }
 
-    val tiles: Array[IntArrayTile] =
-      bands.map { band => updateTile(IntArrayTile(band, gridBounds.width, gridBounds.height)) }
+      if (bufferType == gdalconstConstants.GDT_Int16 || bufferType == gdalconstConstants.GDT_UInt16) {
+        val shorts = new Array[Array[Short]](bandCount)
+        cfor(0)(_ < bandCount, _ + 1) { i =>
+          shorts(i) = new Array[Short](pixelCount)
+          bandsDataBuffer(i).order(ByteOrder.nativeOrder)
+          bandsDataBuffer(i).asShortBuffer().get(shorts(i), 0, pixelCount)
+        }
 
-    MultibandTile(tiles)
-  }
-}
+        if (bufferType == gdalconstConstants.GDT_Int16) {
+          val ct = noDataValue match {
+            case Some(nd) => ShortUserDefinedNoDataCellType(nd.toShort)
+            case _ => ShortConstantNoDataCellType
+          }
+          MultibandTile(shorts.map(ShortArrayTile(_, gridBounds.width, gridBounds.height, ct)))
+        } else {
+          val ct = noDataValue match {
+            case Some(nd) => UShortUserDefinedNoDataCellType(nd.toShort)
+            case _ => UShortConstantNoDataCellType
+          }
+          MultibandTile(shorts.map(UShortArrayTile(_, gridBounds.width, gridBounds.height, ct)))
+        }
+      } else if (bufferType == gdalconstConstants.GDT_Int32 || bufferType == gdalconstConstants.GDT_UInt32) {
+        val ct = noDataValue match {
+          case Some(nd) => IntUserDefinedNoDataCellType(nd.toInt)
+          case _ => IntConstantNoDataCellType
+        }
 
-case class FloatGDALReader(dataset: Dataset, dataType: GDALDataType) extends GDALReader(dataset, dataType) {
-  def read(gridBounds: GridBounds): MultibandTile = {
-    val pixelCount: Int = gridBounds.width * gridBounds.height
+        val ints = new Array[Array[Int]](bandCount)
+        cfor(0)(_ < bandCount, _ + 1) { i =>
+          ints(i) = new Array[Int](pixelCount)
+          bandsDataBuffer(i).order(ByteOrder.nativeOrder)
+          bandsDataBuffer(i).asIntBuffer().get(ints(i), 0, pixelCount)
+        }
 
-    // This array will hold all of the data for the given region for each band
-    val sourceArray: Array[Float] = Array.ofDim[Float](pixelCount * bandCount)
+        MultibandTile(ints.map(IntArrayTile(_, gridBounds.width, gridBounds.height, ct)))
+      } else if (bufferType == gdalconstConstants.GDT_Float32) {
+        val ct = noDataValue match {
+          case Some(nd) => FloatUserDefinedNoDataCellType(nd.toFloat)
+          case _ => FloatConstantNoDataCellType
+        }
 
-    val bands: Array[Array[Float]] = Array.ofDim[Array[Float]](bandCount)
+        val floats = new Array[Array[Float]](bandCount)
+        cfor(0)(_ < bandCount, _ + 1) { i =>
+          floats(i) = new Array[Float](pixelCount)
+          bandsDataBuffer(i).order(ByteOrder.nativeOrder)
+          bandsDataBuffer(i).asFloatBuffer().get(floats(i), 0, pixelCount)
+        }
 
-    dataset.ReadRaster(
-      gridBounds.colMin,
-      gridBounds.rowMin,
-      gridBounds.width,
-      gridBounds.height,
-      gridBounds.width,
-      gridBounds.height,
-      dataType.code,
-      sourceArray,
-      1 to bands.size toArray,
-      0,
-      0,
-      0
-    )
+        MultibandTile(floats.map(FloatArrayTile(_, gridBounds.width, gridBounds.height, ct)))
+      } else if (bufferType == gdalconstConstants.GDT_Float64) {
+        val ct = noDataValue match {
+          case Some(nd) => DoubleUserDefinedNoDataCellType(nd)
+          case _ => DoubleConstantNoDataCellType
+        }
 
-    var index = 0
+        val doubles = new Array[Array[Double]](bandCount)
+        cfor(0)(_ < bandCount, _ + 1) { i =>
+          doubles(i) = new Array[Double](pixelCount)
+          bandsDataBuffer(i).order(ByteOrder.nativeOrder)
+          bandsDataBuffer(i).asDoubleBuffer().get(doubles(i), 0, pixelCount)
+        }
 
-    cfor(0)(_ < sourceArray.size, _ + pixelCount) { offset =>
-      val bandArray: Array[Float] = Array.ofDim[Float](pixelCount)
-
-      System.arraycopy(sourceArray, offset, bandArray, 0, bandArray.size)
-      bands(index) = bandArray
-
-      index += 1
+        MultibandTile(doubles.map(DoubleArrayTile(_, gridBounds.width, gridBounds.height, ct)))
+      } else
+        throw new Exception(s"The specified data type is actually unsupported: $bufferType")
     }
-
-    def updateTile: FloatArrayTile => FloatArrayTile =
-      noDataValue match {
-        case Some(nd) =>
-          (tile: FloatArrayTile) =>
-            cfor(0)(_ < tile.cols, _ + 1) { col =>
-              cfor(0)(_ < tile.rows, _ + 1) { row =>
-                if (tile.getDouble(col, row) == nd) { tile.set(col, row, NODATA) }
-              }
-            }
-
-            tile
-        case None => (tile: FloatArrayTile) => tile
-      }
-
-    val tiles: Array[FloatArrayTile] =
-      bands.map { band => updateTile(FloatArrayTile(band, gridBounds.width, gridBounds.height)) }
-
-    MultibandTile(tiles)
-  }
-}
-
-case class DoubleGDALReader(dataset: Dataset, dataType: GDALDataType) extends GDALReader(dataset, dataType) {
-  def read(gridBounds: GridBounds): MultibandTile = {
-    val pixelCount: Int = gridBounds.width * gridBounds.height
-
-    // This array will hold all of the data for the given region for each band
-    val sourceArray: Array[Double] = Array.ofDim[Double](pixelCount * bandCount)
-
-    val bands: Array[Array[Double]] = Array.ofDim[Array[Double]](bandCount)
-
-    dataset.ReadRaster(
-      gridBounds.colMin,
-      gridBounds.rowMin,
-      gridBounds.width,
-      gridBounds.height,
-      gridBounds.width,
-      gridBounds.height,
-      dataType.code,
-      sourceArray,
-      1 to bands.size toArray,
-      0,
-      0,
-      0
-    )
-
-    var index = 0
-
-    cfor(0)(_ < sourceArray.size, _ + pixelCount) { offset =>
-      val bandArray: Array[Double] = Array.ofDim[Double](pixelCount)
-
-      System.arraycopy(sourceArray, offset, bandArray, 0, bandArray.size)
-      bands(index) = bandArray
-
-      index += 1
-    }
-
-    def updateTile: DoubleArrayTile => DoubleArrayTile =
-      noDataValue match {
-        case Some(nd) =>
-          (tile: DoubleArrayTile) =>
-            cfor(0)(_ < tile.cols, _ + 1) { col =>
-              cfor(0)(_ < tile.rows, _ + 1) { row =>
-                if (tile.getDouble(col, row) == nd) { tile.set(col, row, NODATA) }
-              }
-            }
-
-            tile
-        case None => (tile: DoubleArrayTile) => tile
-      }
-
-    val tiles: Array[DoubleArrayTile] =
-      bands.map { band => updateTile(DoubleArrayTile(band, gridBounds.width, gridBounds.height)) }
-
-    MultibandTile(tiles)
   }
 }
