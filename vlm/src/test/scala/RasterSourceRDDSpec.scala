@@ -26,7 +26,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
   val layout = scheme.levelForZoom(13).layout
 
   describe("reading in GeoTiffs as RDDs using GeoTiffRasterSource") {
-    val uri = "file:///tmp/aspect-tiled.tif"
+    val uri = s"file://${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
     val rasterSource = new GeoTiffRasterSource(uri)
 
     it("should have the right number of tiles") {
@@ -92,7 +92,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
   }
 
   describe("reading in GeoTiffs as RDDs using GDALRasterSource") {
-    val uri = "/tmp/aspect-tiled.tif"
+    val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
     val rasterSource = GDALRasterSource(uri)
 
     it("should have the right number of tiles") {
