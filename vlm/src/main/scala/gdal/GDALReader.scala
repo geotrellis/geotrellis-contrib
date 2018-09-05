@@ -20,6 +20,10 @@ case class GDALReader(dataset: Dataset) {
     arr.headOption.map(_.doubleValue)
   }
 
+  /**
+    * TODO: benchmark this function, probably in case of reading all bands
+    * we can optimize it by reading all the bytes as a single buffer into memory
+    */
   def read(gridBounds: GridBounds, bands: Seq[Int] = 0 until bandCount): MultibandTile = {
     // NOTE: Bands are not 0-base indexed, so we must add 1// NOTE: Bands are not 0-base indexed, so we must add 1
     val baseBand = dataset.GetRasterBand(1)
@@ -38,7 +42,7 @@ case class GDALReader(dataset: Dataset) {
     val typeSizeInBytes = gdal.GetDataTypeSize(bufferType) / 8
     val bufferSize = bandCount * pixelCount * typeSizeInBytes
 
-    /** TODO: thing about how to handle UByte case **/
+    /** TODO: think about how to handle UByte case **/
     if (bufferType == gdalconstConstants.GDT_Byte) {
       // in the byte case we can strictly use
       val bandsDataArray = Array.ofDim[Array[Byte]](bandCount)
