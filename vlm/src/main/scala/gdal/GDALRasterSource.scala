@@ -48,12 +48,10 @@ case class GDALRasterSource(uri: String) extends RasterSource {
     }.getOrElse(CRS.fromEpsgCode(4326))
   }
 
-  private lazy val datatype: GDALDataType = {
-    val band = dataset.GetRasterBand(1)
-    band.getDataType()
-  }
+  private lazy val datatype: GDALDataType =
+    dataset.GetRasterBand(1).getDataType()
 
-  private lazy val reader: GDALReader = GDALReader(dataset, datatype)
+  private lazy val reader: GDALReader = GDALReader(dataset)
 
   lazy val cellType: CellType = GDAL.deriveGTCellType(datatype)
 
