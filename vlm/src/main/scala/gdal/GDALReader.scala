@@ -17,7 +17,10 @@ case class GDALReader(dataset: Dataset) {
     val arr = Array.ofDim[java.lang.Double](1)
     dataset.GetRasterBand(1).GetNoDataValue(arr)
 
-    arr.headOption.map(_.doubleValue)
+    arr.head match {
+      case null => None
+      case value => Some(value.doubleValue)
+    }
   }
 
   /**

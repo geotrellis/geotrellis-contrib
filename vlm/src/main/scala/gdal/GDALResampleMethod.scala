@@ -23,9 +23,9 @@ object GDALResampleMethod {
   implicit def GDALResampleMethodToInt(method: GDALResampleMethod): Int =
     method.code
 
-  implicit def GTResampleMethodToGDALResampleMethod(method: ResampleMethod): GDALResampleMethod =
+  def deriveGDALResampleMethod(method: ResampleMethod): GDALResampleMethod =
     method match {
-      case NearestNeighbor => NearestNeighbor
+      case NearestNeighbor => GDALNearestNeighbor
       case Bilinear => GDALBilinear
       case CubicConvolution => GDALCubic
       case CubicSpline => GDALCubicSpline

@@ -41,7 +41,6 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
   val scheme = ZoomedLayoutScheme(targetCRS)
   val layout = scheme.levelForZoom(13).layout
 
-  /*
   describe("reading in GeoTiffs as RDDs using GeoTiffRasterSource") {
     val uri = s"file://${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
     val rasterSource = new GeoTiffRasterSource(uri)
@@ -72,6 +71,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
       values.map { value => (value.cols, value.rows) should be ((256, 256)) }
     }
 
+    /*
     it("should be the same as a tiled HadoopGeoTiffRDD") {
       val floatingLayout = FloatingLayoutScheme(256)
 
@@ -106,15 +106,14 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
         }
       }
     }
+    */
   }
-  */
 
   describe("reading in GeoTiffs as RDDs using GDALRasterSource") {
     val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
     val rasterSource = GDALRasterSource(uri)
 
     it("should have the right number of tiles") {
-      //val warpRasterSource = WarpGDALRasterSource(uri, targetCRS, rasterSource.crs, rasterSource.extent, GDALNearestNeighbor)
       val warpRasterSource = WarpGDALRasterSource(uri, targetCRS, GDALNearestNeighbor)
       val rdd = RasterSourceRDD(warpRasterSource, layout)
 
@@ -123,17 +122,17 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
           .mapTransform
           .keysForGeometry(warpRasterSource.extent.toPolygon)
           .toSeq
-          .sortBy { key => (key.col, key.row) }
+          .sortBy { key => (key.col, key.row) }.toSet
 
-      val actualKeys = rdd.keys.collect().sortBy { key => (key.col, key.row) }
+      val actualKeys = rdd.keys.collect().sortBy { key => (key.col, key.row) }.toSet
 
-      for ((actual, expected) <- actualKeys.zip(expectedKeys)) {
-        actual should be (expected)
-      }
+      println(s"This is the expectedKeys size: ${expectedKeys.size}")
+      println(s"This is the actualKeys size: ${actualKeys.size}")
+
+      expectedKeys should be (actualKeys)
     }
 
     it("should read in the tiles as squares") {
-      //val reprojectedRasterSource = WarpGDALRasterSource(uri, targetCRS, rasterSource.crs, rasterSource.extent, GDALNearestNeighbor)
       val reprojectedRasterSource = WarpGDALRasterSource(uri, targetCRS, GDALNearestNeighbor)
       val rdd = RasterSourceRDD(reprojectedRasterSource, layout)
 
@@ -143,7 +142,6 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
     }
   }
 
-  /*
   describe("Match reprojection from HadoopGeoTiffRDD") {
     val floatingLayout = FloatingLayoutScheme(256)
     val geoTiffRDD = HadoopGeoTiffRDD.spatialMultiband(uri)
@@ -173,25 +171,53 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
       }
     }
 
-    it("should reproduce tileToLayout") {
-      // This should be the same as result of .tileToLayout(md.layout)
-      val rasterSourceRDD: MultibandTileLayerRDD[SpatialKey] =
-        RasterSourceRDD(rasterSource, md.layout)
+    describe("GeoTiffRasterSource") {
+      val rasterSource = new GeoTiffRasterSource(uri)
 
-      // Complete the reprojection
-      val reprojectedSource =
-        rasterSourceRDD.reproject(targetCRS, layout)._2
+      it("should reproduce tileToLayout") {
+        // This should be the same as result of .tileToLayout(md.layout)
+        val rasterSourceRDD: MultibandTileLayerRDD[SpatialKey] =
+          RasterSourceRDD(rasterSource, md.layout)
 
-      assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSource)
+        // Complete the reprojection
+        val reprojectedSource =
+          rasterSourceRDD.reproject(targetCRS, layout)._2
+
+        assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSource)
+      }
+
+      it("should reproduce tileToLayout followed by reproject") {
+        // This should be the same as .tileToLayout(md.layout).reproject(crs, layout)
+        val reprojectedSourceRDD: MultibandTileLayerRDD[SpatialKey] =
+          RasterSourceRDD(rasterSource.withCRS(targetCRS), layout)
+
+        assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSourceRDD)
+      }
     }
 
-    it("should reproduce tileToLayout followed by reproject") {
-      // This should be the same as .tileToLayout(md.layout).reproject(crs, layout)
-      val reprojectedSourceRDD: MultibandTileLayerRDD[SpatialKey] =
-        RasterSourceRDD(rasterSource.withCRS(targetCRS), layout)
+    describe("GDALRasterSource") {
+      val gdalURI = "/tmp/aspect-tiled.tif"
+      val rasterSource = GDALRasterSource(gdalURI)
 
-      assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSourceRDD)
+      it("should reproduce tileToLayout") {
+        // This should be the same as result of .tileToLayout(md.layout)
+        val rasterSourceRDD: MultibandTileLayerRDD[SpatialKey] =
+          RasterSourceRDD(rasterSource, md.layout)
+
+        // Complete the reprojection
+        val reprojectedSource =
+          rasterSourceRDD.reproject(targetCRS, layout)._2
+
+        assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSource)
+      }
+
+      it("should reproduce tileToLayout followed by reproject") {
+        // This should be the same as .tileToLayout(md.layout).reproject(crs, layout)
+        val reprojectedSourceRDD: MultibandTileLayerRDD[SpatialKey] =
+          RasterSourceRDD(rasterSource.withCRS(targetCRS), layout)
+
+        assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSourceRDD)
+      }
     }
   }
-  */
 }

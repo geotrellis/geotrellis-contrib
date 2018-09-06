@@ -62,58 +62,36 @@ case class WarpGDALRasterSource(
     band.getDataType()
   }
 
-  private lazy val reader: GDALReader = GDALReader(vrt, datatype)
+  private lazy val reader: GDALReader = GDALReader(vrt)
 
   lazy val cellType: CellType = GDAL.deriveGTCellType(datatype)
 
   def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
     val bounds: Map[GridBounds, RasterExtent] =
       windows.flatMap { case targetRasterExtent =>
-        val existingRegion = rasterExtent.gridBoundsFor(targetRasterExtent.extent, clamp = true)
-        //(existingRegion, targetRasterExtent)
+        val gridBounds = rasterExtent.gridBoundsFor(targetRasterExtent.extent, clamp = true)
 
-        if (existingRegion.width > targetRasterExtent.cols || existingRegion.height > targetRasterExtent.rows)
-          existingRegion.split(targetRasterExtent.cols, targetRasterExtent.rows).map { gb =>
-            (gb, targetRasterExtent)
-          }
-        else
-          Seq((existingRegion, targetRasterExtent))
-
-        /*
-        existingRegion.intersection(targetRasterExtent.gridBounds) match {
-          case Some(intersection) =>
-            //Some((existingRegion, targetRasterExtent))
-            Some((intersection, targetRasterExtent))
-          case None => None
+        gridBounds.split(targetRasterExtent.cols, targetRasterExtent.rows).map { gb =>
+          (gb, targetRasterExtent)
         }
-        */
       }.toMap
 
     bounds.map { case (gb, re) =>
       val initialTile = reader.read(gb)
 
-      val (gridBounds, tile) =
+      val tile =
         if (initialTile.cols != re.cols || initialTile.rows != re.rows) {
-          println(s"initialTile: cols = ${initialTile.cols} rows = ${initialTile.rows}")
-          println(s"rasterExtent: cols = ${re.cols} rows = ${re.rows}\n")
-
-          val targetBounds = rasterExtent.gridBoundsFor(re.extent, clamp = false)
-
           val updatedTiles = initialTile.bands.map { band =>
             val protoTile = band.prototype(re.cols, re.rows)
-            println(s"colMin: ${gb.colMin}, rowMin: ${gb.rowMin}")
-            println(s"256 - colMin: ${256 - gb.colMin}, 256 - rowMin: ${256 - gb.rowMin}\n")
 
-            //protoTile.update(re.cols - gb.colMin, re.rows - gb.rowMin, band)
             protoTile.update(re.cols - gb.width, re.rows - gb.height, band)
             protoTile
           }
 
-          (targetBounds, MultibandTile(updatedTiles))
+          MultibandTile(updatedTiles)
         } else
-          (gb, initialTile)
+          initialTile
 
-        //Raster(tile, rasterExtent.extentFor(gridBounds))
         Raster(tile, re.extent)
     }.toIterator
   }
@@ -122,5 +100,5 @@ case class WarpGDALRasterSource(
     targetCRS: CRS,
     resampleMethod: ResampleMethod = NearestNeighbor
   ): WarpGDALRasterSource =
-    WarpGDALRasterSource(uri, targetCRS, resampleMethod)
+    WarpGDALRasterSource(uri, targetCRS, GDALResampleMethod.deriveGDALResampleMethod(resampleMethod))
 }

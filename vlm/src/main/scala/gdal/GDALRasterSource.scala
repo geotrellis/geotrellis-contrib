@@ -85,10 +85,6 @@ case class GDALRasterSource(uri: String) extends RasterSource {
     }.toIterator
   }
 
-  def withCRS(targetCRS: CRS, resampleMethod: ResampleMethod = NearestNeighbor): WarpGDALRasterSource = {
-    println("About to delete the original dataset")
-    dataset.delete()
-    println("Just deleted the original dataset")
-    WarpGDALRasterSource(uri, targetCRS, resampleMethod)
-  }
+  def withCRS(targetCRS: CRS, resampleMethod: ResampleMethod = NearestNeighbor): WarpGDALRasterSource =
+    WarpGDALRasterSource(uri, targetCRS, GDALResampleMethod.deriveGDALResampleMethod(resampleMethod))
 }
