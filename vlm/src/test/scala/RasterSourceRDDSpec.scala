@@ -25,6 +25,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
   val scheme = ZoomedLayoutScheme(targetCRS)
   val layout = scheme.levelForZoom(13).layout
 
+  /*
   describe("reading in GeoTiffs as RDDs using GeoTiffRasterSource") {
     val uri = s"file://${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
     val rasterSource = new GeoTiffRasterSource(uri)
@@ -90,12 +91,14 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
       }
     }
   }
+  */
 
   describe("reading in GeoTiffs as RDDs using GDALRasterSource") {
     val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
     val rasterSource = GDALRasterSource(uri)
 
     it("should have the right number of tiles") {
+      //val warpRasterSource = WarpGDALRasterSource(uri, targetCRS, rasterSource.crs, rasterSource.extent, GDALNearestNeighbor)
       val warpRasterSource = WarpGDALRasterSource(uri, targetCRS, GDALNearestNeighbor)
       val rdd = RasterSourceRDD(warpRasterSource, layout)
 
@@ -113,16 +116,15 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
       }
     }
 
-    /*
     it("should read in the tiles as squares") {
-      val reprojectedRasterSource = rasterSource.withCRS(targetCRS)
+      //val reprojectedRasterSource = WarpGDALRasterSource(uri, targetCRS, rasterSource.crs, rasterSource.extent, GDALNearestNeighbor)
+      val reprojectedRasterSource = WarpGDALRasterSource(uri, targetCRS, GDALNearestNeighbor)
       val rdd = RasterSourceRDD(reprojectedRasterSource, layout)
 
       val values = rdd.values.collect()
 
       values.map { value => (value.cols, value.rows) should be ((256, 256)) }
     }
-    */
   }
 
   /*

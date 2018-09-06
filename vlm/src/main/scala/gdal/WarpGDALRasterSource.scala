@@ -68,10 +68,25 @@ case class WarpGDALRasterSource(
 
   def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
     val bounds: Map[GridBounds, RasterExtent] =
-      windows.map { case targetRasterExtent =>
+      windows.flatMap { case targetRasterExtent =>
         val existingRegion = rasterExtent.gridBoundsFor(targetRasterExtent.extent, clamp = true)
+        //(existingRegion, targetRasterExtent)
 
-        (existingRegion, targetRasterExtent)
+        if (existingRegion.width > targetRasterExtent.cols || existingRegion.height > targetRasterExtent.rows)
+          existingRegion.split(targetRasterExtent.cols, targetRasterExtent.rows).map { gb =>
+            (gb, targetRasterExtent)
+          }
+        else
+          Seq((existingRegion, targetRasterExtent))
+
+        /*
+        existingRegion.intersection(targetRasterExtent.gridBounds) match {
+          case Some(intersection) =>
+            //Some((existingRegion, targetRasterExtent))
+            Some((intersection, targetRasterExtent))
+          case None => None
+        }
+        */
       }.toMap
 
     bounds.map { case (gb, re) =>
@@ -86,8 +101,11 @@ case class WarpGDALRasterSource(
 
           val updatedTiles = initialTile.bands.map { band =>
             val protoTile = band.prototype(re.cols, re.rows)
+            println(s"colMin: ${gb.colMin}, rowMin: ${gb.rowMin}")
+            println(s"256 - colMin: ${256 - gb.colMin}, 256 - rowMin: ${256 - gb.rowMin}\n")
 
-            protoTile.update(targetBounds.colMin - gb.colMin, targetBounds.rowMin - gb.rowMin, band)
+            //protoTile.update(re.cols - gb.colMin, re.rows - gb.rowMin, band)
+            protoTile.update(re.cols - gb.width, re.rows - gb.height, band)
             protoTile
           }
 
@@ -95,7 +113,8 @@ case class WarpGDALRasterSource(
         } else
           (gb, initialTile)
 
-        Raster(tile, rasterExtent.extentFor(gridBounds))
+        //Raster(tile, rasterExtent.extentFor(gridBounds))
+        Raster(tile, re.extent)
     }.toIterator
   }
 
