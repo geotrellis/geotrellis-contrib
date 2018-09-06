@@ -27,11 +27,18 @@ case class WarpGDALRasterSource(
   }
 
   @transient private lazy val vrt: Dataset = {
-    val dataset: Dataset = GDAL.open(uri)
+    val baseDataset: Dataset = GDAL.open(uri)
 
-    val ds = gdal.AutoCreateWarpedVRT(dataset, null, spatialReference.ExportToWkt(), resampleMethod, errorThreshold)
-    dataset.delete()
-    ds
+    val dataset =
+      gdal.AutoCreateWarpedVRT(
+        baseDataset,
+        null,
+        spatialReference.ExportToWkt(),
+        GDAL.deriveGDALResampleMethod(resampleMethod),
+        errorThreshold
+      )
+    baseDataset.delete()
+    dataset
   }
 
   private lazy val colsLong: Long = vrt.getRasterXSize
@@ -62,18 +69,37 @@ case class WarpGDALRasterSource(
     band.getDataType()
   }
 
-  private lazy val reader: GDALReader = GDALReader(vrt)
+  private lazy val reader: GDALReader = GDALReader(vrt, datatype)
 
   lazy val cellType: CellType = GDAL.deriveGTCellType(datatype)
 
   def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
     val bounds: Map[GridBounds, RasterExtent] =
-      windows.flatMap { case targetRasterExtent =>
-        val gridBounds = rasterExtent.gridBoundsFor(targetRasterExtent.extent, clamp = true)
+      windows.map { case targetRasterExtent =>
+        val affine =
+          Array[Double](
+            targetRasterExtent.extent.xmin,
+            targetRasterExtent.cellwidth,
+            0,
+            targetRasterExtent.extent.ymax,
+            0,
+            -targetRasterExtent.cellheight
+          )
 
-        gridBounds.split(targetRasterExtent.cols, targetRasterExtent.rows).map { gb =>
-          (gb, targetRasterExtent)
-        }
+        val (colMax, rowMin) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
+
+        gdal.ApplyGeoTransform(
+          affine,
+          targetRasterExtent.gridBounds.colMax,
+          targetRasterExtent.gridBounds.rowMin,
+          colMax,
+          rowMin
+        )
+
+        val extent = Extent(affine(0), rowMin.head, colMax.head, affine(3))
+        val gridBounds = rasterExtent.gridBoundsFor(extent)
+
+        (gridBounds, targetRasterExtent)
       }.toMap
 
     bounds.map { case (gb, re) =>
