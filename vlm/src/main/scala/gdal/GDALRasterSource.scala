@@ -86,5 +86,5 @@ case class GDALRasterSource(uri: String) extends RasterSource {
   }
 
   def withCRS(targetCRS: CRS, resampleMethod: ResampleMethod = NearestNeighbor): WarpGDALRasterSource =
-    WarpGDALRasterSource(uri, targetCRS, GDALResampleMethod.deriveGDALResampleMethod(resampleMethod))
+    WarpGDALRasterSource(uri, targetCRS, resampleMethod)
 }
