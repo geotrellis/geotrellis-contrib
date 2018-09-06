@@ -17,7 +17,7 @@ import org.gdal.osr.SpatialReference
 case class WarpGDALRasterSource(
   uri: String,
   crs: CRS,
-  resampleMethod: GDALResampleMethod = GDALNearestNeighbor,
+  resampleMethod: ResampleMethod = NearestNeighbor,
   errorThreshold: Double = 0.125
 ) extends RasterSource {
   private lazy val spatialReference: SpatialReference = {
@@ -100,5 +100,5 @@ case class WarpGDALRasterSource(
     targetCRS: CRS,
     resampleMethod: ResampleMethod = NearestNeighbor
   ): WarpGDALRasterSource =
-    WarpGDALRasterSource(uri, targetCRS, GDALResampleMethod.deriveGDALResampleMethod(resampleMethod))
+    WarpGDALRasterSource(uri, targetCRS, resampleMethod)
 }
