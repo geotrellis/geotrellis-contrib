@@ -1,6 +1,8 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.raster._
+import geotrellis.raster.resample._
+
 import org.gdal.gdal.gdal
 import org.gdal.gdal.Dataset
 import org.gdal.gdalconst.gdalconstConstants
@@ -32,6 +34,18 @@ object GDAL {
       case FloatConstantNoDataCellType64 => DoubleConstantNoDataCellType
       case (TypeCInt16 | TypeCInt32 | TypeCFloat32 | TypeCFloat64) =>
         throw new Exception("Complex datatypes are not supported")
+    }
+
+  def deriveGDALResampleMethod(method: ResampleMethod): Int =
+    method match {
+      case NearestNeighbor => gdalconstConstants.GRA_NearestNeighbour
+      case Bilinear => gdalconstConstants.GRA_Bilinear
+      case CubicConvolution => gdalconstConstants.GRA_Cubic
+      case CubicSpline => gdalconstConstants.GRA_CubicSpline
+      case Lanczos => gdalconstConstants.GRA_Lanczos
+      case Average => gdalconstConstants.GRA_Average
+      case Mode => gdalconstConstants.GRA_Mode
+      case _ => throw new Exception(s"Could not find equivalent GDALResampleMethod for: $method")
     }
 
   def open(path: String): Dataset = {
