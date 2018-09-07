@@ -69,7 +69,7 @@ case class WarpGDALRasterSource(
     band.getDataType()
   }
 
-  private lazy val reader: GDALReader = GDALReader(vrt, datatype)
+  private lazy val reader: GDALReader = GDALReader(vrt)
 
   lazy val cellType: CellType = GDAL.deriveGTCellType(datatype)
 
