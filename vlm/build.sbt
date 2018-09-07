@@ -15,9 +15,11 @@ libraryDependencies ++= Seq(
   catsEffect,
   fs2Core,
   fs2Io,
-  scalatest % Test
+  scalatest % Test,
+  gdal
 )
 
 Test / fork := true
+fork in run := true
 
-javaOptions ++= Seq("-Xms1024m", "-Xmx6144m")
+javaOptions ++= Seq("-Xms1024m", "-Xmx6144m", "-Djava.library.path=/usr/local/lib")

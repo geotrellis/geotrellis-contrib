@@ -71,4 +71,6 @@ object Dependencies {
   val circeGeneric        = "io.circe"                   %% "circe-generic"            % Version.circe
   val circeGenericExtras  = "io.circe"                   %% "circe-generic-extras"     % Version.circe
   val circeParser         = "io.circe"                   %% "circe-parser"             % Version.circe
+
+  val gdal                = "org.gdal"                    % "gdal"                     % Version.gdal
 }
