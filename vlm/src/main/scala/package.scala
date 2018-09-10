@@ -21,7 +21,7 @@ import java.net.URI
 
 import geotrellis.util.{FileRangeReader, RangeReader, StreamingByteReader}
 
-package object vlm extends Implicits {
+package object vlm {
   private[vlm] def getByteReader(uri: String): StreamingByteReader = {
     val javaURI = new URI(uri)
     val rr =  javaURI.getScheme match {
