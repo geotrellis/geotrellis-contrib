@@ -28,16 +28,31 @@ case class WarpGDALRasterSource(
 
   @transient private lazy val vrt: Dataset = {
     val baseDataset: Dataset = GDAL.open(uri)
+    val driver = baseDataset.GetDriver()
 
-    val dataset =
-      gdal.AutoCreateWarpedVRT(
-        baseDataset,
-        null,
-        spatialReference.ExportToWkt(),
-        GDAL.deriveGDALResampleMethod(resampleMethod),
-        errorThreshold
+    // In order to pass in the command line arguments for Warp in Java,
+    // each parameter name and value need to passed as individual strings
+    // that follow one another
+    val parameters: java.util.Vector[_] =
+      new java.util.Vector(
+        java.util.Arrays.asList(
+          "-s_srs",
+          s"${baseDataset.GetProjection}",
+          "-t_srs",
+          s"${crs.toProj4String}",
+          "-r",
+          s"${GDAL.deriveResampleMethodString(resampleMethod)}",
+          "-et",
+          s"$errorThreshold"
+        )
       )
-    baseDataset.delete()
+
+    val options = new WarpOptions(parameters)
+
+    val dataset = driver.CreateCopy("reprojected", baseDataset)
+
+    gdal.Warp(dataset, Array(baseDataset), options)
+
     dataset
   }
 
@@ -76,41 +91,62 @@ case class WarpGDALRasterSource(
   def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
     val bounds: Map[GridBounds, RasterExtent] =
       windows.map { case targetRasterExtent =>
-        val affine =
+        val affine: Array[Double] =
           Array[Double](
             targetRasterExtent.extent.xmin,
-            targetRasterExtent.cellwidth,
-            0,
+            rasterExtent.cellwidth,
+            geoTransform(2),
             targetRasterExtent.extent.ymax,
-            0,
-            -targetRasterExtent.cellheight
+            geoTransform(4),
+            -rasterExtent.cellheight
           )
 
-        val (colMax, rowMin) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
+        // Need to create 4 seperate arrays to hold each of the the points
+        val (colMin, rowMin) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
+        val (colMax, rowMax) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
 
+        // rowMin and rowMax are switched, so the GeoTransformed
+        // rowMin of the targetRasterExtent becomes the rowMax of the
+        // computed Extent and vice-versa
         gdal.ApplyGeoTransform(
           affine,
           targetRasterExtent.gridBounds.colMax,
           targetRasterExtent.gridBounds.rowMin,
           colMax,
+          rowMax
+        )
+
+        gdal.ApplyGeoTransform(
+          affine,
+          targetRasterExtent.gridBounds.colMin,
+          targetRasterExtent.gridBounds.rowMax,
+          colMin,
           rowMin
         )
 
-        val extent = Extent(affine(0), rowMin.head, colMax.head, affine(3))
-        val gridBounds = rasterExtent.gridBoundsFor(extent)
+        val ex = Extent(colMin.head, rowMin.head, colMax.head, rowMax.head)
+        val targetGridBounds = rasterExtent.gridBoundsFor(ex)
 
-        (gridBounds, targetRasterExtent)
+        (targetGridBounds, targetRasterExtent)
       }.toMap
 
-    bounds.map { case (gb, re) =>
-      val initialTile = reader.read(gb)
+    bounds.map { case (targetBounds, re) =>
+      val initialTile = reader.read(targetBounds)
 
       val tile =
         if (initialTile.cols != re.cols || initialTile.rows != re.rows) {
           val updatedTiles = initialTile.bands.map { band =>
             val protoTile = band.prototype(re.cols, re.rows)
 
-            protoTile.update(re.cols - gb.width, re.rows - gb.height, band)
+            val colOffset = re.cols - targetBounds.width
+            val rowOffset = re.rows - targetBounds.height
+            //println(s"\nCols of the initialTile: ${initialTile.cols}")
+            //println(s"Rows of the initialTile: ${initialTile.rows}")
+
+            //println(s"\nThis is the col offset: ${colOffset}")
+            //println(s"This is the row offset: ${rowOffset}\n")
+
+            protoTile.update(colOffset, rowOffset, band)
             protoTile
           }
 

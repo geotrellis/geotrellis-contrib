@@ -48,6 +48,21 @@ object GDAL {
       case _ => throw new Exception(s"Could not find equivalent GDALResampleMethod for: $method")
     }
 
+  def deriveResampleMethodString(method: ResampleMethod): String =
+    method match {
+      case NearestNeighbor => "near"
+      case Bilinear => "bilinear"
+      case CubicConvolution => "cubic"
+      case CubicSpline => "cubicspline"
+      case Lanczos => "lanczos"
+      case Average => "average"
+      case Mode => "mode"
+      case Max => "max"
+      case Min => "min"
+      case Median => "med"
+      case _ => throw new Exception(s"Could not find equivalent GDALResampleMethod for: $method")
+    }
+
   def open(path: String): Dataset = {
     val ds = gdal.Open(path, gdalconstConstants.GA_ReadOnly)
     if(ds == null) {
