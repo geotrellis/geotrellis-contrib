@@ -28,7 +28,6 @@ case class WarpGDALRasterSource(
 
   @transient private lazy val vrt: Dataset = {
     val baseDataset: Dataset = GDAL.open(uri)
-    val driver = baseDataset.GetDriver()
 
     // In order to pass in the command line arguments for Warp in Java,
     // each parameter name and value need to passed as individual strings
@@ -49,9 +48,7 @@ case class WarpGDALRasterSource(
 
     val options = new WarpOptions(parameters)
 
-    val dataset = driver.CreateCopy("reprojected", baseDataset)
-
-    gdal.Warp(dataset, Array(baseDataset), options)
+    val dataset = gdal.Warp("/vsimem/reprojected", Array(baseDataset), options)
 
     dataset
   }
@@ -125,26 +122,31 @@ case class WarpGDALRasterSource(
         )
 
         val ex = Extent(colMin.head, rowMin.head, colMax.head, rowMax.head)
-        val targetGridBounds = rasterExtent.gridBoundsFor(ex)
 
-        (targetGridBounds, targetRasterExtent)
+        val targetBounds = rasterExtent.gridBoundsFor(ex)
+
+        (targetBounds, targetRasterExtent)
       }.toMap
 
     bounds.map { case (targetBounds, re) =>
       val initialTile = reader.read(targetBounds)
+      val targetRasterExtent = rasterExtent.rasterExtentFor(targetBounds)
 
       val tile =
         if (initialTile.cols != re.cols || initialTile.rows != re.rows) {
           val updatedTiles = initialTile.bands.map { band =>
             val protoTile = band.prototype(re.cols, re.rows)
 
+            println(s"\nThis is the gridBounds of the tile: $targetBounds")
+            println(s"This is the gridBounds of the cell: ${re.gridBounds}")
+
             val colOffset = re.cols - targetBounds.width
             val rowOffset = re.rows - targetBounds.height
-            //println(s"\nCols of the initialTile: ${initialTile.cols}")
-            //println(s"Rows of the initialTile: ${initialTile.rows}")
+            println(s"\nCols of the initialTile: ${initialTile.cols}")
+            println(s"Rows of the initialTile: ${initialTile.rows}")
 
-            //println(s"\nThis is the col offset: ${colOffset}")
-            //println(s"This is the row offset: ${rowOffset}\n")
+            println(s"This is the col offset: ${colOffset}")
+            println(s"This is the row offset: ${rowOffset}")
 
             protoTile.update(colOffset, rowOffset, band)
             protoTile
