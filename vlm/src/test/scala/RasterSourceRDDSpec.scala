@@ -119,15 +119,13 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
           mapTrans.keyToExtent(k).intersects(expectedExtent)
         }
 
-      //println(s"\nCount of expected: ${filteredExpected.count}")
-      //println(s"\nCount of actual  : ${filteredActual.count}\n")
-
       val joinedRDD = filteredExpected.leftOuterJoin(filteredActual)
 
       joinedRDD.collect().map { case (key, (expected, actualTile)) =>
         actualTile match {
           case Some(actual) =>
             println(s"\nThis is the key that is being compared: $key")
+
             assertEqual(expected, actual)
           case None => throw new Exception(s"$key does not exist in the rasterSourceRDD")
         }

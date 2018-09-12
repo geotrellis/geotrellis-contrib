@@ -34,21 +34,22 @@ case class WarpGDALRasterSource(
     // that follow one another
     val parameters: java.util.Vector[_] =
       new java.util.Vector(
-        java.util.Arrays.asList(
-          "-s_srs",
-          s"${baseDataset.GetProjection}",
-          "-t_srs",
-          s"${crs.toProj4String}",
-          "-r",
-          s"${GDAL.deriveResampleMethodString(resampleMethod)}",
-          "-et",
-          s"$errorThreshold"
-        )
+      java.util.Arrays.asList(
+        "-s_srs",
+        s"${baseDataset.GetProjection}",
+        "-t_srs",
+        s"${crs.toProj4String}",
+        "-r",
+        s"${GDAL.deriveResampleMethodString(resampleMethod)}",
+        "-et",
+        s"$errorThreshold"
       )
+    )
 
     val options = new WarpOptions(parameters)
-
     val dataset = gdal.Warp("/vsimem/reprojected", Array(baseDataset), options)
+
+    baseDataset.delete
 
     dataset
   }
@@ -85,80 +86,12 @@ case class WarpGDALRasterSource(
 
   lazy val cellType: CellType = GDAL.deriveGTCellType(datatype)
 
-  def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
-    val bounds: Map[GridBounds, RasterExtent] =
-      windows.map { case targetRasterExtent =>
-        val affine: Array[Double] =
-          Array[Double](
-            targetRasterExtent.extent.xmin,
-            rasterExtent.cellwidth,
-            geoTransform(2),
-            targetRasterExtent.extent.ymax,
-            geoTransform(4),
-            -rasterExtent.cellheight
-          )
+  def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] =
+    windows.map { case targetRasterExtent =>
+      val tile = reader.read(targetRasterExtent.gridBounds)
 
-        // Need to create 4 seperate arrays to hold each of the the points
-        val (colMin, rowMin) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
-        val (colMax, rowMax) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
-
-        // rowMin and rowMax are switched, so the GeoTransformed
-        // rowMin of the targetRasterExtent becomes the rowMax of the
-        // computed Extent and vice-versa
-        gdal.ApplyGeoTransform(
-          affine,
-          targetRasterExtent.gridBounds.colMax,
-          targetRasterExtent.gridBounds.rowMin,
-          colMax,
-          rowMax
-        )
-
-        gdal.ApplyGeoTransform(
-          affine,
-          targetRasterExtent.gridBounds.colMin,
-          targetRasterExtent.gridBounds.rowMax,
-          colMin,
-          rowMin
-        )
-
-        val ex = Extent(colMin.head, rowMin.head, colMax.head, rowMax.head)
-
-        val targetBounds = rasterExtent.gridBoundsFor(ex)
-
-        (targetBounds, targetRasterExtent)
-      }.toMap
-
-    bounds.map { case (targetBounds, re) =>
-      val initialTile = reader.read(targetBounds)
-      val targetRasterExtent = rasterExtent.rasterExtentFor(targetBounds)
-
-      val tile =
-        if (initialTile.cols != re.cols || initialTile.rows != re.rows) {
-          val updatedTiles = initialTile.bands.map { band =>
-            val protoTile = band.prototype(re.cols, re.rows)
-
-            println(s"\nThis is the gridBounds of the tile: $targetBounds")
-            println(s"This is the gridBounds of the cell: ${re.gridBounds}")
-
-            val colOffset = re.cols - targetBounds.width
-            val rowOffset = re.rows - targetBounds.height
-            println(s"\nCols of the initialTile: ${initialTile.cols}")
-            println(s"Rows of the initialTile: ${initialTile.rows}")
-
-            println(s"This is the col offset: ${colOffset}")
-            println(s"This is the row offset: ${rowOffset}")
-
-            protoTile.update(colOffset, rowOffset, band)
-            protoTile
-          }
-
-          MultibandTile(updatedTiles)
-        } else
-          initialTile
-
-        Raster(tile, re.extent)
+      Raster(tile, targetRasterExtent.extent)
     }.toIterator
-  }
 
   def withCRS(
     targetCRS: CRS,
