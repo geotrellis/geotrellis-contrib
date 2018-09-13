@@ -107,20 +107,7 @@ case class WarpGDALRasterSource(
   def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
     val baseDataset = GDAL.open(uri)
 
-    val cellwidths = windows.map { _.cellwidth }.toSet
-    val cellheights = windows.map { _.cellheight }.toSet
-
-    /*
-    println(s"\nThis is the size of the set of cellwidths: ${cellwidths.size}")
-    println(s"These are the contents of the set of cellwidths: ${cellwidths.toArray.mkString(" ")}")
-    println(s"This is the size of the set of cellheights: ${cellheights.size}")
-    println(s"These are the contents of the set of cellheights: ${cellheights.toArray.mkString(" ")}\n")
-    */
-
-    val combinedRasterExtents: RasterExtent =
-      windows
-        .map { _.withResolution(cellwidths.head, cellheights.head) }
-        .reduce { _ combine _ }
+    val combinedRasterExtents: RasterExtent = windows.reduce { _ combine _ }
 
     val targetExtent = combinedRasterExtents.extent
     val name = s"/vsimem/$uri/${targetExtent}"

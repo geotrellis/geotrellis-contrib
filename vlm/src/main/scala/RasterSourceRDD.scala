@@ -49,7 +49,15 @@ object RasterSourceRDD {
             case Some(intersection) =>
               val keys = mapTransform.keysForGeometry(intersection.toPolygon)
 
-              keys.map { key => RasterExtent(mapTransform(key), layout.tileCols, layout.tileRows) }
+              keys.map { key =>
+                RasterExtent(
+                  mapTransform(key),
+                  layout.cellwidth,
+                  layout.cellheight,
+                  layout.tileCols,
+                  layout.tileRows
+                )
+              }
             case None => Seq.empty[RasterExtent]
           }
 

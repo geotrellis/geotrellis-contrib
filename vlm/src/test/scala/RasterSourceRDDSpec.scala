@@ -28,7 +28,6 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
   val scheme = ZoomedLayoutScheme(targetCRS)
   val layout = scheme.levelForZoom(13).layout
 
-  /*
   describe("reading in GeoTiffs as RDDs using GeoTiffRasterSource") {
     val rasterSource = GeoTiffRasterSource(uri)
 
@@ -86,7 +85,6 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
       values.map { value => (value.cols, value.rows) should be ((256, 256)) }
     }
   }
-  */
 
   describe("Match reprojection from HadoopGeoTiffRDD") {
     val floatingLayout = FloatingLayoutScheme(256)
@@ -129,7 +127,6 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
       }
     }
 
-    /*
     describe("GeoTiffRasterSource") {
       val rasterSource = GeoTiffRasterSource(uri)
 
@@ -153,12 +150,10 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
        assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSourceRDD)
       }
     }
-    */
 
     describe("GDALRasterSource") {
       val rasterSource = GDALRasterSource(filePath)
 
-      /*
       it("should reproduce tileToLayout") {
         // This should be the same as result of .tileToLayout(md.layout)
         val rasterSourceRDD: MultibandTileLayerRDD[SpatialKey] =
@@ -170,7 +165,6 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
 
         assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSource)
       }
-      */
 
       it("should reproduce tileToLayout followed by reproject") {
         // This should be the same as .tileToLayout(md.layout).reproject(crs, layout)
