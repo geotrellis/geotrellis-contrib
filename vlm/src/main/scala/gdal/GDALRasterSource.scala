@@ -63,25 +63,25 @@ case class GDALRasterSource(uri: String) extends RasterSource {
         (existingRegion, targetRasterExtent)
       }.toMap
 
-   bounds.map { case (gb, re) =>
-     val initialTile = reader.read(gb)
+    bounds.map { case (gb, re) =>
+      val initialTile = reader.read(gb)
 
-     val (gridBounds, tile) =
-       if (initialTile.cols != re.cols || initialTile.rows != re.rows) {
-         val targetBounds = rasterExtent.gridBoundsFor(re.extent, clamp = false)
+      val (gridBounds, tile) =
+        if (initialTile.cols != re.cols || initialTile.rows != re.rows) {
+          val targetBounds = rasterExtent.gridBoundsFor(re.extent, clamp = false)
 
-         val updatedTiles = initialTile.bands.map { band =>
-           val protoTile = band.prototype(re.cols, re.rows)
+          val updatedTiles = initialTile.bands.map { band =>
+            val protoTile = band.prototype(re.cols, re.rows)
 
-           protoTile.update(targetBounds.colMin - gb.colMin, targetBounds.rowMin - gb.rowMin, band)
-           protoTile
-         }
+            protoTile.update(targetBounds.colMin - gb.colMin, targetBounds.rowMin - gb.rowMin, band)
+            protoTile
+          }
 
-         (targetBounds, MultibandTile(updatedTiles))
-       } else
-         (gb, initialTile)
+          (targetBounds, MultibandTile(updatedTiles))
+        } else
+          (gb, initialTile)
 
-     Raster(tile, rasterExtent.extentFor(gridBounds))
+      Raster(tile, rasterExtent.extentFor(gridBounds))
     }.toIterator
   }
 

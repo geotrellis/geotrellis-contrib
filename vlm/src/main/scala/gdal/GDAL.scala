@@ -12,7 +12,7 @@ import org.gdal.gdalconst.gdalconstConstants
 // https://github.com/geotrellis/geotrellis-gdal/blob/master/gdal/src/main/scala/geotrellis/gdal/Gdal.scala
 
 private[gdal] class GDALException(code: Int, msg: String)
-    extends RuntimeException(s"GDAL ERROR $code: $msg")
+  extends RuntimeException(s"GDAL ERROR $code: $msg")
 
 private[gdal] object GDALException {
   def lastError(): GDALException =
