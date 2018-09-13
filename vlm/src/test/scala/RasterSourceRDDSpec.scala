@@ -105,9 +105,9 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
     val expectedExtent = reprojectedExpectedRDD.metadata.extent
 
     def assertRDDLayersEqual(
-      expected: MultibandTileLayerRDD[SpatialKey],
-      actual: MultibandTileLayerRDD[SpatialKey]
-    ): Unit = {
+                              expected: MultibandTileLayerRDD[SpatialKey],
+                              actual: MultibandTileLayerRDD[SpatialKey]
+                            ): Unit = {
       val filteredExpected = expected.filter { case (k, _) =>
         mapTrans.keyToExtent(k).intersects(expectedExtent)
       }
@@ -147,7 +147,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
         val reprojectedSourceRDD: MultibandTileLayerRDD[SpatialKey] =
           RasterSourceRDD(rasterSource.withCRS(targetCRS), layout)
 
-       assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSourceRDD)
+        assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSourceRDD)
       }
     }
 
@@ -171,7 +171,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
         val reprojectedSourceRDD: MultibandTileLayerRDD[SpatialKey] =
           RasterSourceRDD(rasterSource.withCRS(targetCRS), layout)
 
-       assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSourceRDD)
+        assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSourceRDD)
       }
     }
   }
