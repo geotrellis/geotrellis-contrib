@@ -123,10 +123,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
 
       joinedRDD.collect().map { case (key, (expected, actualTile)) =>
         actualTile match {
-          case Some(actual) =>
-            println(s"\nThis is the key that is being compared: $key")
-
-            assertEqual(expected, actual)
+          case Some(actual) => assertEqual(expected, actual)
           case None => throw new Exception(s"$key does not exist in the rasterSourceRDD")
         }
       }

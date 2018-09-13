@@ -12,8 +12,8 @@ import org.scalatest._
 import java.io.File
 
 
-class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
-  describe("Reprojecting a RasterSource") {
+class GeoTiffWarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
+  describe("Reprojecting a GeoTiffRasterSource") {
     val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
     val schemeURI = s"file://$uri"
 
