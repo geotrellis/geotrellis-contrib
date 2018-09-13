@@ -44,7 +44,7 @@ case class WarpGDALRasterSource(
           "-projwin_srs",
           crs.toProj4String
         )
-    )
+      )
 
     baseDataset.delete
     params
@@ -107,42 +107,59 @@ case class WarpGDALRasterSource(
   def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
     val baseDataset = GDAL.open(uri)
 
+    val cellwidths = windows.map { _.cellwidth }.toSet
+    val cellheights = windows.map { _.cellheight }.toSet
+
+    /*
+    println(s"\nThis is the size of the set of cellwidths: ${cellwidths.size}")
+    println(s"These are the contents of the set of cellwidths: ${cellwidths.toArray.mkString(" ")}")
+    println(s"This is the size of the set of cellheights: ${cellheights.size}")
+    println(s"These are the contents of the set of cellheights: ${cellheights.toArray.mkString(" ")}\n")
+    */
+
+    val combinedRasterExtents: RasterExtent =
+      windows
+        .map { _.withResolution(cellwidths.head, cellheights.head) }
+        .reduce { _ combine _ }
+
+    val targetExtent = combinedRasterExtents.extent
+    val name = s"/vsimem/$uri/${targetExtent}"
+
+    val updatedTranslateParameters = {
+      // TODO: Find a better way of doing this.
+      val updated = baseTranslateParameters
+      updated.add("-tr")
+      updated.add(s"${combinedRasterExtents.cellwidth} ${combinedRasterExtents.cellheight}")
+      updated.add("-projwin")
+      updated.add(s"${targetExtent.xmin} ${targetExtent.ymin} ${targetExtent.xmax} ${targetExtent.ymax}")
+
+      val result = updated
+
+      // A RunTimeError is thrown if these aren't removed.
+      // I'm not sure why.
+      updated.removeElement("-tr")
+      updated.removeElement(s"${combinedRasterExtents.cellwidth} ${combinedRasterExtents.cellheight}")
+      updated.removeElement("-projwin")
+      updated.removeElement(s"${targetExtent.xmin} ${targetExtent.ymin} ${targetExtent.xmax} ${targetExtent.ymax}")
+
+      result
+    }
+
+    val options = new TranslateOptions(updatedTranslateParameters)
+
+    val targetDataset = gdal.Translate(name, baseDataset, options)
+
+    val reader = GDALReader(targetDataset)
+
     val tiles =
       windows.map { case targetRasterExtent =>
-        val targetExtent = targetRasterExtent.extent
-        val name = s"/vsimem/$uri/${targetRasterExtent.extent}"
-
-        val updatedTranslateParameters = {
-          // TODO: Find a better way of doing this.
-          val updated = baseTranslateParameters
-          updated.add("-tr")
-          updated.add(s"${targetRasterExtent.cellwidth} ${targetRasterExtent.cellheight}")
-          updated.add("-projwin")
-          updated.add(s"${targetExtent.xmin} ${targetExtent.ymin} ${targetExtent.xmax} ${targetExtent.ymax}")
-
-          val result = updated
-
-          // A RunTimeError is thrown if these aren't removed.
-          // I'm not sure why.
-          updated.removeElement("-tr")
-          updated.removeElement(s"${targetRasterExtent.cellwidth} ${targetRasterExtent.cellheight}")
-          updated.removeElement("-projwin")
-          updated.removeElement(s"${targetExtent.xmin} ${targetExtent.ymin} ${targetExtent.xmax} ${targetExtent.ymax}")
-
-          result
-        }
-
-        val options = new TranslateOptions(updatedTranslateParameters)
-
-        val targetDataset = gdal.Translate(name, baseDataset, options)
-
-        val tile = GDALReader(targetDataset).read(targetRasterExtent.gridBounds)
-
-        targetDataset.delete
+        val bounds = combinedRasterExtents.gridBoundsFor(targetRasterExtent.extent)
+        val tile = reader.read(bounds)
 
         Raster(tile, targetRasterExtent.extent)
       }.toIterator
 
+    targetDataset.delete
     baseDataset.delete
     tiles
   }
