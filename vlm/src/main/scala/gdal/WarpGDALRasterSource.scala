@@ -26,28 +26,48 @@ case class WarpGDALRasterSource(
     spatialReference
   }
 
-  @transient private lazy val vrt: Dataset = {
+  // In order to pass in the command line arguments for Translate in Java,
+  // each parameter name and value need to passed as individual strings
+  // that follow one another
+
+  // IDEA: What if we make the command line parameters available
+  // so that way users can know how to recreate this operations
+  // via the command line if they so chose.
+  final val baseTranslateParameters = {
     val baseDataset: Dataset = GDAL.open(uri)
 
-    // In order to pass in the command line arguments for Warp in Java,
-    // each parameter name and value need to passed as individual strings
-    // that follow one another
-    val parameters: java.util.Vector[_] =
+    val params =
       new java.util.Vector(
-      java.util.Arrays.asList(
-        "-s_srs",
-        s"${baseDataset.GetProjection}",
-        "-t_srs",
-        s"${crs.toProj4String}",
-        "-r",
-        s"${GDAL.deriveResampleMethodString(resampleMethod)}",
-        "-et",
-        s"$errorThreshold"
-      )
+        java.util.Arrays.asList(
+          "-r",
+          s"${GDAL.deriveResampleMethodString(resampleMethod)}",
+          "-projwin_srs",
+          crs.toProj4String
+        )
     )
 
-    val options = new WarpOptions(parameters)
-    val dataset = gdal.Warp("/vsimem/reprojected", Array(baseDataset), options)
+    baseDataset.delete
+    params
+  }
+
+  @transient private lazy val vrt: Dataset = {
+
+    // For some reason, baseDataset can't be in
+    // the scope of the class or else a RunTime
+    // Error will be encountered. So it is
+    // created and closed when needed.
+    val baseDataset: Dataset = GDAL.open(uri)
+
+    // TODO: change how the dataset is created so that
+    // it takes the direction of the picture into account.
+    val dataset =
+      gdal.AutoCreateWarpedVRT(
+        baseDataset,
+        null,
+        spatialReference.ExportToWkt,
+        GDAL.deriveGDALResampleMethod(resampleMethod),
+        errorThreshold
+      )
 
     baseDataset.delete
 
@@ -82,16 +102,50 @@ case class WarpGDALRasterSource(
     band.getDataType()
   }
 
-  private lazy val reader: GDALReader = GDALReader(vrt)
-
   lazy val cellType: CellType = GDAL.deriveGTCellType(datatype)
 
-  def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] =
-    windows.map { case targetRasterExtent =>
-      val tile = reader.read(targetRasterExtent.gridBounds)
+  def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
+    val baseDataset = GDAL.open(uri)
 
-      Raster(tile, targetRasterExtent.extent)
-    }.toIterator
+    val tiles =
+      windows.map { case targetRasterExtent =>
+        val targetExtent = targetRasterExtent.extent
+        val name = s"/vsimem/$uri/${targetRasterExtent.extent}"
+
+        val updatedTranslateParameters = {
+          // TODO: Find a better way of doing this.
+          val updated = baseTranslateParameters
+          updated.add("-tr")
+          updated.add(s"${targetRasterExtent.cellwidth} ${targetRasterExtent.cellheight}")
+          updated.add("-projwin")
+          updated.add(s"${targetExtent.xmin} ${targetExtent.ymin} ${targetExtent.xmax} ${targetExtent.ymax}")
+
+          val result = updated
+
+          // A RunTimeError is thrown if these aren't removed.
+          // I'm not sure why.
+          updated.removeElement("-tr")
+          updated.removeElement(s"${targetRasterExtent.cellwidth} ${targetRasterExtent.cellheight}")
+          updated.removeElement("-projwin")
+          updated.removeElement(s"${targetExtent.xmin} ${targetExtent.ymin} ${targetExtent.xmax} ${targetExtent.ymax}")
+
+          result
+        }
+
+        val options = new TranslateOptions(updatedTranslateParameters)
+
+        val targetDataset = gdal.Translate(name, baseDataset, options)
+
+        val tile = GDALReader(targetDataset).read(targetRasterExtent.gridBounds)
+
+        targetDataset.delete
+
+        Raster(tile, targetRasterExtent.extent)
+      }.toIterator
+
+    baseDataset.delete
+    tiles
+  }
 
   def withCRS(
     targetCRS: CRS,
