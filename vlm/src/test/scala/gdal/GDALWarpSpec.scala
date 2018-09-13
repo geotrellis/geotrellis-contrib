@@ -1,7 +1,9 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.raster._
+import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.resample._
+import geotrellis.raster.reproject._
 import geotrellis.raster.testkit._
 import geotrellis.proj4._
 import geotrellis.spark.testkit._
@@ -22,10 +24,21 @@ class GDALWarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
     val rasterSource = GDALRasterSource(uri)
     val sourceDataset = GDAL.open(uri)
 
+    val sourceTiff = GeoTiffReader.readMultiband(uri)
+
+    val reprojectedRasterExtent = {
+      val re = ReprojectRasterExtent(rasterSource.rasterExtent, Transform(rasterSource.crs, LatLng))
+      // stretch target raster extent slightly to avoid default case in ReprojectRasterExtent
+      RasterExtent(re.extent, CellSize(re.cellheight * 1.1, re.cellwidth * 1.1))
+    }
+
+
     val params =
       new java.util.Vector(
         java.util.Arrays.asList(
-          "-a_srs",
+          "-s_srs",
+          rasterSource.crs.toProj4String,
+          "-t_srs",
           LatLng.toProj4String
         )
       )
@@ -47,6 +60,7 @@ class GDALWarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
 
     def testReprojection(method: ResampleMethod) = {
       val warpRasterSource = rasterSource.withCRS(LatLng, method)
+      val testBounds = GridBounds(0, 0, reprojectedRasterExtent.cols, reprojectedRasterExtent.rows).split(64,64).toSeq
 
       val updatedParams = {
         val update = params
@@ -57,21 +71,20 @@ class GDALWarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
 
         update.removeElement("-r")
         update.removeElement(s"${GDAL.deriveResampleMethodString(method)}")
+
         result
       }
 
-      val options = new TranslateOptions(updatedParams)
-      val dataset = gdal.Translate("/vsimem/gdal-warp-test", sourceDataset, options)
+      val options = new WarpOptions(updatedParams)
+      val dataset = gdal.Warp("/vsimem/gdal-warp-test", Array(sourceDataset), options)
 
+      val geoTransform: Array[Double] = dataset.GetGeoTransform
+
+      /*
       val cols = dataset.GetRasterXSize.toInt
       val rows = dataset.GetRasterYSize.toInt
 
-      val testBounds =
-        GridBounds(0, 0, cols, rows).split(64,64).toSeq
-
       val extent = {
-        val geoTransform: Array[Double] = dataset.GetGeoTransform
-
         val xmin: Double = geoTransform(0)
         val ymin: Double = geoTransform(3) + geoTransform(5) * rows
         val xmax: Double = geoTransform(0) + geoTransform(1) * cols
@@ -82,11 +95,33 @@ class GDALWarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
 
       val rasterExtent = RasterExtent(extent, cols, rows)
 
+      val testBounds = GridBounds(0, 0, cols, rows).split(64,64).toSeq
+      */
+
       for (bound <- testBounds) yield {
         withClue(s"Read window ${bound}: ") {
-          val targetExtent = rasterExtent.extentFor(bound)
+          val (colMin, rowMin) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
+          val (colMax, rowMax) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
+
+          gdal.ApplyGeoTransform(geoTransform, bound.colMin, bound.rowMax, colMin, rowMin)
+          gdal.ApplyGeoTransform(geoTransform, bound.colMax, bound.rowMin, colMax, rowMax)
+
+          val targetExtent = Extent(colMin.head, rowMin.head, colMax.head, rowMax.head)
           val testRasterExtent = RasterExtent(targetExtent, cols = bound.width, rows = bound.height)
 
+          val expected: Raster[MultibandTile] = {
+            val rr = implicitly[RasterRegionReproject[MultibandTile]]
+            rr.regionReproject(
+              sourceTiff.raster,
+              sourceTiff.crs,
+              LatLng,
+              testRasterExtent,
+              testRasterExtent.extent.toPolygon,
+              method
+            )
+          }
+
+          /*
           val expected: Raster[MultibandTile] = {
             val arr = Array.ofDim[Float](bound.width * bound.height)
 
@@ -107,6 +142,7 @@ class GDALWarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
 
             Raster(tile, targetExtent)
           }
+          */
 
           dataset.delete
 

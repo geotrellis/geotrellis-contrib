@@ -20,38 +20,43 @@ case class WarpGDALRasterSource(
   resampleMethod: ResampleMethod = NearestNeighbor,
   errorThreshold: Double = 0.125
 ) extends RasterSource {
-  private lazy val spatialReference: SpatialReference = {
+  private lazy val baseSpatialReference = {
+    val baseDataset: Dataset = GDAL.open(uri)
+
+    val spatialReference = new SpatialReference(baseDataset.GetProjection)
+
+    baseDataset.delete
+    spatialReference
+  }
+
+  private lazy val targetSpatialReference: SpatialReference = {
     val spatialReference = new SpatialReference()
     spatialReference.ImportFromProj4(crs.toProj4String)
     spatialReference
   }
 
-  // In order to pass in the command line arguments for Translate in Java,
-  // each parameter name and value need to passed as individual strings
+  // In order to pass in the command line arguments for Warp in Java,
+  // each parameter name and value needs to passed as individual strings
   // that follow one another
 
   // IDEA: What if we make the command line parameters available
   // so that way users can know how to recreate this operations
-  // via the command line if they so chose.
-  final val baseTranslateParameters = {
-    val baseDataset: Dataset = GDAL.open(uri)
-
-    val params =
-      new java.util.Vector(
-        java.util.Arrays.asList(
-          "-r",
-          s"${GDAL.deriveResampleMethodString(resampleMethod)}",
-          "-projwin_srs",
-          crs.toProj4String
-        )
+  // via the command line if they so chose?
+  final val baseWarpParameters =
+    new java.util.Vector(
+      java.util.Arrays.asList(
+        "-r",
+        s"${GDAL.deriveResampleMethodString(resampleMethod)}",
+        "-s_srs",
+        baseSpatialReference.ExportToProj4,
+        "-t_srs",
+        targetSpatialReference.ExportToProj4,
+        "-et",
+        s"$errorThreshold"
       )
-
-    baseDataset.delete
-    params
-  }
+    )
 
   @transient private lazy val vrt: Dataset = {
-
     // For some reason, baseDataset can't be in
     // the scope of the class or else a RunTime
     // Error will be encountered. So it is
@@ -64,7 +69,7 @@ case class WarpGDALRasterSource(
       gdal.AutoCreateWarpedVRT(
         baseDataset,
         null,
-        spatialReference.ExportToWkt,
+        targetSpatialReference.ExportToWkt,
         GDAL.deriveGDALResampleMethod(resampleMethod),
         errorThreshold
       )
@@ -112,13 +117,11 @@ case class WarpGDALRasterSource(
     val targetExtent = combinedRasterExtents.extent
     val name = s"/vsimem/$uri/${targetExtent}"
 
-    val updatedTranslateParameters = {
+    val updatedWarpParameters = {
       // TODO: Find a better way of doing this.
-      val updated = baseTranslateParameters
+      val updated = baseWarpParameters
       updated.add("-tr")
       updated.add(s"${combinedRasterExtents.cellwidth} ${combinedRasterExtents.cellheight}")
-      updated.add("-projwin")
-      updated.add(s"${targetExtent.xmin} ${targetExtent.ymin} ${targetExtent.xmax} ${targetExtent.ymax}")
 
       val result = updated
 
@@ -126,20 +129,22 @@ case class WarpGDALRasterSource(
       // I'm not sure why.
       updated.removeElement("-tr")
       updated.removeElement(s"${combinedRasterExtents.cellwidth} ${combinedRasterExtents.cellheight}")
-      updated.removeElement("-projwin")
-      updated.removeElement(s"${targetExtent.xmin} ${targetExtent.ymin} ${targetExtent.xmax} ${targetExtent.ymax}")
 
       result
     }
 
-    val options = new TranslateOptions(updatedTranslateParameters)
+    val options = new WarpOptions(updatedWarpParameters)
 
-    val targetDataset = gdal.Translate(name, baseDataset, options)
+    val targetDataset = gdal.Warp(name, Array(baseDataset), options)
 
     val reader = GDALReader(targetDataset)
 
     val tiles =
       windows.map { case targetRasterExtent =>
+
+        // The resulting bounds sometimes contains an extra col and/or row,
+        // and it's not clear as to why. This needs to be fixed in order
+        // to get this working.
         val bounds = combinedRasterExtents.gridBoundsFor(targetRasterExtent.extent)
         val tile = reader.read(bounds)
 
