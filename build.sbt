@@ -59,12 +59,12 @@ lazy val vlm = project
     libraryDependencies ++= Seq(
       geotrellisSpark, geotrellisS3, geotrellisUtil,
       catsCore, catsEffect,
-      fs2Core, fs2Io,
+      fs2Core, fs2Io, gdal,
       sparkCore % Provided,      
       geotrellisSparkTestKit % Test,
       scalatest % Test),
     Test / fork := true,
-    javaOptions ++= Seq("-Xms1024m", "-Xmx6144m")
+    javaOptions ++= Seq("-Xms1024m", "-Xmx6144m", "-Djava.library.path=/usr/local/lib")
   )
 
 lazy val benchmark = (project in file("benchmark"))
