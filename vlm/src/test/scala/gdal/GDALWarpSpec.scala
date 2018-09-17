@@ -2,6 +2,8 @@ package geotrellis.contrib.vlm.gdal
 
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
+import geotrellis.raster.prototype._
+import geotrellis.raster.render.ascii._
 import geotrellis.raster.resample._
 import geotrellis.raster.reproject._
 import geotrellis.raster.testkit._
@@ -15,11 +17,13 @@ import java.io.File
 
 import org.gdal.gdal._
 import org.gdal.gdalconst.gdalconstConstants
+import org.gdal.osr.SpatialReference
 
 
 class GDALWarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
   describe("Reprojecting a GDALRasterSource") {
-    val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
+    //val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
+    val uri = "/tmp/test-file.tif"
 
     val rasterSource = GDALRasterSource(uri)
     val sourceDataset = GDAL.open(uri)
@@ -31,7 +35,6 @@ class GDALWarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
       // stretch target raster extent slightly to avoid default case in ReprojectRasterExtent
       RasterExtent(re.extent, CellSize(re.cellheight * 1.1, re.cellwidth * 1.1))
     }
-
 
     val params =
       new java.util.Vector(
@@ -60,6 +63,18 @@ class GDALWarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
 
     def testReprojection(method: ResampleMethod) = {
       val warpRasterSource = rasterSource.withCRS(LatLng, method)
+
+      val sr = new SpatialReference()
+      sr.ImportFromProj4(LatLng.toProj4String)
+
+      val vrt =
+        gdal.AutoCreateWarpedVRT(
+          sourceDataset,
+          new SpatialReference(sourceDataset.GetProjection).ExportToWkt,
+          sr.ExportToWkt,
+          GDAL.deriveGDALResampleMethod(method)
+        )
+
       val testBounds = GridBounds(0, 0, reprojectedRasterExtent.cols, reprojectedRasterExtent.rows).split(64,64).toSeq
 
       val updatedParams = {
@@ -78,7 +93,8 @@ class GDALWarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
       val options = new WarpOptions(updatedParams)
       val dataset = gdal.Warp("/vsimem/gdal-warp-test", Array(sourceDataset), options)
 
-      val geoTransform: Array[Double] = dataset.GetGeoTransform
+      //val geoTransform: Array[Double] = dataset.GetGeoTransform
+      val geoTransform: Array[Double] = vrt.GetGeoTransform
 
       /*
       val cols = dataset.GetRasterXSize.toInt
@@ -146,9 +162,31 @@ class GDALWarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
 
           dataset.delete
 
-          val actual = warpRasterSource.read(List(testRasterExtent)).next
+          //val actual = warpRasterSource.read(List(testRasterExtent)).next
+          val actual = {
+            val gb = testRasterExtent.gridBounds
+            val arr = Array.ofDim[Float](testRasterExtent.cols * testRasterExtent.rows)
+
+            vrt.ReadRaster(
+              gb.colMin,
+              gb.rowMin,
+              gb.width,
+              gb.height,
+              gb.width,
+              gb.height,
+              gdalconstConstants.GDT_Float32,
+              arr,
+              Array(1)
+            )
+
+            val tile = FloatArrayTile(arr, gb.width, gb.height, -9999.0.toFloat)
+
+            Raster(MultibandTile(tile), testRasterExtent.extent)
+          }
+
 
           val expectedTile = expected.tile.band(0)
+          //val actualTile = actual.tile.band(0).reproject(actual.extent, sourceTiff.crs, LatLng).tile
           val actualTile = actual.tile.band(0)
 
           actual.extent.covers(expected.extent) should be (true)
@@ -156,6 +194,12 @@ class GDALWarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
           actual.rasterExtent.extent.ymax should be (expected.rasterExtent.extent.ymax +- 0.00001)
           actual.rasterExtent.cellwidth should be (expected.rasterExtent.cellwidth +- 0.00001)
           actual.rasterExtent.cellheight should be (expected.rasterExtent.cellheight +- 0.00001)
+
+          println(s"\nThis is the expectedTile:")
+          println(NumericEncoder.encodeIntegrals(expectedTile))
+          println("\nThis is the actualTile:")
+          println(s"${NumericEncoder.encodeIntegrals(actualTile)}\n")
+
           assertEqual(actual, expected)
         }
       }

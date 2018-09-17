@@ -20,7 +20,7 @@ case class WarpGDALRasterSource(
   resampleMethod: ResampleMethod = NearestNeighbor,
   errorThreshold: Double = 0.125
 ) extends RasterSource {
-  private lazy val baseSpatialReference = {
+  private val baseSpatialReference = {
     val baseDataset: Dataset = GDAL.open(uri)
 
     val spatialReference = new SpatialReference(baseDataset.GetProjection)
@@ -29,7 +29,7 @@ case class WarpGDALRasterSource(
     spatialReference
   }
 
-  private lazy val targetSpatialReference: SpatialReference = {
+  private val targetSpatialReference: SpatialReference = {
     val spatialReference = new SpatialReference()
     spatialReference.ImportFromProj4(crs.toProj4String)
     spatialReference
@@ -42,15 +42,15 @@ case class WarpGDALRasterSource(
   // IDEA: What if we make the command line parameters available
   // so that way users can know how to recreate this operations
   // via the command line if they so chose?
-  final val baseWarpParameters =
+  final val warpParametersSet =
     new java.util.Vector(
       java.util.Arrays.asList(
-        "-r",
-        s"${GDAL.deriveResampleMethodString(resampleMethod)}",
         "-s_srs",
         baseSpatialReference.ExportToProj4,
         "-t_srs",
         targetSpatialReference.ExportToProj4,
+        "-r",
+        s"${GDAL.deriveResampleMethodString(resampleMethod)}",
         "-et",
         s"$errorThreshold"
       )
@@ -63,16 +63,11 @@ case class WarpGDALRasterSource(
     // created and closed when needed.
     val baseDataset: Dataset = GDAL.open(uri)
 
-    // TODO: change how the dataset is created so that
-    // it takes the direction of the picture into account.
-    val dataset =
-      gdal.AutoCreateWarpedVRT(
-        baseDataset,
-        null,
-        targetSpatialReference.ExportToWkt,
-        GDAL.deriveGDALResampleMethod(resampleMethod),
-        errorThreshold
-      )
+    val name = s"/vsimem$uri"
+
+    val options = new WarpOptions(warpParametersSet)
+
+    val dataset = gdal.Warp(name, Array(baseDataset), options)
 
     baseDataset.delete
 
@@ -98,7 +93,14 @@ case class WarpGDALRasterSource(
   private lazy val ymax: Double = geoTransform(3)
 
   lazy val extent = Extent(xmin, ymin, xmax, ymax)
-  override lazy val rasterExtent = RasterExtent(extent, cols, rows)
+  override lazy val rasterExtent =
+    RasterExtent(
+      extent,
+      geoTransform(1),
+      math.abs(geoTransform(5)),
+      cols,
+      rows
+    )
 
   lazy val bandCount: Int = vrt.getRasterCount
 
@@ -109,51 +111,64 @@ case class WarpGDALRasterSource(
 
   lazy val cellType: CellType = GDAL.deriveGTCellType(datatype)
 
+  private lazy val reader = GDALReader(vrt)
+
   def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
-    val baseDataset = GDAL.open(uri)
+    val combinedRasterExtents = windows.reduce { _ combine _ }
 
-    val combinedRasterExtents: RasterExtent = windows.reduce { _ combine _ }
+    windows.map { case targetRasterExtent =>
+      // The resulting bounds sometimes contains an extra col and/or row,
+      // and it's not clear as to why. This needs to be fixed in order
+      // to get this working.
 
-    val targetExtent = combinedRasterExtents.extent
-    val name = s"/vsimem/$uri/${targetExtent}"
+      val affine: Array[Double] = {
+        val targetExtent = targetRasterExtent.extent
 
-    val updatedWarpParameters = {
-      // TODO: Find a better way of doing this.
-      val updated = baseWarpParameters
-      updated.add("-tr")
-      updated.add(s"${combinedRasterExtents.cellwidth} ${combinedRasterExtents.cellheight}")
+        val xMin: Double = math.floor(targetExtent.xmin / combinedRasterExtents.cellwidth) * combinedRasterExtents.cellwidth
+        val yMax: Double = math.ceil(targetExtent.ymax / combinedRasterExtents.cellheight) * combinedRasterExtents.cellheight
 
-      val result = updated
+        Array(targetExtent.xmin, combinedRasterExtents.cellwidth, geoTransform(2), targetExtent.ymax, geoTransform(4), -combinedRasterExtents.cellheight)
+      }
 
-      // A RunTimeError is thrown if these aren't removed.
-      // I'm not sure why.
-      updated.removeElement("-tr")
-      updated.removeElement(s"${combinedRasterExtents.cellwidth} ${combinedRasterExtents.cellheight}")
+      val adjustedExtent = {
+        val (xmin, ymin) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
+        val (xmax, ymax) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
 
-      result
-    }
+        val gridBounds = targetRasterExtent.gridBounds
 
-    val options = new WarpOptions(updatedWarpParameters)
+        gdal.ApplyGeoTransform(
+          affine,
+          gridBounds.colMin,
+          gridBounds.rowMin,
+          xmin,
+          ymax
+        )
 
-    val targetDataset = gdal.Warp(name, Array(baseDataset), options)
+        gdal.ApplyGeoTransform(
+          affine,
+          gridBounds.colMax,
+          gridBounds.rowMax,
+          xmax,
+          ymin
+        )
 
-    val reader = GDALReader(targetDataset)
+        Extent(xmin.head, ymin.head, xmax.head, ymax.head)
+      }
 
-    val tiles =
-      windows.map { case targetRasterExtent =>
+      //val bounds = rasterExtent.gridBoundsFor(adjustedExtent)
+      //val bounds = rasterExtent.createAlignedRasterExtent(adjustedExtent).gridBounds
+      //val bounds = RasterExtent(adjustedExtent, targetRasterExtent.cols, targetRasterExtent.rows).gridBounds
+      //val bounds = combinedRasterExtents.gridBoundsFor(adjustedExtent)
+      val bounds = combinedRasterExtents.createAlignedRasterExtent(adjustedExtent).gridBounds
 
-        // The resulting bounds sometimes contains an extra col and/or row,
-        // and it's not clear as to why. This needs to be fixed in order
-        // to get this working.
-        val bounds = combinedRasterExtents.gridBoundsFor(targetRasterExtent.extent)
-        val tile = reader.read(bounds)
+      println(s"\nThese are the bounds of the targetRasterExtent: ${targetRasterExtent.gridBounds}")
+      println(s"These are the computed bounds: ${bounds}")
+      println(s"This is the extent of the targetRasterExtent: ${targetRasterExtent.extent}")
+      println(s"This is the computed extent: ${adjustedExtent}")
+      val tile = reader.read(bounds)
 
-        Raster(tile, targetRasterExtent.extent)
-      }.toIterator
-
-    targetDataset.delete
-    baseDataset.delete
-    tiles
+     Raster(tile, targetRasterExtent.extent)
+    }.toIterator
   }
 
   def withCRS(
