@@ -60,7 +60,7 @@ lazy val vlm = project
       geotrellisSpark, geotrellisS3, geotrellisUtil,
       catsCore, catsEffect,
       fs2Core, fs2Io, gdal,
-      sparkCore % Provided,      
+      sparkCore % Provided,
       geotrellisSparkTestKit % Test,
       scalatest % Test),
     Test / fork := true,
