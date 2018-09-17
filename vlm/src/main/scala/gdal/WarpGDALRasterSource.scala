@@ -77,11 +77,6 @@ case class WarpGDALRasterSource(
   private lazy val colsLong: Long = vrt.getRasterXSize
   private lazy val rowsLong: Long = vrt.getRasterYSize
 
-  require(
-    colsLong * rowsLong <= Int.MaxValue,
-    s"Cannot read this raster, cols * rows is greater than the maximum array index: ${colsLong * rowsLong}"
-  )
-
   def cols: Int = colsLong.toInt
   def rows: Int = rowsLong.toInt
 
@@ -115,59 +110,62 @@ case class WarpGDALRasterSource(
 
   def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
     val combinedRasterExtents = windows.reduce { _ combine _ }
+    val ex = combinedRasterExtents.extent
+
+    val transform =
+      Array[Double](
+        ex.xmin,
+        combinedRasterExtents.cellwidth,
+        geoTransform(2),
+        ex.ymax,
+        geoTransform(4),
+        -combinedRasterExtents.cellheight
+      )
+
+    val backTransform = gdal.InvGeoTransform(transform)
 
     windows.map { case targetRasterExtent =>
       // The resulting bounds sometimes contains an extra col and/or row,
       // and it's not clear as to why. This needs to be fixed in order
       // to get this working.
 
-      val affine: Array[Double] = {
-        val targetExtent = targetRasterExtent.extent
+      val targetExtent = targetRasterExtent.extent
 
-        val xMin: Double = math.floor(targetExtent.xmin / combinedRasterExtents.cellwidth) * combinedRasterExtents.cellwidth
-        val yMax: Double = math.ceil(targetExtent.ymax / combinedRasterExtents.cellheight) * combinedRasterExtents.cellheight
+      val colMin = Array.ofDim[Double](1)
+      val rowMin = Array.ofDim[Double](1)
+      val colMax = Array.ofDim[Double](1)
+      val rowMax = Array.ofDim[Double](1)
 
-        Array(targetExtent.xmin, combinedRasterExtents.cellwidth, geoTransform(2), targetExtent.ymax, geoTransform(4), -combinedRasterExtents.cellheight)
-      }
+      gdal.ApplyGeoTransform(
+        backTransform,
+        targetExtent.xmin,
+        targetExtent.ymin,
+        colMin,
+        rowMax
+      )
 
-      val adjustedExtent = {
-        val (xmin, ymin) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
-        val (xmax, ymax) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
+      gdal.ApplyGeoTransform(
+        backTransform,
+        targetExtent.xmax,
+        targetExtent.ymax,
+        colMax,
+        rowMin
+      )
 
-        val gridBounds = targetRasterExtent.gridBounds
-
-        gdal.ApplyGeoTransform(
-          affine,
-          gridBounds.colMin,
-          gridBounds.rowMin,
-          xmin,
-          ymax
+      val bounds =
+        GridBounds(
+          colMin.head.toInt,
+          rowMin.head.toInt,
+          colMax.head.toInt - 1,
+          rowMax.head.toInt - 1
         )
-
-        gdal.ApplyGeoTransform(
-          affine,
-          gridBounds.colMax,
-          gridBounds.rowMax,
-          xmax,
-          ymin
-        )
-
-        Extent(xmin.head, ymin.head, xmax.head, ymax.head)
-      }
-
-      //val bounds = rasterExtent.gridBoundsFor(adjustedExtent)
-      //val bounds = rasterExtent.createAlignedRasterExtent(adjustedExtent).gridBounds
-      //val bounds = RasterExtent(adjustedExtent, targetRasterExtent.cols, targetRasterExtent.rows).gridBounds
-      //val bounds = combinedRasterExtents.gridBoundsFor(adjustedExtent)
-      val bounds = combinedRasterExtents.createAlignedRasterExtent(adjustedExtent).gridBounds
 
       println(s"\nThese are the bounds of the targetRasterExtent: ${targetRasterExtent.gridBounds}")
       println(s"These are the computed bounds: ${bounds}")
-      println(s"This is the extent of the targetRasterExtent: ${targetRasterExtent.extent}")
-      println(s"This is the computed extent: ${adjustedExtent}")
+
       val tile = reader.read(bounds)
 
-     Raster(tile, targetRasterExtent.extent)
+      Raster(tile, targetRasterExtent.extent)
     }.toIterator
   }
 
