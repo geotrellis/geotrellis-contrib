@@ -42,5 +42,8 @@ trait RasterSource extends Serializable {
 
     def withCRS(targetCRS: CRS, resampleMethod: ResampleMethod = NearestNeighbor): RasterSource
 
+    def read(): Iterator[Raster[MultibandTile]] =
+      read(List(rasterExtent))
+
     def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]]
 }
