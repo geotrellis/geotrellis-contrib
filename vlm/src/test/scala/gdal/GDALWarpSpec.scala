@@ -1,6 +1,9 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.raster._
+import geotrellis.raster.mapalgebra.local._
+import geotrellis.raster.io.geotiff._
+import geotrellis.raster.io.geotiff.writer._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.prototype._
 import geotrellis.raster.render.ascii._
@@ -22,7 +25,8 @@ import org.gdal.osr.SpatialReference
 
 class GDALWarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
   describe("Reprojecting a GDALRasterSource") {
-    val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
+    //val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
+    val uri = "/tmp/test.tif"
 
     val rasterSource = GDALRasterSource(uri)
 
@@ -59,10 +63,12 @@ class GDALWarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
           val (colMin, rowMin) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
           val (colMax, rowMax) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
 
-          gdal.ApplyGeoTransform(geoTransform, bound.colMin, bound.rowMax, colMin, rowMin)
-          gdal.ApplyGeoTransform(geoTransform, bound.colMax, bound.rowMin, colMax, rowMax)
+          //gdal.ApplyGeoTransform(geoTransform, bound.colMin, bound.rowMax, colMin, rowMin)
+          //gdal.ApplyGeoTransform(geoTransform, bound.colMax, bound.rowMin, colMax, rowMax)
 
-          val targetExtent = Extent(colMin.head, rowMin.head, colMax.head, rowMax.head)
+          val targetExtent = reprojectedRasterExtent.extentFor(bound)
+
+          //val targetExtent = Extent(colMin.head, rowMin.head, colMax.head, rowMax.head)
           val testRasterExtent = RasterExtent(targetExtent, cols = bound.width, rows = bound.height)
 
           val expected: Raster[MultibandTile] = {
@@ -102,10 +108,49 @@ class GDALWarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
     }
 
     it("should produce the same thing as GDALRasterSource") {
-      val reprojectedImage = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-3857.tif"
+      val reprojectedImage = "/tmp/slope_wsg84-nearestneighbor-er0.125.tif"
+      val uri2 = "/tmp/slope_webmercator.tif"
+
+      //val reprojectedImage = "/tmp/test-file-gt-3857.tif"
+      //val uri2 = "/tmp/test-file.tif"
+
+      val ds = GDAL.open(uri2)
 
       val gdalSource = GDALRasterSource(reprojectedImage)
-      val warpSource = rasterSource.withCRS(WebMercator)
+      val warpSource = GDALRasterSource(uri2).withCRS(LatLng)
+
+      /*
+      val sr = new SpatialReference()
+      sr.ImportFromProj4(WebMercator.toProj4String)
+
+      val vrt =
+        gdal.AutoCreateWarpedVRT(
+          ds,
+          ds.GetProjection,
+          sr.ExportToWkt,
+          GDAL.deriveGDALResampleMethod(NearestNeighbor)
+        )
+
+      val reader = GDALReader(vrt)
+
+      val tile = {
+        val arr = Array.ofDim[Float](warpSource.cols * warpSource.rows)
+
+        vrt.ReadRaster(
+          warpSource.rasterExtent.gridBounds.colMin,
+          warpSource.rasterExtent.gridBounds.rowMin,
+          warpSource.cols,
+          warpSource.rows,
+          warpSource.cols,
+          warpSource.rows,
+          gdalconstConstants.GDT_Float32,
+          arr,
+          Array(1)
+        )
+
+        FloatArrayTile(arr, warpSource.cols, warpSource.rows, FloatUserDefinedNoDataCellType(-9999.0.toFloat))
+      }
+      */
 
       val expectedTile = gdalSource.read().next.tile.band(0)
       val actualTile = warpSource.read().next.tile.band(0)
