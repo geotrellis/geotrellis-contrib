@@ -10,7 +10,7 @@ import org.gdal.gdalconst.gdalconstConstants
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-case class GDALReader(dataset: Dataset) {
+class GDALReader(val dataset: Dataset) {
   protected val bandCount: Int = dataset.getRasterCount()
 
   protected val noDataValue: Option[Double] = {
@@ -28,7 +28,7 @@ case class GDALReader(dataset: Dataset) {
     * we can optimize it by reading all the bytes as a single buffer into memory
     */
   def read(
-    gridBounds: GridBounds,
+    gridBounds: GridBounds = GridBounds(0, 0, dataset.getRasterXSize - 1, dataset.getRasterYSize - 1),
     bufXSize: Option[Int] = None,
     bufYSize: Option[Int] = None,
     bands: Seq[Int] = 0 until bandCount
@@ -174,4 +174,9 @@ case class GDALReader(dataset: Dataset) {
         throw new Exception(s"The specified data type is actually unsupported: $bufferType")
     }
   }
+}
+
+object GDALReader {
+  def apply(dataset: Dataset) = new GDALReader(dataset)
+  def apply(path: String) = new GDALReader(GDAL.open(path))
 }
