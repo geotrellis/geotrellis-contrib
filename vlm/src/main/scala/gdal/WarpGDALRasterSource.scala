@@ -156,28 +156,29 @@ case class WarpGDALRasterSource(
         GridBounds(
           colMin.head.toInt,
           rowMin.head.toInt,
-          colMax.head.toInt - 1,
-          rowMax.head.toInt - 1
+          colMax.head.toInt,
+          rowMax.head.toInt
         )
 
       val re = targetRasterExtent.withResolution(rasterExtent.cellwidth, rasterExtent.cellheight)
 
-      //println(s"\nThese are the bounds of the targetRasterExtent: ${targetRasterExtent.gridBounds}")
-      //println(s"These are the computed bounds: ${bounds}")
+      println(s"\nThese are the bounds of the targetRasterExtent: ${targetRasterExtent.gridBounds}")
+      println(s"These are the computed bounds: ${bounds}")
+      println(s"More computed bounds: ${re.gridBounds}")
       println(s"width: ${re.gridBounds.width} height: ${re.gridBounds.height}")
       //println(s"width: ${r.gridBounds.width} height: ${r.gridBounds.height}")
 
-      val bufferXSize = math.ceil(targetRasterExtent.cellwidth).toInt
+      //val bufferXSize = math.ceil(targetRasterExtent.cellwidth).toInt
         //math.ceil(targetRasterExtent.cellwidth - rasterExtent.cellwidth).toInt
         //math.floor(bounds.width * targetRasterExtent.cellwidth).toInt
 
-      val bufferYSize = math.ceil(targetRasterExtent.cellheight).toInt
+      //val bufferYSize = math.ceil(targetRasterExtent.cellheight).toInt
         //math.ceil(targetRasterExtent.cellheight - rasterExtent.cellheight).toInt
         //math.floor(bounds.height * targetRasterExtent.cellheight).toInt
 
-      println(s"\n\n !!!! bufferXSize: $bufferXSize bufferYSize: $bufferYSize !!! ")
+      //println(s"\n\n !!!! bufferXSize: $bufferXSize bufferYSize: $bufferYSize !!! ")
 
-      val tile = reader.read(bounds, Some(bufferXSize), Some(bufferYSize))
+      val tile = reader.read(re.gridBounds)
 
       Raster(tile, targetRasterExtent.extent)
     }.toIterator
