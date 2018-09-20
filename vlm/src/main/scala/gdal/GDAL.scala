@@ -12,7 +12,7 @@ import org.gdal.gdalconst.gdalconstConstants
 // https://github.com/geotrellis/geotrellis-gdal/blob/master/gdal/src/main/scala/geotrellis/gdal/Gdal.scala
 
 private[gdal] class GDALException(code: Int, msg: String)
-    extends RuntimeException(s"GDAL ERROR $code: $msg")
+  extends RuntimeException(s"GDAL ERROR $code: $msg")
 
 private[gdal] object GDALException {
   def lastError(): GDALException =
@@ -45,6 +45,21 @@ object GDAL {
       case Lanczos => gdalconstConstants.GRA_Lanczos
       case Average => gdalconstConstants.GRA_Average
       case Mode => gdalconstConstants.GRA_Mode
+      case _ => throw new Exception(s"Could not find equivalent GDALResampleMethod for: $method")
+    }
+
+  def deriveResampleMethodString(method: ResampleMethod): String =
+    method match {
+      case NearestNeighbor => "near"
+      case Bilinear => "bilinear"
+      case CubicConvolution => "cubic"
+      case CubicSpline => "cubicspline"
+      case Lanczos => "lanczos"
+      case Average => "average"
+      case Mode => "mode"
+      case Max => "max"
+      case Min => "min"
+      case Median => "med"
       case _ => throw new Exception(s"Could not find equivalent GDALResampleMethod for: $method")
     }
 

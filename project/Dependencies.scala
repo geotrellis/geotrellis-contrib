@@ -16,6 +16,25 @@
 
 import sbt._
 
+object Version {
+  val geotrellisContrib = "0.0.1"
+  val geotrellis  = "2.0.0"
+  val scala       = "2.11.12"
+  val geotools    = "17.1"
+  val sprayJson   = "1.3.3"
+  val monocle     = "1.5.1-cats"
+  val spire       = "0.13.0"
+  val accumulo    = "1.9.1"
+  val cassandra   = "3.5.0"
+  val hbase       = "1.4.4"
+  val geomesa     = "2.0.1"
+  val circe       = "0.9.3"
+  val previousVersion = "1.1.0"
+  val hadoop = "2.8.0"
+  val spark  = "2.3.0"
+  val gdal = "2.3.0"
+}
+
 object Dependencies {
   val geotrellisSpark         = "org.locationtech.geotrellis" %% "geotrellis-spark"          % Version.geotrellis
   val geotrellisSparkTestKit  = "org.locationtech.geotrellis" %% "geotrellis-spark-testkit"  % Version.geotrellis

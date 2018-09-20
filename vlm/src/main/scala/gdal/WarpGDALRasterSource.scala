@@ -20,34 +20,43 @@ case class WarpGDALRasterSource(
   resampleMethod: ResampleMethod = NearestNeighbor,
   errorThreshold: Double = 0.125
 ) extends RasterSource {
-  private lazy val spatialReference: SpatialReference = {
+  private val baseSpatialReference = {
+    val baseDataset: Dataset = GDAL.open(uri)
+
+    val spatialReference = new SpatialReference(baseDataset.GetProjection)
+
+    baseDataset.delete
+    spatialReference
+  }
+
+  private val targetSpatialReference: SpatialReference = {
     val spatialReference = new SpatialReference()
     spatialReference.ImportFromProj4(crs.toProj4String)
     spatialReference
   }
 
   @transient private lazy val vrt: Dataset = {
+    // For some reason, baseDataset can't be in
+    // the scope of the class or else a RunTime
+    // Error will be encountered. So it is
+    // created and closed when needed.
     val baseDataset: Dataset = GDAL.open(uri)
 
-    val dataset =
-      gdal.AutoCreateWarpedVRT(
-        baseDataset,
-        null,
-        spatialReference.ExportToWkt(),
-        GDAL.deriveGDALResampleMethod(resampleMethod),
-        errorThreshold
-      )
-    baseDataset.delete()
+    val dataset = gdal.AutoCreateWarpedVRT(
+      baseDataset,
+      baseDataset.GetProjection,
+      targetSpatialReference.ExportToWkt,
+      GDAL.deriveGDALResampleMethod(resampleMethod),
+      errorThreshold
+    )
+
+    baseDataset.delete
+
     dataset
   }
 
   private lazy val colsLong: Long = vrt.getRasterXSize
   private lazy val rowsLong: Long = vrt.getRasterYSize
-
-  require(
-    colsLong * rowsLong <= Int.MaxValue,
-    s"Cannot read this raster, cols * rows is greater than the maximum array index: ${colsLong * rowsLong}"
-  )
 
   def cols: Int = colsLong.toInt
   def rows: Int = rowsLong.toInt
@@ -60,7 +69,14 @@ case class WarpGDALRasterSource(
   private lazy val ymax: Double = geoTransform(3)
 
   lazy val extent = Extent(xmin, ymin, xmax, ymax)
-  override lazy val rasterExtent = RasterExtent(extent, cols, rows)
+  override lazy val rasterExtent =
+    RasterExtent(
+      extent,
+      geoTransform(1),
+      math.abs(geoTransform(5)),
+      cols,
+      rows
+    )
 
   lazy val bandCount: Int = vrt.getRasterCount
 
@@ -69,58 +85,16 @@ case class WarpGDALRasterSource(
     band.getDataType()
   }
 
-  private lazy val reader: GDALReader = GDALReader(vrt)
-
   lazy val cellType: CellType = GDAL.deriveGTCellType(datatype)
 
-  def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
-    val bounds: Map[GridBounds, RasterExtent] =
-      windows.map { case targetRasterExtent =>
-        val affine =
-          Array[Double](
-            targetRasterExtent.extent.xmin,
-            targetRasterExtent.cellwidth,
-            0,
-            targetRasterExtent.extent.ymax,
-            0,
-            -targetRasterExtent.cellheight
-          )
+  private lazy val reader = GDALReader(vrt)
 
-        val (colMax, rowMin) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
+  def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] =
+    windows.map { case targetRasterExtent =>
+      val tile = reader.read(targetRasterExtent.gridBounds)
 
-        gdal.ApplyGeoTransform(
-          affine,
-          targetRasterExtent.gridBounds.colMax,
-          targetRasterExtent.gridBounds.rowMin,
-          colMax,
-          rowMin
-        )
-
-        val extent = Extent(affine(0), rowMin.head, colMax.head, affine(3))
-        val gridBounds = rasterExtent.gridBoundsFor(extent)
-
-        (gridBounds, targetRasterExtent)
-      }.toMap
-
-    bounds.map { case (gb, re) =>
-      val initialTile = reader.read(gb)
-
-      val tile =
-        if (initialTile.cols != re.cols || initialTile.rows != re.rows) {
-          val updatedTiles = initialTile.bands.map { band =>
-            val protoTile = band.prototype(re.cols, re.rows)
-
-            protoTile.update(re.cols - gb.width, re.rows - gb.height, band)
-            protoTile
-          }
-
-          MultibandTile(updatedTiles)
-        } else
-          initialTile
-
-        Raster(tile, re.extent)
+      Raster(tile, targetRasterExtent.extent)
     }.toIterator
-  }
 
   def withCRS(
     targetCRS: CRS,
