@@ -57,19 +57,19 @@ object RasterSourceRDD {
     val layerMetadata =
       TileLayerMetadata[SpatialKey](cellType, layout, combinedExtents, crs, layerKeyBounds)
 
-    val sourcesRDD: RDD[(RasterSource, Array[RasterExtent])] =
+    val sourcesRDD: RDD[(RasterSource, Array[Extent])] =
       sc.parallelize(sources).flatMap { source =>
-        val rasterExtents: Traversable[RasterExtent] =
+        val extents: Traversable[Extent] =
           extent.intersection(source.extent) match {
             case Some(intersection) =>
               val keys = mapTransform.keysForGeometry(intersection.toPolygon)
 
-              keys.map { key => RasterExtent(mapTransform(key), layout.tileCols, layout.tileRows) }
-            case None => Seq.empty[RasterExtent]
+              keys.map { key => mapTransform(key) }
+            case None => Seq.empty[Extent]
           }
 
         RasterExtentPartitioner
-          .partitionRasterExtents(rasterExtents, partitionBytes)
+          .partitionExtents(extents, partitionBytes)
           .map { res => (source, res) }
       }
 
@@ -84,11 +84,11 @@ object RasterSourceRDD {
     }
 
     val result: RDD[(SpatialKey, MultibandTile)] =
-      repartitioned.flatMap { case (source, rasterExtents) =>
-        source.read(rasterExtents).map { raster =>
+      repartitioned.flatMap { case (source, extents) =>
+        source.readExtents(extents).map { raster =>
           val center = raster.extent.center
           val key = mapTransform.pointToKey(center)
-
+          require(raster.tile.cols == layout.tileCols && raster.tile.rows == layout.tileRows)
           (key, raster.tile)
         }
       }

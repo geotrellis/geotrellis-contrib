@@ -16,11 +16,58 @@
 
 package geotrellis.contrib.vlm
 
-import geotrellis.raster.RasterExtent
+import geotrellis.vector.Extent
+import geotrellis.raster.{RasterExtent, GridBounds}
 
 import scala.collection.mutable.ArrayBuilder
 
 private[vlm] object RasterExtentPartitioner {
+  def partitionExtents(
+    gridBounds: Traversable[Extent],
+    maxPartitionSize: Long
+  ): Array[Array[Extent]] = ???
+
+  def partitionGridBounds(
+    gridBounds: Traversable[GridBounds],
+    maxPartitionSize: Long
+  ): Array[Array[GridBounds]] =
+    if (gridBounds.isEmpty)
+      Array[Array[GridBounds]]()
+    else {
+      val partition = ArrayBuilder.make[GridBounds]
+      partition.sizeHintBounded(128, gridBounds)
+      var partitionSize: Long = 0l
+      var partitionCount: Long = 0l
+      val partitions = ArrayBuilder.make[Array[GridBounds]]
+
+      def finalizePartition() {
+        val res = partition.result
+        if (res.nonEmpty) partitions += res
+        partition.clear()
+        partitionSize = 0l
+        partitionCount = 0l
+      }
+
+      def addToPartition(bounds: GridBounds) {
+        partition += bounds
+        partitionSize += bounds.size
+        partitionCount += 1
+      }
+
+      for (bound <- gridBounds) {
+        if ((partitionCount == 0) || (partitionSize + bound.size) < maxPartitionSize)
+          addToPartition(bound)
+        else {
+          finalizePartition()
+          addToPartition(bound)
+        }
+      }
+
+      finalizePartition()
+      partitions.result
+    }
+
+
   def partitionRasterExtents(
     rasterExtents: Traversable[RasterExtent],
     maxPartitionSize: Long
