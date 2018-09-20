@@ -26,6 +26,8 @@ import geotrellis.proj4._
 import org.apache.spark._
 import org.apache.spark.rdd._
 
+import scala.collection.mutable.ArrayBuilder
+import scala.reflect.ClassTag
 
 object RasterSourceRDD {
   final val PARTITION_BYTES: Long = 128l * 1024 * 1024
@@ -67,10 +69,8 @@ object RasterSourceRDD {
               keys.map { key => mapTransform(key) }
             case None => Seq.empty[Extent]
           }
-
-        RasterExtentPartitioner
-          .partitionExtents(extents, partitionBytes)
-          .map { res => (source, res) }
+        
+        partition(extents, partitionBytes).map { res => (source, res) }
       }
 
     sourcesRDD.persist()
@@ -100,4 +100,47 @@ object RasterSourceRDD {
 
   def apply(source: RasterSource, layout: LayoutDefinition)(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
     apply(Seq(source), layout)
+
+  /** Partition a set of chunks not to exceed certain size per partition */
+  private def partition[T: ClassTag](
+    chunks: Traversable[T],
+    maxPartitionSize: Long,
+    chunkSize: T => Long = { c: T => 1l }
+  ): Array[Array[T]] = {
+    if (chunks.isEmpty) {
+      Array[Array[T]]()
+    } else {
+      val partition = ArrayBuilder.make[T]
+      partition.sizeHintBounded(128, chunks)
+      var partitionSize: Long = 0l
+      var partitionCount: Long = 0l
+      val partitions = ArrayBuilder.make[Array[T]]
+
+      def finalizePartition() {
+        val res = partition.result
+        if (res.nonEmpty) partitions += res
+        partition.clear()
+        partitionSize = 0l
+        partitionCount = 0l
+      }
+
+      def addToPartition(chunk: T) {
+        partition += chunk
+        partitionSize += chunkSize(chunk)
+        partitionCount += 1
+      }
+
+      for (chunk <- chunks) {
+        if ((partitionCount == 0) || (partitionSize + chunkSize(chunk)) < maxPartitionSize)
+          addToPartition(chunk)
+        else {
+          finalizePartition()
+          addToPartition(chunk)
+        }
+      }
+
+      finalizePartition()
+      partitions.result
+    }
+  }
 }
