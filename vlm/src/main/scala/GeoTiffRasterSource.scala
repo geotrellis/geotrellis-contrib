@@ -19,13 +19,14 @@ package geotrellis.contrib.vlm
 import geotrellis.vector._
 import geotrellis.proj4._
 import geotrellis.raster._
-import geotrellis.raster.reproject.{ReprojectRasterExtent, RasterRegionReproject}
+import geotrellis.raster.reproject.{ReprojectRasterExtent, RasterRegionReproject, Reproject}
 import geotrellis.raster.resample.{ResampleMethod, NearestNeighbor}
 import geotrellis.raster.io.geotiff.{MultibandGeoTiff, GeoTiffMultibandTile}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
 
 case class GeoTiffRasterSource(uri: String) extends RasterSource {
+
   @transient private lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 
@@ -36,11 +37,8 @@ case class GeoTiffRasterSource(uri: String) extends RasterSource {
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = tiff.cellType
 
-  def withCRS(targetCRS: CRS, resampleMethod: ResampleMethod = NearestNeighbor): WarpGeoTiffRasterSource =
-    new WarpGeoTiffRasterSource(uri, targetCRS, resampleMethod)
-
-  def reproject(targetCRS: CRS, resampleMethod: ResampleMethod, rasterExtent: RasterExtent): RasterSource = 
-    new WarpGeoTiffRasterSource(uri, targetCRS, resampleMethod, Some(rasterExtent)) 
+  def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource = 
+    new WarpGeoTiffRasterSource(uri, targetCRS, options) 
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)

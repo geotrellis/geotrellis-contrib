@@ -58,7 +58,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
     }
 
     it("should read in the tiles as squares") {
-      val reprojectedRasterSource = rasterSource.withCRS(targetCRS)
+      val reprojectedRasterSource = rasterSource.reproject(targetCRS)
       val rdd = RasterSourceRDD(reprojectedRasterSource, layout)
 
       val values = rdd.values.collect()
@@ -111,7 +111,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
     it("should reproduce tileToLayout followed by reproject") {
       // This should be the same as .tileToLayout(md.layout).reproject(crs, layout)
       val reprojectedSourceRDD: MultibandTileLayerRDD[SpatialKey] =
-        RasterSourceRDD(rasterSource.withCRS(targetCRS), layout)
+        RasterSourceRDD(rasterSource.reproject(targetCRS), layout)
 
       assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSourceRDD)
     }

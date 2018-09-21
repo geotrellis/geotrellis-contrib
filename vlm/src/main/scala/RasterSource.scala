@@ -40,15 +40,7 @@ trait RasterSource extends Serializable {
     def cellSize = CellSize(extent, cols, rows)
     def gridExtent = GridExtent(extent, cellSize)
 
-    def withCRS(targetCRS: CRS, resampleMethod: ResampleMethod = NearestNeighbor): RasterSource
-
-    def reproject(targetCRS: CRS): RasterSource =
-        reproject(targetCRS, NearestNeighbor)
-    
-    def reproject(targetCRS: CRS, resampleMethod: ResampleMethod): RasterSource =
-        withCRS(targetCRS, resampleMethod)
-    
-    def reproject(targetCRS: CRS, resampleMethod: ResampleMethod, rasterExtent: RasterExtent): RasterSource
+    def reproject(targetCRS: CRS, options: Reproject.Options = Reproject.Options.DEFAULT): RasterSource
     
     /** Reads a window for the extent.
       * Return extent may be smaller than requested extent around raster edges.
@@ -81,5 +73,4 @@ trait RasterSource extends Serializable {
 
     def readBounds(bounds: Traversable[GridBounds]): Iterator[Raster[MultibandTile]] =
         bounds.toIterator.flatMap(read(_, (0 until bandCount)).toIterator)
-
 }

@@ -28,8 +28,7 @@ import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 case class WarpGeoTiffRasterSource(
   uri: String,
   crs: CRS,
-  resampleMethod: ResampleMethod = NearestNeighbor,
-  targetRasterExtent: Option[RasterExtent] = None
+  options: Reproject.Options = Reproject.Options.DEFAULT
 ) extends RasterSource {
   @transient private lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
@@ -39,8 +38,10 @@ case class WarpGeoTiffRasterSource(
 
   private lazy val transform = Transform(baseCRS, crs)
   private lazy val backTransform = Transform(crs, baseCRS)
-  override lazy val rasterExtent = targetRasterExtent
-    .getOrElse(ReprojectRasterExtent(baseRasterExtent, transform))
+  override lazy val rasterExtent: RasterExtent = options.targetRasterExtent match {
+    case Some(targetRasterExtent) => targetRasterExtent
+    case None => ReprojectRasterExtent(baseRasterExtent, transform, options)
+  }
 
   def extent: Extent = rasterExtent.extent
   def cols: Int = rasterExtent.cols
@@ -84,17 +85,12 @@ case class WarpGeoTiffRasterSource(
         crs,
         targetRasterExtent,
         targetRasterExtent.extent.toPolygon,
-        resampleMethod
+        options.method
+        // TODO: add options.errorThreshold with geotrellis 2.1
       )
     }
   }
 
-  def withCRS(
-    targetCRS: CRS,
-    resampleMethod: ResampleMethod = NearestNeighbor
-  ): WarpGeoTiffRasterSource =
-    WarpGeoTiffRasterSource(uri, targetCRS, resampleMethod)
-
-  def reproject(targetCRS: CRS, resampleMethod: ResampleMethod, rasterExtent: RasterExtent): RasterSource = 
-    WarpGeoTiffRasterSource(uri, targetCRS, resampleMethod, Some(rasterExtent)) 
+  def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource = 
+    WarpGeoTiffRasterSource(uri, targetCRS, options) 
 }
