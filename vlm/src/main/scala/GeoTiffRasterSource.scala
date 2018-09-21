@@ -39,8 +39,8 @@ case class GeoTiffRasterSource(uri: String) extends RasterSource {
   def withCRS(targetCRS: CRS, resampleMethod: ResampleMethod = NearestNeighbor): WarpGeoTiffRasterSource =
     new WarpGeoTiffRasterSource(uri, targetCRS, resampleMethod)
 
-  def reproject(targetCRS: CRS, resampleMethod: ResampleMethod, rasterExtent: RasterExtent): RasterSource = 
-    new WarpGeoTiffRasterSource(uri, targetCRS, resampleMethod, Some(rasterExtent)) 
+  def reproject(targetCRS: CRS, resampleMethod: ResampleMethod, rasterExtent: RasterExtent): RasterSource =
+    new WarpGeoTiffRasterSource(uri, targetCRS, resampleMethod, Some(rasterExtent))
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
@@ -50,7 +50,7 @@ case class GeoTiffRasterSource(uri: String) extends RasterSource {
     }
     if (it.hasNext) Some(it.next) else None
   }
-    
+
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
     val it = geoTiffTile.crop(List(bounds), bands.toArray).map { case (gb, tile) =>
