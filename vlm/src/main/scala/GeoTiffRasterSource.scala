@@ -37,8 +37,8 @@ case class GeoTiffRasterSource(uri: String) extends RasterSource {
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = tiff.cellType
 
-  def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource = 
-    new WarpGeoTiffRasterSource(uri, targetCRS, options) 
+  def reproject(targetCRS: CRS, options: Reproject.Options): WarpGeoTiffRasterSource = 
+    new WarpGeoTiffRasterSource(uri, targetCRS, options)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)

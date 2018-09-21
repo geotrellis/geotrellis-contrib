@@ -39,8 +39,10 @@ case class WarpGeoTiffRasterSource(
   private lazy val transform = Transform(baseCRS, crs)
   private lazy val backTransform = Transform(crs, baseCRS)
   override lazy val rasterExtent: RasterExtent = options.targetRasterExtent match {
-    case Some(targetRasterExtent) => targetRasterExtent
-    case None => ReprojectRasterExtent(baseRasterExtent, transform, options)
+    case Some(targetRasterExtent) =>
+      targetRasterExtent
+    case None =>
+      ReprojectRasterExtent(baseRasterExtent, transform, options)
   }
 
   def extent: Extent = rasterExtent.extent
@@ -61,22 +63,22 @@ case class WarpGeoTiffRasterSource(
   }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    // TODO: clamp = false when we have PaddedTile
+    // TODO: clamp = true when we have PaddedTile
     val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = false))
     readBounds(bounds, bands)
   }
 
   override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    val intersectingWindows = bounds.map { targetGridBounds =>
-      val targetRasterExtent = RasterExtent(rasterExtent.extentFor(targetGridBounds, clamp = false), targetGridBounds.width, targetGridBounds.height)
+    val intersectingWindows = bounds.map { targetPixelBounds =>
+      val targetRasterExtent = RasterExtent(rasterExtent.extentFor(targetPixelBounds, clamp = false), targetPixelBounds.width, targetPixelBounds.height)
       val sourceExtent = ReprojectRasterExtent.reprojectExtent(targetRasterExtent, backTransform)
-      val sourceGridBounds = tiff.rasterExtent.gridBoundsFor(sourceExtent, clamp = false)
-      (sourceGridBounds, targetRasterExtent)
+      val sourcePixelBounds = tiff.rasterExtent.gridBoundsFor(sourceExtent, clamp = false)
+      (sourcePixelBounds, targetRasterExtent)
     }.toMap
 
-    tiff.crop(intersectingWindows.keys.toSeq).map { case (gb, tile) =>
-      val targetRasterExtent = intersectingWindows(gb)
-      val sourceRaster = Raster(tile, baseRasterExtent.extentFor(gb, clamp = false))
+    tiff.crop(intersectingWindows.keys.toSeq).map { case (sourcePixelBounds, tile) =>
+      val targetRasterExtent = intersectingWindows(sourcePixelBounds)
+      val sourceRaster = Raster(tile, baseRasterExtent.extentFor(sourcePixelBounds, clamp = false))
 
       val rr = implicitly[RasterRegionReproject[MultibandTile]]
       rr.regionReproject(

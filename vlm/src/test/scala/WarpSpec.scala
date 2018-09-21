@@ -45,7 +45,7 @@ class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
     }
 
     def testReprojection(method: ResampleMethod) = {
-      val warpRasterSource = rasterSource.reproject(LatLng, Reproject.Options(method, targetRasterExtent = Some(expectedRasterExtent)))
+      val warpRasterSource = rasterSource.reprojectToRegion(LatLng, expectedRasterExtent, method)
       
       val testBounds = GridBounds(0, 0, expectedRasterExtent.cols, expectedRasterExtent.rows).split(64,64).toSeq
 
