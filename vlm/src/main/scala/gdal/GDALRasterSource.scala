@@ -11,80 +11,52 @@ import org.gdal.osr.SpatialReference
 
 case class GDALRasterSource(uri: String) extends RasterSource {
   @transient private lazy val dataset = GDAL.open(uri)
+  private lazy val data = GDALSourceData(dataset)
 
-  private val colsLong: Long = dataset.getRasterXSize
-  private val rowsLong: Long = dataset.getRasterYSize
+  lazy val cols: Int = data.cols
+  lazy val rows: Int = data.rows
 
-  require(
-    colsLong * rowsLong <= Int.MaxValue,
-    s"Cannot read this raster, cols * rows is greater than the maximum array index: ${colsLong * rowsLong}"
-  )
+  lazy val extent = data.extent
 
-  def cols: Int = colsLong.toInt
-  def rows: Int = rowsLong.toInt
+  lazy val bandCount: Int = data.bandCount
 
-  private lazy val geoTransform: Array[Double] = dataset.GetGeoTransform
+  lazy val crs: CRS = data.crs
 
-  private lazy val xmin: Double = geoTransform(0)
-  private lazy val ymin: Double = geoTransform(3) + geoTransform(5) * rows
-  private lazy val xmax: Double = geoTransform(0) + geoTransform(1) * cols
-  private lazy val ymax: Double = geoTransform(3)
+  lazy val cellType: CellType = data.cellType
 
-  lazy val extent = Extent(xmin, ymin, xmax, ymax)
+  lazy val noDataValue: Option[Double] = data.noDataValue
 
-  lazy val bandCount: Int = dataset.getRasterCount
+  private lazy val reader = GDALReader(dataset, bandCount, noDataValue)
 
-  lazy val crs: CRS = {
-    val projection: Option[String] = {
-      val proj = dataset.GetProjectionRef
+  def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] =
+    read(rasterExtent.gridBoundsFor(extent, clamp = false), bands)
 
-      if (proj == null || proj.isEmpty) None
-      else Some(proj)
-    }
+  def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+    val targetExtent = rasterExtent.rasterExtentFor(bounds).extent
+    val actualBounds = rasterExtent.gridBoundsFor(targetExtent, clamp = true)
 
-    projection.map { proj =>
-      val srs = new SpatialReference(proj)
-      CRS.fromString(srs.ExportToProj4())
-    }.getOrElse(CRS.fromEpsgCode(4326))
-  }
+    val initialTile = reader.read(actualBounds, bands)
 
-  private lazy val datatype: GDALDataType =
-    dataset.GetRasterBand(1).getDataType()
+    val tile =
+      if (initialTile.cols != bounds.width || initialTile.rows != bounds.height) {
+        val tiles =
+          initialTile.bands.map { band =>
+            val protoTile = band.prototype(bounds.width, bounds.height)
 
-  private lazy val reader: GDALReader = GDALReader(dataset)
+            protoTile.update(bounds.colMin - actualBounds.colMin, bounds.rowMin - actualBounds.rowMin, band)
+            protoTile
+          }
 
-  lazy val cellType: CellType = GDAL.deriveGTCellType(datatype)
+        MultibandTile(tiles)
+      } else
+        initialTile
 
-  def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
-    val bounds: Map[GridBounds, RasterExtent] =
-      windows.map { case targetRasterExtent =>
-        val existingRegion = rasterExtent.gridBoundsFor(targetRasterExtent.extent, clamp = true)
-
-        (existingRegion, targetRasterExtent)
-      }.toMap
-
-   bounds.map { case (gb, re) =>
-     val initialTile = reader.read(gb)
-
-     val (gridBounds, tile) =
-       if (initialTile.cols != re.cols || initialTile.rows != re.rows) {
-         val targetBounds = rasterExtent.gridBoundsFor(re.extent, clamp = false)
-
-         val updatedTiles = initialTile.bands.map { band =>
-           val protoTile = band.prototype(re.cols, re.rows)
-
-           protoTile.update(targetBounds.colMin - gb.colMin, targetBounds.rowMin - gb.rowMin, band)
-           protoTile
-         }
-
-         (targetBounds, MultibandTile(updatedTiles))
-       } else
-         (gb, initialTile)
-
-     Raster(tile, rasterExtent.extentFor(gridBounds))
-    }.toIterator
+    Some(Raster(tile, rasterExtent.extentFor(bounds)))
   }
 
   def withCRS(targetCRS: CRS, resampleMethod: ResampleMethod = NearestNeighbor): WarpGDALRasterSource =
-    WarpGDALRasterSource(uri, targetCRS, resampleMethod)
+    WarpGDALRasterSource(uri, targetCRS, data, None, resampleMethod)
+
+  def reproject(targetCRS: CRS, resampleMethod: ResampleMethod, rasterExtent: RasterExtent): WarpGDALRasterSource =
+    WarpGDALRasterSource(uri, targetCRS, data, Some(rasterExtent))
 }
