@@ -28,12 +28,12 @@ import org.scalatest._
 import java.io.File
 
 
-class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
+class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with RasterMatchers {
   describe("Reprojecting a RasterSource") {
     val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
     val schemeURI = s"file://$uri"
 
-    val rasterSource = GeoTiffRasterSource(schemeURI)
+    val rasterSource = new GeoTiffRasterSource(schemeURI)
 
     val sourceTiff = GeoTiffReader.readMultiband(uri)
 

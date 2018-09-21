@@ -21,14 +21,14 @@ import geotrellis.raster._
 import geotrellis.raster.reproject._
 import geotrellis.raster.resample.{ResampleMethod, NearestNeighbor}
 import geotrellis.proj4._
-import geotrellis.raster.io.geotiff.MultibandGeoTiff
+import geotrellis.raster.io.geotiff.{MultibandGeoTiff, GeoTiffMultibandTile}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
 
-case class WarpGeoTiffRasterSource(
-  uri: String,
-  crs: CRS,
-  options: Reproject.Options = Reproject.Options.DEFAULT
+class GeoTiffReprojectRasterSource(
+  val uri: String,
+  val crs: CRS,
+  val options: Reproject.Options = Reproject.Options.DEFAULT
 ) extends RasterSource {
   @transient private lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
@@ -44,10 +44,6 @@ case class WarpGeoTiffRasterSource(
     case None =>
       ReprojectRasterExtent(baseRasterExtent, transform, options)
   }
-
-  def extent: Extent = rasterExtent.extent
-  def cols: Int = rasterExtent.cols
-  def rows: Int = rasterExtent.rows
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = tiff.cellType
 
@@ -75,8 +71,8 @@ case class WarpGeoTiffRasterSource(
       val sourcePixelBounds = tiff.rasterExtent.gridBoundsFor(sourceExtent, clamp = false)
       (sourcePixelBounds, targetRasterExtent)
     }.toMap
-
-    tiff.crop(intersectingWindows.keys.toSeq).map { case (sourcePixelBounds, tile) =>
+    val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
+    geoTiffTile.crop(intersectingWindows.keys.toSeq, bands.toArray).map { case (sourcePixelBounds, tile) =>
       val targetRasterExtent = intersectingWindows(sourcePixelBounds)
       val sourceRaster = Raster(tile, baseRasterExtent.extentFor(sourcePixelBounds, clamp = false))
 
@@ -94,5 +90,9 @@ case class WarpGeoTiffRasterSource(
   }
 
   def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource = 
-    WarpGeoTiffRasterSource(uri, targetCRS, options) 
+    new GeoTiffReprojectRasterSource(uri, targetCRS, options) 
+
+  def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
+    ???
+
 }

@@ -42,15 +42,14 @@ import java.net.URI
   */
 trait RasterSource extends Serializable {
     def uri: String
-    def extent: Extent
     def crs: CRS
-    def cols: Int
-    def rows: Int
     def bandCount: Int
     def cellType: CellType
-    def rasterExtent = RasterExtent(extent, cols, rows)
     def cellSize = CellSize(extent, cols, rows)
-    def gridExtent = GridExtent(extent, cellSize)
+    def rasterExtent: RasterExtent
+    def extent: Extent = rasterExtent.extent
+    def cols: Int = rasterExtent.cols
+    def rows: Int = rasterExtent.rows
 
     /** Reproject to different CRS with explicit sampling options.
       * @see [[geotrellis.raster.reproject.Reproject]]
@@ -70,7 +69,7 @@ trait RasterSource extends Serializable {
       * @group reproject a
       */    
     def reprojectToGrid(crs: CRS, grid: GridExtent, method: ResampleMethod = NearestNeighbor): RasterSource = 
-        reproject(crs, Reproject.Options(method = method), parentGridExtent = Some(grid))
+        reproject(crs, Reproject.Options(method = method, parentGridExtent = Some(grid)))
 
     /** Sampling grid and resolution is defined by given [[RasterExtent]] region.
       * The extent of the result is also taken from given [[RasterExtent]],
@@ -78,7 +77,32 @@ trait RasterSource extends Serializable {
       * @group reproject 
       */
     def reprojectToRegion(crs: CRS, region: RasterExtent, method: ResampleMethod = NearestNeighbor): RasterSource =
-        reproject(crs, Reproject.Options(method = method), targetRasterExtent = Some(region))
+        reproject(crs, Reproject.Options(method = method, targetRasterExtent = Some(region)))
+    
+
+    def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource
+
+    /** Sampling grid is defined of the footprint of the data with resolution implied by column and row count. 
+      * @group resample
+      */
+    def resample(targetCols: Int, targetRows: Int, method: ResampleMethod = NearestNeighbor): RasterSource =
+      resample(Dimensions(targetCols, targetRows), method)
+
+    /** Sampling grid and resolution is defined by given [[GridExtent]].
+      * Resulting extent is the extent of the minimum enclosing pixel region 
+      *  of the data footprint in the target grid.
+      * @group resample
+      */
+    def resampleToGrid(grid: GridExtent, method: ResampleMethod = NearestNeighbor): RasterSource = 
+      resample(TargetGrid(grid), method)
+    
+    /** Sampling grid and resolution is defined by given [[RasterExtent]] region.
+      * The extent of the result is also taken from given [[RasterExtent]],
+      *   this region may be larger or smaller than the footprint of the data
+      * @group resample
+      */
+    def resampleToRegion(region: RasterExtent, method: ResampleMethod = NearestNeighbor): RasterSource = 
+      resample(TargetRegion(region), method)
     
     /** Reads a window for the extent.
       * Return extent may be smaller than requested extent around raster edges.
