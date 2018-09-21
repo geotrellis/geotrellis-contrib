@@ -10,19 +10,7 @@ import org.gdal.gdalconst.gdalconstConstants
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-case class GDALReader(dataset: Dataset) {
-  protected val bandCount: Int = dataset.getRasterCount()
-
-  protected val noDataValue: Option[Double] = {
-    val arr = Array.ofDim[java.lang.Double](1)
-    dataset.GetRasterBand(1).GetNoDataValue(arr)
-
-    arr.head match {
-      case null => None
-      case value => Some(value.doubleValue)
-    }
-  }
-
+case class GDALReader(dataset: Dataset, bandCount: Int, noDataValue: Option[Double]) {
   /**
     * TODO: benchmark this function, probably in case of reading all bands
     * we can optimize it by reading all the bytes as a single buffer into memory
