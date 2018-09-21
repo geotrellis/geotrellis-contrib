@@ -64,6 +64,8 @@ lazy val vlm = project
       geotrellisSparkTestKit % Test,
       scalatest % Test),
     Test / fork := true,
+    Test / parallelExecution := false,
+    Test / testOptions += Tests.Argument("-oDF"),
     javaOptions ++= Seq("-Xms1024m", "-Xmx6144m")
   )
 
