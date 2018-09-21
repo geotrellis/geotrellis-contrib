@@ -69,7 +69,7 @@ object RasterSourceRDD {
               keys.map { key => mapTransform(key) }
             case None => Seq.empty[Extent]
           }
-        
+
         partition(extents, partitionBytes).map { res => (source, res) }
       }
 

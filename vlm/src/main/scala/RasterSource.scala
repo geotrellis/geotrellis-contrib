@@ -44,12 +44,12 @@ trait RasterSource extends Serializable {
 
     def reproject(targetCRS: CRS): RasterSource =
         reproject(targetCRS, NearestNeighbor)
-    
+
     def reproject(targetCRS: CRS, resampleMethod: ResampleMethod): RasterSource =
         withCRS(targetCRS, resampleMethod)
-    
+
     def reproject(targetCRS: CRS, resampleMethod: ResampleMethod, rasterExtent: RasterExtent): RasterSource
-    
+
     /** Reads a window for the extent.
       * Return extent may be smaller than requested extent around raster edges.
       * May return None if the requested extent does not overlap the raster extent.
@@ -63,13 +63,13 @@ trait RasterSource extends Serializable {
       */
     @throws[IndexOutOfBoundsException]("if requested bands do not exist")
     def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]]
-    
-    def read(extent: Extent): Option[Raster[MultibandTile]] = 
+
+    def read(extent: Extent): Option[Raster[MultibandTile]] =
         read(extent, (0 until bandCount))
-    
-    def read(bounds: GridBounds): Option[Raster[MultibandTile]] = 
+
+    def read(bounds: GridBounds): Option[Raster[MultibandTile]] =
         read(bounds, (0 until bandCount))
-    
+
     def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
         extents.toIterator.flatMap(read(_, bands).toIterator)
 
