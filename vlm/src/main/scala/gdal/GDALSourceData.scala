@@ -26,7 +26,9 @@ case class GDALSourceData(
   dataType: Int,
   cellType: CellType,
   bandCount: Int
-) { private lazy val invTransform = gdal.InvGeoTransform(geoTransform)
+) {
+
+  private lazy val invTransform = gdal.InvGeoTransform(geoTransform)
 
   def gridBoundsForExtent(targetExtent: Extent): GridBounds = {
     val (colMin, rowMin) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
@@ -49,8 +51,8 @@ case class GDALSourceData(
     )
 
     GridBounds(
-      colMin.head.toInt - 1,
-      rowMin.head.toInt - 1,
+      colMin.head.toInt,
+      rowMin.head.toInt,
       colMax.head.toInt - 1,
       rowMax.head.toInt - 1
     )
@@ -95,7 +97,7 @@ case class GDALSourceData(
     gdal.ApplyGeoTransform(
       geoTransform,
       gridBounds.colMin,
-      gridBounds.rowMax,
+      gridBounds.rowMin,
       xmin,
       ymax
     )
@@ -103,7 +105,7 @@ case class GDALSourceData(
     gdal.ApplyGeoTransform(
       geoTransform,
       gridBounds.colMax,
-      gridBounds.rowMin,
+      gridBounds.rowMax,
       xmax,
       ymin
     )
