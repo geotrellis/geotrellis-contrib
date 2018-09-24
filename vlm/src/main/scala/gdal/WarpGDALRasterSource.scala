@@ -87,6 +87,7 @@ case class WarpGDALRasterSource(
           initialTile.bands.map { band =>
             val protoTile = band.prototype(targetBounds.width, targetBounds.height)
 
+            /*
             println(s"\nThis is the actualBounds: ${tile.actualBounds}")
             println(s"This is the actualBounds width: ${tile.actualBounds.width}")
             println(s"This is the actualBounds height: ${tile.actualBounds.height}")
@@ -94,6 +95,7 @@ case class WarpGDALRasterSource(
             println(s"This is the col offset: ${tile.actualBounds.colMin - targetBounds.colMin}")
             println(s"This is the row offset: ${tile.actualBounds.rowMin - targetBounds.rowMin}")
             //println(s"This is the band's size - cols: ${band.cols} rows: ${band.rows}")
+            */
 
             protoTile.update(tile.actualBounds.colMin - targetBounds.colMin, tile.actualBounds.rowMin - targetBounds.rowMin, band)
             protoTile
@@ -103,7 +105,7 @@ case class WarpGDALRasterSource(
       } else
         initialTile
 
-    println(s"\n This is the size of the tile - cols: ${result.cols} row: ${result.rows}")
+    //println(s"\n This is the size of the tile - cols: ${result.cols} row: ${result.rows}")
 
     //Some(Raster(tile, rasterExtent.extentFor(bounds)))
 
@@ -112,13 +114,13 @@ case class WarpGDALRasterSource(
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val re = data.gridBoundsForExtent(extent)
-    println(s"\nThese Are the Different Bounds produced")
+    //println(s"\nThese Are the Different Bounds produced")
     //println(s"This is the bounds produced by raster extent (no clamp): ${data.gridBoundsForExtent(extent)}")
     //println(s"This is the width of the bounds produced by raster extent (no clamp): ${data.gridBoundsForExtent(extent).width}")
     //println(s"This is the height of the bounds produced by raster extent (no clamp): ${data.gridBoundsForExtent(extent).height}")
-    println(s"This is the bounds produced by raster extent (no clamp): ${re}")
-    println(s"This is the width of the bounds produced by raster extent (no clamp): ${re.width}")
-    println(s"This is the height of the bounds produced by raster extent (no clamp): ${re.height}")
+    //println(s"This is the bounds produced by raster extent (no clamp): ${re}")
+    //println(s"This is the width of the bounds produced by raster extent (no clamp): ${re.width}")
+    //println(s"This is the height of the bounds produced by raster extent (no clamp): ${re.height}")
     //println(s"This is the bounds produced by raster extent (ya clamp): ${data.gridBoundsForExtent(extent, clamp = true)}")
     //println(s"This is the width of the bounds produced by raster extent (ya clamp): ${data.gridBoundsForExtent(extent, clamp = true).width}")
     //println(s"This is the height of the bounds produced by raster extent (ya clamp): ${data.gridBoundsForExtent(extent, clamp = true).height}")
@@ -134,12 +136,14 @@ case class WarpGDALRasterSource(
     val actualBounds = rasterExtent.gridBoundsFor(targetExtent, clamp = false)
     //val actualBounds = data.gridBoundsForExtent(targetExtent, bounds.width, bounds.height)
 
+    /*
     println(s"\nThis is the bounds: $bounds")
     println(s"width: ${bounds.width}")
     println(s"height: ${bounds.height}")
     println(s"\nThis is the actualBounds: $actualBounds")
     println(s"width: ${actualBounds.width}")
     println(s"height: ${actualBounds.height}")
+    */
 
     val initialTile = reader.read(actualBounds, bands)
     val tile =
@@ -160,7 +164,7 @@ case class WarpGDALRasterSource(
       } else
         initialTile
 
-    println(s"\n This is the size of the tile - cols: ${tile.cols} row: ${tile.rows}")
+    //println(s"\n This is the size of the tile - cols: ${tile.cols} row: ${tile.rows}")
 
     Some(Raster(tile, rasterExtent.extentFor(bounds)))
   }

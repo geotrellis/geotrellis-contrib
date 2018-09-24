@@ -41,8 +41,8 @@ case class GDALReader(dataset: Dataset, bandCount: Int, noDataValue: Option[Doub
         val rBand = dataset.GetRasterBand(indexBand(i) + 1)
         val dataBuffer = new Array[Byte](bufferSize.toInt)
         val returnVal = rBand.ReadRaster(
-          gridBounds.colMin,
-          gridBounds.rowMin,
+          gridBounds.colMin - 112,
+          gridBounds.rowMin - 58,
           gridBounds.width,
           gridBounds.height,
           gridBounds.width,
@@ -73,8 +73,8 @@ case class GDALReader(dataset: Dataset, bandCount: Int, noDataValue: Option[Doub
         val rBand = dataset.GetRasterBand(indexBand(i) + 1)
         val dataBuffer = new Array[Byte](bufferSize.toInt)
         val returnVal = rBand.ReadRaster(
-          gridBounds.colMin,
-          gridBounds.rowMin,
+          gridBounds.colMin - 112,
+          gridBounds.rowMin - 58,
           gridBounds.width,
           gridBounds.height,
           gridBounds.width,

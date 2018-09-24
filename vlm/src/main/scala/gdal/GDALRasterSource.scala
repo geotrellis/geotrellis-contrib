@@ -37,9 +37,7 @@ case class GDALRasterSource(uri: String) extends RasterSource {
   def readPaddedTile(tile: PaddedTile, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val result = reader.read(
       tile.actualBounds,
-      bands,
-      Some(tile.targetBounds.width),
-      Some(tile.targetBounds.height)
+      bands
     )
 
     Some(Raster(result, rasterExtent.extentFor(tile.targetBounds)))
