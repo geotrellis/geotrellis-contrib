@@ -71,78 +71,87 @@ object RasterSourceRDD {
       )
 
     //val sourcesRDD: RDD[(RasterSource, Array[Extent])] =
-    val sourcesRDD: RDD[(RasterSource, Array[GridBounds])] =
+    //val sourcesRDD: RDD[(RasterSource, Array[GridBounds])] =
+    val sourcesRDD: RDD[(RasterSource, Array[PaddedTile])] =
       sc.parallelize(sources).flatMap { source =>
         //val extents: Traversable[Extent] =
-        val extents: Traversable[GridBounds] =
+        //val extents: Traversable[GridBounds] =
+        val extents: Traversable[PaddedTile] =
+        //val extents: Map[GridBounds, GridBounds] =
           extent.intersection(source.extent) match {
             case Some(intersection) =>
               val keys =
                 mapTransform
                   .keysForGeometry(intersection.toPolygon)
-                  .toSeq
-                  .sortBy { key => (key.col, key.row) }
 
+              val intersectionGridBounds: GridBounds =
+                rasterExtent.gridBoundsFor(intersection)
+
+              val keyGridBounds =
+                keys
+                  .map { key => rasterExtent.gridBoundsFor(mapTransform(key)) }
+
+              val combinedGridBounds = keyGridBounds.reduce { _ combine _ }
+
+              val adjustedIntersectionGridBounds = {
+                val colMin = intersectionGridBounds.colMin - combinedGridBounds.colMin
+                val rowMin = intersectionGridBounds.rowMin - combinedGridBounds.rowMin
+
+                GridBounds(
+                  colMin,
+                  rowMin,
+                  source.cols,
+                  source.rows
+                  //intersectionGridBounds.width + colMin - 2,
+                  //intersectionGridBounds.height + rowMin - 2
+                  //source.cols + colMin - 1,
+                  //source.rows + rowMin - 1
+                )
+              }
+
+              println(s"\nThis is the adjustedInterGridBounds: ${adjustedIntersectionGridBounds}")
+              println(s"This is the adjustedInterGridBounds: ${adjustedIntersectionGridBounds.width}")
+              println(s"This is the adjustedInterGridBounds: ${adjustedIntersectionGridBounds.height}")
+
+              keyGridBounds.map { gb =>
+                val adjusted = gb.offset(-combinedGridBounds.colMin, -combinedGridBounds.rowMin)
+
+                println(s"This is the adjusted: ${adjusted}")
+                println(s"This is the gb: ${gb}")
+
+                val result =
+                  adjusted.intersection(adjustedIntersectionGridBounds).get
+
+                println(s"This is the actual GridBounds: $result")
+
+                PaddedTile(result, adjusted)
+              }
+
+
+              //adjustedKeyGridBounds.split(256, 256).toSeq
+
+              /*
               val (colMin, rowMin) = {
                 val keyExtent = mapTransform(keys.head)
 
-                rasterExtent.mapToGrid(keyExtent.xmin, keyExtent.ymin)
+                rasterExtent.mapToGrid(keyExtent.xmin, keyExtent.ymax)
               }
 
               val (colMax, rowMax) = {
                 val keyExtent = mapTransform(keys(keys.size - 1))
 
-                rasterExtent.mapToGrid(keyExtent.xmax, keyExtent.ymax)
+                rasterExtent.mapToGrid(keyExtent.xmax, keyExtent.ymin)
               }
 
-              val targetColMax = colMax - colMin
-              val targetRowMax = rowMax - rowMin
-
-              println(s"\nThis is the targetColMax: $targetColMax")
-              println(s"This is the targetRowMax: $targetRowMax")
-
-              for {
-                cols <- 0 until targetColMax + 1 by layout.tileCols
-                rows <- 0 until targetRowMax + 1 by layout.tileRows
-              } yield {
-                GridBounds(
-                  cols,
-                  rows,
-                  math.min(cols + layout.tileCols - 1, targetColMax - 1),
-                  math.min(rows + layout.tileRows - 1, targetRowMax - 1)
-                )
-              }
-
-              //GridBounds(0, 0, colMax - colMin, rowMax - rowMin)
-                //.split(layout.tileCols, layout.tileRows)
-                //.filter { gb => gb.width != 1 && gb.height != 1 }
-                //.toList
-
-              /*
-              keys.map { key =>
-                val ex = mapTransform(key)
-
-                val (colMin, rowMin) = rasterExtent.mapToGrid(ex.xmin, ex.ymax)
-                val (colMax, rowMax) = rasterExtent.mapToGrid(ex.xmax, ex.ymin)
-
-                val gridBounds  = mapTransform(ex)
-                val gridBounds2 = rasterExtent.gridBoundsFor(ex)
-
-                /*
-                println(s"This is the gridBounds for $key")
-                println(s"This is the gridBounds produced by mapTransform: $gridBounds")
-                println(s"This is the gridBound's width: ${gridBounds.width}")
-                println(s"This is the girdBound's height: ${gridBounds.height}")
-                println(s"This is the gridBounds produced by rasterExtent: $gridBounds2")
-                println(s"This is the gridBound's width: ${gridBounds2.width}")
-                println(s"This is the girdBound's height: ${gridBounds2.height}")
-                */
-
-                //gridBounds2
-              }
+              GridBounds(0, 0, colMax - colMin, rowMax - rowMin)
+                .split(layout.tileCols, layout.tileRows)
+                .toSeq
               */
+
+              //keys.map { key => mapTransform(key) }
             //case None => Seq.empty[Extent]
-            case None => Seq.empty[GridBounds]
+            //case None => Seq.empty[GridBounds]
+            case None => Seq.empty[PaddedTile]
           }
 
         partition(extents, partitionBytes).map { res => (source, res) }
@@ -161,9 +170,11 @@ object RasterSourceRDD {
     val result: RDD[(SpatialKey, MultibandTile)] =
       repartitioned.flatMap { case (source, extents) =>
         //source.readExtents(extents).map { raster =>
-        source.readBounds(extents).map { raster =>
+        //source.readBounds(extents).map { raster =>
+        source.readPaddedTiles(extents).map { raster =>
           val center = raster.extent.center
           val key = mapTransform.pointToKey(center)
+          println(s"Tile.cols: ${raster.tile.cols} Tile.rows: ${raster.tile.rows}")
           require(raster.tile.cols == layout.tileCols && raster.tile.rows == layout.tileRows)
           (key, raster.tile)
         }
