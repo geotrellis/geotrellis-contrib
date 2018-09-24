@@ -1,6 +1,6 @@
 package geotrellis.contrib.vlm.gdal
 
-import geotrellis.contrib.vlm.RasterSource
+import geotrellis.contrib.vlm.{RasterSource, PaddedTile}
 
 import geotrellis.vector._
 import geotrellis.raster._
@@ -74,9 +74,55 @@ case class WarpGDALRasterSource(
 
   private lazy val reader: GDALReader = GDALReader(vrt, bandCount, noDataValue)
 
+  def readPaddedTiles(tiles: Traversable[PaddedTile], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
+    tiles.toIterator.flatMap(readPaddedTile(_, bands)).toIterator
+
+  def readPaddedTile(tile: PaddedTile, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+    val targetBounds = tile.targetBounds
+    val initialTile = reader.read(tile.actualBounds, bands)
+
+    val result =
+      if (initialTile.cols != targetBounds.width || initialTile.rows != targetBounds.height) {
+        val tiles =
+          initialTile.bands.map { band =>
+            val protoTile = band.prototype(targetBounds.width, targetBounds.height)
+
+            println(s"\nThis is the actualBounds: ${tile.actualBounds}")
+            println(s"This is the actualBounds width: ${tile.actualBounds.width}")
+            println(s"This is the actualBounds height: ${tile.actualBounds.height}")
+            println(s"This is the targetBounds: ${targetBounds}")
+            println(s"This is the col offset: ${tile.actualBounds.colMin - targetBounds.colMin}")
+            println(s"This is the row offset: ${tile.actualBounds.rowMin - targetBounds.rowMin}")
+            //println(s"This is the band's size - cols: ${band.cols} rows: ${band.rows}")
+
+            protoTile.update(tile.actualBounds.colMin - targetBounds.colMin, tile.actualBounds.rowMin - targetBounds.rowMin, band)
+            protoTile
+          }
+
+        MultibandTile(tiles)
+      } else
+        initialTile
+
+    println(s"\n This is the size of the tile - cols: ${result.cols} row: ${result.rows}")
+
+    //Some(Raster(tile, rasterExtent.extentFor(bounds)))
+
+    Some(Raster(result, rasterExtent.extentFor(tile.targetBounds)))
+  }
+
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+    val re = data.gridBoundsForExtent(extent)
+    println(s"\nThese Are the Different Bounds produced")
+    //println(s"This is the bounds produced by raster extent (no clamp): ${data.gridBoundsForExtent(extent)}")
+    //println(s"This is the width of the bounds produced by raster extent (no clamp): ${data.gridBoundsForExtent(extent).width}")
+    //println(s"This is the height of the bounds produced by raster extent (no clamp): ${data.gridBoundsForExtent(extent).height}")
+    println(s"This is the bounds produced by raster extent (no clamp): ${re}")
+    println(s"This is the width of the bounds produced by raster extent (no clamp): ${re.width}")
+    println(s"This is the height of the bounds produced by raster extent (no clamp): ${re.height}")
+    //println(s"This is the bounds produced by raster extent (ya clamp): ${data.gridBoundsForExtent(extent, clamp = true)}")
+    //println(s"This is the width of the bounds produced by raster extent (ya clamp): ${data.gridBoundsForExtent(extent, clamp = true).width}")
+    //println(s"This is the height of the bounds produced by raster extent (ya clamp): ${data.gridBoundsForExtent(extent, clamp = true).height}")
     read(data.rasterExtent.gridBoundsFor(extent, clamp = false), bands)
-    //read(data.gridBoundsForExtent(extent), bands)
   }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
@@ -85,13 +131,8 @@ case class WarpGDALRasterSource(
 
     //println(s"\nThis targetExtent: $targetExtent")
     //println(s"This targetExtent2:  $targetExtent2")
-    val actualBounds = rasterExtent.gridBoundsFor(targetExtent, clamp = true)
-    //val actualBounds =
-      //data.gridBoundsForExtent(
-        //targetExtent,
-        //bounds.width,
-        //bounds.height
-      //)
+    val actualBounds = rasterExtent.gridBoundsFor(targetExtent, clamp = false)
+    //val actualBounds = data.gridBoundsForExtent(targetExtent, bounds.width, bounds.height)
 
     println(s"\nThis is the bounds: $bounds")
     println(s"width: ${bounds.width}")
@@ -111,8 +152,7 @@ case class WarpGDALRasterSource(
             //println(s"This is the row offset: ${bounds.rowMin - actualBounds.rowMin}")
             //println(s"This is the band's size - cols: ${band.cols} rows: ${band.rows}")
 
-            //protoTile.update(bounds.colMin - actualBounds.colMin, bounds.rowMin - actualBounds.rowMin, band)
-            protoTile.update(actualBounds.colMin - actualBounds.colMin, bounds.rowMin - actualBounds.rowMin, band)
+            protoTile.update(bounds.colMin - actualBounds.colMin, bounds.rowMin - actualBounds.rowMin, band)
             protoTile
           }
 

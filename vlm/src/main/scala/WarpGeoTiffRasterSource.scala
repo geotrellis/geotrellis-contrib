@@ -59,6 +59,9 @@ case class WarpGeoTiffRasterSource(
     if (it.hasNext) Some(it.next) else None
   }
 
+  def readPaddedTiles(tiles: Traversable[PaddedTile], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
+    readBounds(tiles.map { _.targetBounds }, bands)
+
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     // TODO: clamp = false when we have PaddedTile
     val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = false))

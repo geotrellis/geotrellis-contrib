@@ -82,4 +82,8 @@ trait RasterSource extends Serializable {
     def readBounds(bounds: Traversable[GridBounds]): Iterator[Raster[MultibandTile]] =
         bounds.toIterator.flatMap(read(_, (0 until bandCount)).toIterator)
 
+    def readPaddedTiles(tiles: Traversable[PaddedTile], bands: Seq[Int]): Iterator[Raster[MultibandTile]]
+
+    def readPaddedTiles(tiles: Traversable[PaddedTile]): Iterator[Raster[MultibandTile]] =
+      readPaddedTiles(tiles, 0 until bandCount)
 }
