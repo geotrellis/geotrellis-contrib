@@ -26,45 +26,76 @@ case class GDALSourceData(
   dataType: Int,
   cellType: CellType,
   bandCount: Int
-) {
-  private lazy val invTransform = gdal.InvGeoTransform(geoTransform)
+) { private lazy val invTransform = gdal.InvGeoTransform(geoTransform)
 
-  def gridBoundsForExtent(extent: Extent): GridBounds = {
+  def gridBoundsForExtent(targetExtent: Extent): GridBounds = {
     val (colMin, rowMin) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
     val (colMax, rowMax) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
 
     gdal.ApplyGeoTransform(
       invTransform,
-      extent.xmin,
-      extent.ymax,
+      targetExtent.xmin,
+      targetExtent.ymax,
       colMin,
       rowMin
     )
 
     gdal.ApplyGeoTransform(
       invTransform,
-      extent.xmax,
-      extent.ymin,
+      targetExtent.xmax,
+      targetExtent.ymin,
       colMax,
       rowMax
     )
 
     GridBounds(
-      colMin.head.toInt,
-      rowMin.head.toInt,
-      colMax.head.toInt,
-      rowMax.head.toInt
+      colMin.head.toInt - 1,
+      rowMin.head.toInt - 1,
+      colMax.head.toInt - 1,
+      rowMax.head.toInt - 1
     )
   }
 
-  def extentForGridBounds(gridBounds: GridBounds): Extent = {
+  def gridBoundsForExtent(
+    targetExtent: Extent,
+    gridCols: Int,
+    gridRows: Int
+  ): GridBounds = {
+    val (colMin, rowMin) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
+    val (colMax, rowMax) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
+
+    gdal.ApplyGeoTransform(
+      invTransform,
+      targetExtent.xmin,
+      targetExtent.ymax,
+      colMin,
+      rowMin
+    )
+
+    gdal.ApplyGeoTransform(
+      invTransform,
+      targetExtent.xmax,
+      targetExtent.ymin,
+      colMax,
+      rowMax
+    )
+
+    GridBounds(
+      math.min(math.max(colMin.head.toInt, 0), gridCols - 1),
+      math.min(math.max(rowMin.head.toInt, 0), gridRows - 1),
+      math.min(math.max(colMax.head.toInt, 0), gridCols - 1),
+      math.min(math.max(rowMax.head.toInt, 0), gridRows - 1)
+    )
+  }
+
+  def extentForGridBounds(gridBounds: GridBounds, sourceExtent: Option[Extent] = None): Extent = {
     val (xmin, ymin) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
     val (xmax, ymax) = (Array.ofDim[Double](1), Array.ofDim[Double](1))
 
     gdal.ApplyGeoTransform(
       geoTransform,
       gridBounds.colMin,
-      gridBounds.rowMin,
+      gridBounds.rowMax,
       xmin,
       ymax
     )
@@ -72,17 +103,27 @@ case class GDALSourceData(
     gdal.ApplyGeoTransform(
       geoTransform,
       gridBounds.colMax,
-      gridBounds.rowMax,
+      gridBounds.rowMin,
       xmax,
       ymin
     )
 
-    Extent(
-      xmin.head,
-      ymin.head,
-      xmax.head,
-      ymax.head
-    )
+    sourceExtent match {
+      case Some(ex) =>
+        Extent(
+          math.max(math.min(xmin.head, ex.xmax), ex.xmin),
+          math.max(math.min(ymin.head, ex.ymax), ex.ymin),
+          math.max(math.min(xmax.head, ex.xmax), ex.xmin),
+          math.max(math.min(ymax.head, ex.ymax), ex.ymin)
+        )
+      case None =>
+        Extent(
+          xmin.head,
+          ymin.head,
+          xmax.head,
+          ymax.head
+        )
+    }
   }
 }
 
