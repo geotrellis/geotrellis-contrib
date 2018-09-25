@@ -16,6 +16,7 @@
 
 package geotrellis.contrib.vlm
 
+import geotrellis.contrib.vlm.gdal._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.resample._
@@ -33,29 +34,26 @@ class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
     val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
     val schemeURI = s"file://$uri"
 
-    val rasterSource = GeoTiffRasterSource(schemeURI)
-
     val sourceTiff = GeoTiffReader.readMultiband(uri)
 
-    
     val expectedRasterExtent = {
-      val re = ReprojectRasterExtent(rasterSource.rasterExtent, Transform(rasterSource.crs, LatLng))
+      val re = ReprojectRasterExtent(sourceTiff.rasterExtent, Transform(sourceTiff.crs, LatLng))
       // stretch target raster extent slightly to avoid default case in ReprojectRasterExtent
       RasterExtent(re.extent, CellSize(re.cellheight * 1.1, re.cellwidth * 1.1))
     }
 
-    def testReprojection(method: ResampleMethod) = {
+    def testReprojection(rasterSource: RasterSource, method: ResampleMethod) = {
       val warpRasterSource = rasterSource.reproject(LatLng, method, expectedRasterExtent)
-      
+
       val testBounds = GridBounds(0, 0, expectedRasterExtent.cols, expectedRasterExtent.rows).split(64,64).toSeq
 
       for (bound <- testBounds) yield {
         withClue(s"Read window ${bound}: ") {
           val targetExtent = expectedRasterExtent.extentFor(bound)
           val testRasterExtent = RasterExtent(
-            extent = targetExtent, 
-            cellwidth = expectedRasterExtent.cellwidth, 
-            cellheight = expectedRasterExtent.cellheight, 
+            extent = targetExtent,
+            cellwidth = expectedRasterExtent.cellwidth,
+            cellheight = expectedRasterExtent.cellheight,
             cols = bound.width, rows = bound.height)
 
           val expected: Raster[MultibandTile] = {
@@ -78,12 +76,28 @@ class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
       }
     }
 
-    it("should reproject using NearestNeighbor") {
-      testReprojection(NearestNeighbor)
+    describe("WarpGeoTiffRasterSource") {
+      val rasterSource = GeoTiffRasterSource(schemeURI)
+
+      it("should reproject using NearestNeighbor") {
+        testReprojection(rasterSource, NearestNeighbor)
+      }
+
+      it("should reproject using Bilinear") {
+        testReprojection(rasterSource, Bilinear)
+      }
     }
 
-    it("should reproject using Bilinear") {
-      testReprojection(Bilinear)
+    describe("WarpGDALRasterSource") {
+      val rasterSource = GDALRasterSource(uri)
+
+      it("should reproject using NearestNeighbor") {
+        testReprojection(rasterSource, NearestNeighbor)
+      }
+
+      it("should reproject using Bilinear") {
+        testReprojection(rasterSource, Bilinear)
+      }
     }
   }
 }

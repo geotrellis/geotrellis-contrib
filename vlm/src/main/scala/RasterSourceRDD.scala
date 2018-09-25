@@ -93,6 +93,9 @@ object RasterSourceRDD {
 
               val combinedGridBounds = keyGridBounds.reduce { _ combine _ }
 
+              println(s"\nThis is the combinedGridBounds: $combinedGridBounds")
+              println(s"This is the intersectionGridBounds: $intersectionGridBounds")
+
               val adjustedIntersectionGridBounds = {
                 val colMin = intersectionGridBounds.colMin - combinedGridBounds.colMin
                 val rowMin = intersectionGridBounds.rowMin - combinedGridBounds.rowMin
@@ -104,6 +107,8 @@ object RasterSourceRDD {
                   source.rows + rowMin - 1
                 )
               }
+
+              println(s"This is the adjustedIntersectionGridBounds: $adjustedIntersectionGridBounds")
 
               /*
               println(s"\nThis is the gridBounds of the intersection: ${intersectionGridBounds}")
@@ -118,10 +123,12 @@ object RasterSourceRDD {
               keyGridBounds.map { gb =>
                 val adjusted = gb.offset(-combinedGridBounds.colMin, -combinedGridBounds.rowMin)
 
+                println(s"This is the adjusted key gridBounds: $adjusted")
+
                 val result =
                   adjusted.intersection(adjustedIntersectionGridBounds).get
 
-                PaddedTile(result, adjusted)
+                PaddedTile(result, adjusted, mapTransform.boundsToExtent(gb), adjustedIntersectionGridBounds.colMin, adjustedIntersectionGridBounds.rowMin)
               }
 
 

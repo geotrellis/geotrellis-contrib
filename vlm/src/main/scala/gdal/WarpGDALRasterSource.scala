@@ -79,23 +79,19 @@ case class WarpGDALRasterSource(
 
   def readPaddedTile(tile: PaddedTile, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val targetBounds = tile.targetBounds
-    val initialTile = reader.read(tile.actualBounds, bands)
+    println(s"\nThis is the actualBounds: ${tile.actualBounds}")
+    println(s"This is the actualBounds width: ${tile.actualBounds.width}")
+    println(s"This is the actualBounds height: ${tile.actualBounds.height}")
+    println(s"This is the targetBounds: ${targetBounds}")
+    println(s"This is the col offset: ${tile.actualBounds.colMin - targetBounds.colMin}")
+    println(s"This is the row offset: ${tile.actualBounds.rowMin - targetBounds.rowMin}")
+    val initialTile = reader.read(tile.actualBounds, bands, tile.colOffset, tile.rowOffset)
 
     val result =
       if (initialTile.cols != targetBounds.width || initialTile.rows != targetBounds.height) {
         val tiles =
           initialTile.bands.map { band =>
             val protoTile = band.prototype(targetBounds.width, targetBounds.height)
-
-            /*
-            println(s"\nThis is the actualBounds: ${tile.actualBounds}")
-            println(s"This is the actualBounds width: ${tile.actualBounds.width}")
-            println(s"This is the actualBounds height: ${tile.actualBounds.height}")
-            println(s"This is the targetBounds: ${targetBounds}")
-            println(s"This is the col offset: ${tile.actualBounds.colMin - targetBounds.colMin}")
-            println(s"This is the row offset: ${tile.actualBounds.rowMin - targetBounds.rowMin}")
-            //println(s"This is the band's size - cols: ${band.cols} rows: ${band.rows}")
-            */
 
             protoTile.update(tile.actualBounds.colMin - targetBounds.colMin, tile.actualBounds.rowMin - targetBounds.rowMin, band)
             protoTile
@@ -128,12 +124,18 @@ case class WarpGDALRasterSource(
   }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+    val tile = reader.read(bounds, bands)
+
+    Some(Raster(tile, rasterExtent.extentFor(bounds, clamp = true)))
+  }
+
+  /*
     val targetExtent = rasterExtent.extentFor(bounds, clamp = false)
     //val targetExtent = data.extentForGridBounds(bounds)
 
     //println(s"\nThis targetExtent: $targetExtent")
     //println(s"This targetExtent2:  $targetExtent2")
-    val actualBounds = rasterExtent.gridBoundsFor(targetExtent, clamp = false)
+    val actualBounds = rasterExtent.gridBoundsFor(targetExtent, clamp = true)
     //val actualBounds = data.gridBoundsForExtent(targetExtent, bounds.width, bounds.height)
 
     /*
@@ -168,6 +170,7 @@ case class WarpGDALRasterSource(
 
     Some(Raster(tile, rasterExtent.extentFor(bounds)))
   }
+    */
 
   def withCRS(targetCRS: CRS, resampleMethod: ResampleMethod = NearestNeighbor): WarpGDALRasterSource =
     WarpGDALRasterSource(uri, targetCRS, data, None, resampleMethod)

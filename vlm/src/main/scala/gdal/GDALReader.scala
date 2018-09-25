@@ -15,7 +15,12 @@ case class GDALReader(dataset: Dataset, bandCount: Int, noDataValue: Option[Doub
     * TODO: benchmark this function, probably in case of reading all bands
     * we can optimize it by reading all the bytes as a single buffer into memory
     */
-  def read(gridBounds: GridBounds, bands: Seq[Int] = 0 until bandCount): MultibandTile = {
+  def read(
+    gridBounds: GridBounds,
+    bands: Seq[Int] = 0 until bandCount,
+    colOffset: Int = 0,
+    rowOffset: Int = 0
+  ): MultibandTile = {
     // NOTE: Bands are not 0-base indexed, so we must add 1// NOTE: Bands are not 0-base indexed, so we must add 1
     val baseBand = dataset.GetRasterBand(1)
 
@@ -41,8 +46,8 @@ case class GDALReader(dataset: Dataset, bandCount: Int, noDataValue: Option[Doub
         val rBand = dataset.GetRasterBand(indexBand(i) + 1)
         val dataBuffer = new Array[Byte](bufferSize.toInt)
         val returnVal = rBand.ReadRaster(
-          gridBounds.colMin - 112,
-          gridBounds.rowMin - 58,
+          gridBounds.colMin - colOffset,
+          gridBounds.rowMin - rowOffset,
           gridBounds.width,
           gridBounds.height,
           gridBounds.width,
@@ -73,8 +78,8 @@ case class GDALReader(dataset: Dataset, bandCount: Int, noDataValue: Option[Doub
         val rBand = dataset.GetRasterBand(indexBand(i) + 1)
         val dataBuffer = new Array[Byte](bufferSize.toInt)
         val returnVal = rBand.ReadRaster(
-          gridBounds.colMin - 112,
-          gridBounds.rowMin - 58,
+          gridBounds.colMin - colOffset,
+          gridBounds.rowMin - rowOffset,
           gridBounds.width,
           gridBounds.height,
           gridBounds.width,
