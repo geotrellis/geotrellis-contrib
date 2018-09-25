@@ -33,6 +33,7 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
 
   val source: GeoTiffRasterSource = new GeoTiffRasterSource(url)
 
+
   it("should be able to read upper left corner") {
     val bounds = GridBounds(0, 0, 10, 10)
     val chip: Raster[MultibandTile] = source.read(bounds).get
@@ -52,25 +53,21 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
   }
 
   it("should be able to resample") {
-    val cellSize = {
-      val CellSize(w, h) = source.cellSize
-      CellSize(w * 2, h * 2)
-    }
-
     // read in the whole file and resample the pixels in memory
     val expected: Raster[MultibandTile] =
       GeoTiffReader
         .readMultiband(url, streaming = false)
         .raster
-        .resample((source.cols / 2).toInt , (source.rows / 2).toInt, NearestNeighbor)
+        .resample((source.cols * 0.95).toInt , (source.rows * 0.95).toInt, NearestNeighbor)
+        // resample to 0.9 so we RasterSource picks the base layer and not an overview
 
     val resampledSource =
-      source.resample(expected.tile.cols, expected.tile.rows)
+      source.resample(expected.tile.cols, expected.tile.rows, NearestNeighbor)
 
     resampledSource should have (dimensions (expected.tile.dimensions))
 
     val actual: Raster[MultibandTile] =
-      resampledSource.read(GridBounds(0, 0, resampledSource.cols+100, resampledSource.rows)).get
+      resampledSource.read(GridBounds(0, 0, resampledSource.cols - 1, resampledSource.rows - 1)).get
 
     withGeoTiffClue(actual, expected)  {
       assertRastersEqual(actual, expected)

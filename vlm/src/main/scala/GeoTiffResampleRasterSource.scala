@@ -71,7 +71,6 @@ class GeoTiffResampleRasterSource(
   override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     val geoTiffTile = closetTiffOverview.tile.asInstanceOf[GeoTiffMultibandTile]
 
-
     val windows = { for {
       queryPixelBounds <- bounds
       targetPixelBounds <- queryPixelBounds.intersection(this)
@@ -79,14 +78,15 @@ class GeoTiffResampleRasterSource(
       val targetExtent = rasterExtent.extentFor(targetPixelBounds)
       val sourcePixelBounds = closetTiffOverview.rasterExtent.gridBoundsFor(targetExtent, clamp = true)
       val targetRasterExtent = RasterExtent(targetExtent, targetPixelBounds.width, targetPixelBounds.height)
-
       (sourcePixelBounds, targetRasterExtent)
     }}.toMap
 
     geoTiffTile.crop(windows.keys.toSeq, bands.toArray).map { case (gb, tile) =>
       val targetRasterExtent = windows(gb)
-      Raster(tile, rasterExtent.extentFor(gb, clamp = true))
-        .resample(targetRasterExtent, method)
+      Raster(
+        tile = tile,
+        extent = targetRasterExtent.extent
+      ).resample(targetRasterExtent.cols, targetRasterExtent.rows, method)
     }
   }
 }
