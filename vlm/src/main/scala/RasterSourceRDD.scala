@@ -50,7 +50,10 @@ object RasterSourceRDD {
     val cellType = cellTypes.head
     val crs = projections.head
 
+    import geotrellis.spark.io.cog._
+
     val mapTransform = layout.mapTransform
+    // println(s"layout.cellSize: ${layout.cellSize}")
     val extent = mapTransform.extent
     val combinedExtents = sources.map { _.extent }.reduce { _ combine _ }
 
@@ -66,7 +69,15 @@ object RasterSourceRDD {
             case Some(intersection) =>
               val keys = mapTransform.keysForGeometry(intersection.toPolygon)
 
-              keys.map { key => mapTransform(key) }
+              // println("~~~~~~~~~~~~~~~~~~~~~~")
+              // println(s"layout.tileLayout: ${layout.tileLayout}")
+              // println(s"mapTransform.tileHeight -> mapTransform.tileWidth: ${mapTransform.tileHeight -> mapTransform.tileWidth}")
+              // println("~~~~~~~~~~~~~~~~~~~~~~")
+
+              keys.map { key =>
+                if(key == SpatialKey(2303,3222)) println(s"mapTransform.keyToExtent($key): ${mapTransform.keyToExtent(key)}")
+                mapTransform.keyToExtent(key)
+              }
             case None => Seq.empty[Extent]
           }
         
@@ -85,10 +96,20 @@ object RasterSourceRDD {
 
     val result: RDD[(SpatialKey, MultibandTile)] =
       repartitioned.flatMap { case (source, extents) =>
+        extents.map { e =>
+          val re = RasterExtent(e, layout.cellSize)
+          val gb = mapTransform(re.extent)
+          // println(s"re.dimensions: ${re.dimensions}")
+          // println(s"re.cellSize: ${re.cellSize}")
+          // println(s"gb: $gb")
+
+        }
+
         source.readExtents(extents).map { raster =>
-          val center = raster.extent.center
+          val center = raster.extent/*.bufferByLayout(layout)*/.center
           val key = mapTransform.pointToKey(center)
-          require(raster.tile.cols == layout.tileCols && raster.tile.rows == layout.tileRows)
+          // println(s"require(${raster.tile.cols} == ${layout.tileCols} && ${raster.tile.rows} == ${layout.tileRows})")
+          // require(raster.tile.cols == layout.tileCols && raster.tile.rows == layout.tileRows)
           (key, raster.tile)
         }
       }

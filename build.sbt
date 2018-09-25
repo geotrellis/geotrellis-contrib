@@ -57,16 +57,22 @@ lazy val vlm = project
     name := "geotrellis-contrib-vlm",
     version := "0.1.0",
     libraryDependencies ++= Seq(
-      geotrellisSpark, geotrellisS3, geotrellisUtil,
-      catsCore, catsEffect,
-      fs2Core, fs2Io,
-      sparkCore % Provided,      
+      geotrellisSpark,
+      geotrellisS3,
+      geotrellisUtil,
+      catsCore,
+      catsEffect,
+      fs2Core,
+      fs2Io,
+      gdal,
+      sparkCore % Provided,
       geotrellisSparkTestKit % Test,
-      scalatest % Test),
+      scalatest % Test
+    ),
     Test / fork := true,
     Test / parallelExecution := false,
-    Test / testOptions += Tests.Argument("-oD"),
-    javaOptions ++= Seq("-Xms1024m", "-Xmx6144m")
+    Test / testOptions += Tests.Argument("-oDF"),
+    javaOptions ++= Seq("-Xms1024m", "-Xmx6144m", "-Djava.library.path=/usr/local/lib")
   )
 
 lazy val benchmark = (project in file("benchmark"))

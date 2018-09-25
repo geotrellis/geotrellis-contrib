@@ -60,6 +60,9 @@ class GeoTiffReprojectRasterSource(
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     // TODO: clamp = true when we have PaddedTile
+    println(s"HHHHHHHHHHHHHHHH")
+    println(s"rasterExtent.cellSize: ${rasterExtent.cellSize}")
+    println(s"HHHHHHHHHHHHHHHH")
     val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = false))
     readBounds(bounds, bands)
   }

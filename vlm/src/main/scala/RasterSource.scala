@@ -142,7 +142,7 @@ trait RasterSource extends CellGrid with Serializable {
       * @group read
       */
     def readExtents(extents: Traversable[Extent]): Iterator[Raster[MultibandTile]] =
-        extents.toIterator.flatMap(read(_, (0 until bandCount)).toIterator)
+        readExtents(extents, (0 until bandCount))
     /**
       * @group read
       */
