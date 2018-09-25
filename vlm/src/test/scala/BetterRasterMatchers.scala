@@ -3,15 +3,20 @@ package geotrellis.contrib.vlm
 import org.scalatest._
 import geotrellis.raster._
 import geotrellis.vector._
+import geotrellis.proj4.{CRS, LatLng}
 import geotrellis.vector.io.wkt.WKT
+import geotrellis.raster.io.geotiff.GeoTiff
 import matchers._
 import spire.syntax.cfor._
 import geotrellis.raster.testkit.RasterMatchers
 import geotrellis.raster.render.ascii._
 
 import scala.reflect._
+import java.nio.file.Files
 
 trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
+  import BetterRasterMatchers._
+
   private def dims[T <: Grid](t: T): String =
     s"""(${t.cols}, ${t.rows})"""
 
@@ -39,13 +44,25 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
     }
   }
 
+  def assertRastersEqual(actual: Raster[MultibandTile], expected: Raster[MultibandTile]): Unit = {
+    actual.tile should have (
+      cellType (expected.cellType),
+      dimensions (expected.dimensions),
+      bandCount (expected.tile.bandCount)
+    )
+
+    withDiffRenderClue(actual.tile, expected.tile){
+      assertEqual(actual.tile, expected.tile)
+    }
+  }
+
   /** Renders scaled diff tiles as a clue */
   def withDiffRenderClue[T](
     actual: MultibandTile,
     expect: MultibandTile,
     palette: AsciiArtEncoder.Palette = AsciiArtEncoder.Palette.NARROW,
     size: Int = 24
-  )(fun: => T) = {
+  )(fun: => T) = withClue({
     require(actual.bandCount == expect.bandCount, s"Band count doesn't match: ${actual.bandCount} != ${expect.bandCount}")
     val diffs = for (b <- 0 until actual.bandCount) yield
       scaledDiff(actual.band(b), expect.band(b), maxDim = size)
@@ -60,29 +77,42 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
 
     val bandList = (0 until actual.bandCount).mkString(",")
     val scale = s"1 char == ${actual.rows / diffs(0).rows} rows == ${actual.cols / diffs(0).cols} cols"
-    withClue(s"""
+    s"""
     |+ Diff: band(${bandList}) @ ($scale)
     |${joinedDiffs}
     |
-    """.stripMargin)(fun)
-  }
+    """.stripMargin
+  })(fun)
 
-  /** Create a scale tile where no dimension exceeds max value */
-  private def scaledTile(model: CellGrid, max: Int)(cellType: CellType = model.cellType): MutableArrayTile = {
-    val cols = model.cols
-    val rows = model.rows
+  def withGeoTiffClue[T](
+    actual: Raster[MultibandTile],
+    expect: Raster[MultibandTile],
+    crs: CRS = null
+  )(fun: => T) = withClue({
+    val fileCrs = Option(crs).getOrElse(LatLng)
+    val tmpDir = Files.createTempDirectory(getClass.getSimpleName)
+    val actualFile = tmpDir.resolve("actual.tiff")
+    val expectFile = tmpDir.resolve("expect.tiff")
+    var diffFile = tmpDir.resolve("diff.tiff")
+    GeoTiff(actual, fileCrs).write(actualFile.toString, optimizedOrder = true)
+    GeoTiff(expect, fileCrs).write(expectFile.toString, optimizedOrder = true)
 
-    val (scaledCols, scaledRows) =
-      if ((cols > rows) && cols > max)
-        (max, (rows * (max.toDouble / cols)).toInt)
-      else if (rows > max)
-        ((cols * (max.toDouble / rows)).toInt, rows)
-      else
-        (cols, rows)
+    if ((actual.tile.bandCount == expect.tile.bandCount) && (actual.dimensions == expect.dimensions)) {
+      val diff = actual.tile.bands.zip(expect.tile.bands).map { case (l, r) => l - r }.toArray
+      GeoTiff(ArrayMultibandTile(diff), actual.extent, fileCrs).write(diffFile.toString, optimizedOrder = true)
+    } else {
+      diffFile = null
+    }
 
-    ArrayTile.empty(cellType, scaledCols, scaledRows)
-  }
+    s"""
+    |+ actual: ${actualFile}
+    |+ expect: ${expectFile}
+    |+ diff  : ${Option(diffFile).getOrElse("--")}
+    """stripMargin
+  })(fun)
+}
 
+object BetterRasterMatchers {
   def scaledDiff(actual: Tile, expect: Tile, maxDim: Int, eps: Double = Double.MinPositiveValue): Tile = {
     // TODO: Add DiffMode (change count, accumulated value diff, change flag)
     require(actual.cols == expect.cols)
@@ -113,5 +143,18 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
     diff
   }
 
+  /** Create a scale tile where no dimension exceeds max value */
+  def scaledTile(model: CellGrid, max: Int)(cellType: CellType = model.cellType): MutableArrayTile = {
+    val cols = model.cols
+    val rows = model.rows
 
+    val (scaledCols, scaledRows) =
+      if ((cols > rows) && cols > max)
+        (max, (rows * (max.toDouble / cols)).toInt)
+      else if (rows > max)
+        ((cols * (max.toDouble / rows)).toInt, rows)
+      else
+        (cols, rows)
+    ArrayTile.empty(cellType, scaledCols, scaledRows)
+  }
 }
