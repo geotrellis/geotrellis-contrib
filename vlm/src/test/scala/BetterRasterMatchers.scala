@@ -60,7 +60,7 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
   def withDiffRenderClue[T](
     actual: MultibandTile,
     expect: MultibandTile,
-    palette: AsciiArtEncoder.Palette = AsciiArtEncoder.Palette.NARROW,
+    palette: AsciiArtEncoder.Palette = AsciiArtEncoder.Palette(" ░▒▓█"),
     size: Int = 24
   )(fun: => T) = withClue({
     require(actual.bandCount == expect.bandCount, s"Band count doesn't match: ${actual.bandCount} != ${expect.bandCount}")
@@ -119,7 +119,8 @@ object BetterRasterMatchers {
     require(actual.rows == expect.rows)
     val cols = actual.cols
     val rows = actual.rows
-    val diff = scaledTile(actual, maxDim)(FloatConstantNoDataCellType)
+    val scale: Double = maxDim / math.max(cols, rows).toDouble
+    val diff = ArrayTile.empty(FloatConstantNoDataCellType, (cols * scale).toInt, (rows * scale).toInt)
     val colScale: Double = diff.cols.toDouble / actual.cols.toDouble
     val rowScale: Double = diff.rows.toDouble / actual.rows.toDouble
     var diffs = 0
@@ -141,20 +142,5 @@ object BetterRasterMatchers {
       }
     }
     diff
-  }
-
-  /** Create a scale tile where no dimension exceeds max value */
-  def scaledTile(model: CellGrid, max: Int)(cellType: CellType = model.cellType): MutableArrayTile = {
-    val cols = model.cols
-    val rows = model.rows
-
-    val (scaledCols, scaledRows) =
-      if ((cols > rows) && cols > max)
-        (max, (rows * (max.toDouble / cols)).toInt)
-      else if (rows > max)
-        ((cols * (max.toDouble / rows)).toInt, rows)
-      else
-        (cols, rows)
-    ArrayTile.empty(cellType, scaledCols, scaledRows)
   }
 }
