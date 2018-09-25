@@ -79,7 +79,7 @@ class GeoTiffResampleRasterSource(
       val targetExtent = rasterExtent.extentFor(targetPixelBounds)
       val sourcePixelBounds = closetTiffOverview.rasterExtent.gridBoundsFor(targetExtent, clamp = true)
       val targetRasterExtent = RasterExtent(targetExtent, targetPixelBounds.width, targetPixelBounds.height)
-      println(targetRasterExtent)
+
       (sourcePixelBounds, targetRasterExtent)
     }}.toMap
 

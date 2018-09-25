@@ -70,7 +70,7 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
     resampledSource should have (dimensions (expected.tile.dimensions))
 
     val actual: Raster[MultibandTile] =
-      source.read(GridBounds(0, 0, resampledSource.cols+100, resampledSource.rows)).get
+      resampledSource.read(GridBounds(0, 0, resampledSource.cols+100, resampledSource.rows)).get
 
     assertTilesEqual(actual.tile, expected.tile)
   }
