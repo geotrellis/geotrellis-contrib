@@ -47,8 +47,10 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
     size: Int = 24
   )(fun: => T) = {
     require(actual.bandCount == expect.bandCount, s"Band count doesn't match: ${actual.bandCount} != ${expect.bandCount}")
-    val asciiDiffs = for (b <- 0 until actual.bandCount) yield
-      scaledDiff(actual.band(b), expect.band(b), maxDim = size).renderAscii(palette)
+    val diffs = for (b <- 0 until actual.bandCount) yield
+      scaledDiff(actual.band(b), expect.band(b), maxDim = size)
+
+    val asciiDiffs = diffs.map(_.renderAscii(palette))
 
     val joinedDiffs: String = asciiDiffs
       .map(_.lines.toSeq)
@@ -57,9 +59,9 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
       .mkString("\n")
 
     val bandList = (0 until actual.bandCount).mkString(",")
-
+    val scale = s"1 char == ${actual.rows / diffs(0).rows} rows == ${actual.cols / diffs(0).cols} cols"
     withClue(s"""
-    |Band(${bandList}) diff:
+    |+ Diff: band(${bandList}) @ ($scale)
     |${joinedDiffs}
     |
     """.stripMargin)(fun)
