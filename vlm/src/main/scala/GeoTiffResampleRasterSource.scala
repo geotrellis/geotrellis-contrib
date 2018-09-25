@@ -37,14 +37,14 @@ class GeoTiffResampleRasterSource(
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = tiff.cellType
-  
-  override lazy val rasterExtent = 
+
+  override lazy val rasterExtent =
     resampleGrid(tiff.rasterExtent)
-  
-  @transient lazy val closetTiffOverview: GeoTiff[MultibandTile] = 
+
+  @transient lazy val closetTiffOverview: GeoTiff[MultibandTile] =
     tiff.getClosestOverview(rasterExtent.cellSize, AutoHigherResolution)
 
-  def reproject(targetCRS: CRS, options: Reproject.Options): GeoTiffReprojectRasterSource = 
+  def reproject(targetCRS: CRS, options: Reproject.Options): GeoTiffReprojectRasterSource =
     new GeoTiffReprojectRasterSource(uri, targetCRS, options)
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
@@ -55,7 +55,7 @@ class GeoTiffResampleRasterSource(
     val it = readBounds(List(bounds), bands)
     if (it.hasNext) Some(it.next) else None
   }
-    
+
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val it = readBounds(List(bounds), bands)
     if (it.hasNext) Some(it.next) else None
@@ -71,12 +71,17 @@ class GeoTiffResampleRasterSource(
   override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     val geoTiffTile = closetTiffOverview.tile.asInstanceOf[GeoTiffMultibandTile]
 
-    val windows = bounds.map { targetPixelBounds =>
+
+    val windows = { for {
+      queryPixelBounds <- bounds
+      targetPixelBounds <- queryPixelBounds.intersection(this)
+    } yield {
       val targetExtent = rasterExtent.extentFor(targetPixelBounds)
       val sourcePixelBounds = closetTiffOverview.rasterExtent.gridBoundsFor(targetExtent, clamp = true)
       val targetRasterExtent = RasterExtent(targetExtent, targetPixelBounds.width, targetPixelBounds.height)
+      println(targetRasterExtent)
       (sourcePixelBounds, targetRasterExtent)
-    }.toMap
+    }}.toMap
 
     geoTiffTile.crop(windows.keys.toSeq, bands.toArray).map { case (gb, tile) =>
       val targetRasterExtent = windows(gb)

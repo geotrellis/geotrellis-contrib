@@ -40,12 +40,12 @@ import java.net.URI
   * @groupdesc reproject Functions to resample raster data in target projection.
   * @groupprio reproject 2
   */
-trait RasterSource extends Serializable {
+trait RasterSource extends CellGrid with Serializable {
     def uri: String
     def crs: CRS
     def bandCount: Int
     def cellType: CellType
-    def cellSize = CellSize(extent, cols, rows)
+    def cellSize = rasterExtent.cellSize
     def rasterExtent: RasterExtent
     def extent: Extent = rasterExtent.extent
     def cols: Int = rasterExtent.cols
@@ -56,54 +56,54 @@ trait RasterSource extends Serializable {
       * @group reproject
       */
     def reproject(crs: CRS, options: Reproject.Options): RasterSource
-    
-    /** Sampling grid is defined over the footprint of the data at default resolution 
-      * @group reproject 
+
+    /** Sampling grid is defined over the footprint of the data at default resolution
+      * @group reproject
       */
     def reproject(crs: CRS, method: ResampleMethod = NearestNeighbor): RasterSource =
         reproject(crs, Reproject.Options(method = method))
-    
-    /** Sampling grid and resolution is defined by given [[GridExtent]].  
-      * Resulting extent is the extent of the minimum enclosing pixel region 
+
+    /** Sampling grid and resolution is defined by given [[GridExtent]].
+      * Resulting extent is the extent of the minimum enclosing pixel region
       *   of the data footprint in the target grid.
       * @group reproject a
-      */    
-    def reprojectToGrid(crs: CRS, grid: GridExtent, method: ResampleMethod = NearestNeighbor): RasterSource = 
+      */
+    def reprojectToGrid(crs: CRS, grid: GridExtent, method: ResampleMethod = NearestNeighbor): RasterSource =
         reproject(crs, Reproject.Options(method = method, parentGridExtent = Some(grid)))
 
     /** Sampling grid and resolution is defined by given [[RasterExtent]] region.
       * The extent of the result is also taken from given [[RasterExtent]],
       *   this region may be larger or smaller than the footprint of the data
-      * @group reproject 
+      * @group reproject
       */
     def reprojectToRegion(crs: CRS, region: RasterExtent, method: ResampleMethod = NearestNeighbor): RasterSource =
         reproject(crs, Reproject.Options(method = method, targetRasterExtent = Some(region)))
-    
+
 
     def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource
 
-    /** Sampling grid is defined of the footprint of the data with resolution implied by column and row count. 
+    /** Sampling grid is defined of the footprint of the data with resolution implied by column and row count.
       * @group resample
       */
     def resample(targetCols: Int, targetRows: Int, method: ResampleMethod = NearestNeighbor): RasterSource =
       resample(Dimensions(targetCols, targetRows), method)
 
     /** Sampling grid and resolution is defined by given [[GridExtent]].
-      * Resulting extent is the extent of the minimum enclosing pixel region 
+      * Resulting extent is the extent of the minimum enclosing pixel region
       *  of the data footprint in the target grid.
       * @group resample
       */
-    def resampleToGrid(grid: GridExtent, method: ResampleMethod = NearestNeighbor): RasterSource = 
+    def resampleToGrid(grid: GridExtent, method: ResampleMethod = NearestNeighbor): RasterSource =
       resample(TargetGrid(grid), method)
-    
+
     /** Sampling grid and resolution is defined by given [[RasterExtent]] region.
       * The extent of the result is also taken from given [[RasterExtent]],
       *   this region may be larger or smaller than the footprint of the data
       * @group resample
       */
-    def resampleToRegion(region: RasterExtent, method: ResampleMethod = NearestNeighbor): RasterSource = 
+    def resampleToRegion(region: RasterExtent, method: ResampleMethod = NearestNeighbor): RasterSource =
       resample(TargetRegion(region), method)
-    
+
     /** Reads a window for the extent.
       * Return extent may be smaller than requested extent around raster edges.
       * May return None if the requested extent does not overlap the raster extent.
@@ -119,19 +119,19 @@ trait RasterSource extends Serializable {
       */
     @throws[IndexOutOfBoundsException]("if requested bands do not exist")
     def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]]
-    
+
     /**
       * @group read
       */
-    def read(extent: Extent): Option[Raster[MultibandTile]] = 
+    def read(extent: Extent): Option[Raster[MultibandTile]] =
         read(extent, (0 until bandCount))
-    
+
     /**
       * @group read
       */
-    def read(bounds: GridBounds): Option[Raster[MultibandTile]] = 
+    def read(bounds: GridBounds): Option[Raster[MultibandTile]] =
         read(bounds, (0 until bandCount))
-    
+
     /**
       * @group read
       */

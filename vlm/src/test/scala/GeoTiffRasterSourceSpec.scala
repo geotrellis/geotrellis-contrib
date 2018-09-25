@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 package geotrellis.contrib.vlm
 
 import geotrellis.raster._
@@ -28,14 +28,27 @@ import org.scalatest._
 import java.io.File
 
 
-class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers {
-  val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
-  val schemeURI = s"file://$uri"
+class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
+  val url = Resource.path("img/aspect-tiled.tif")
 
-  val source: GeoTiffRasterSource = new GeoTiffRasterSource(schemeURI)
+  val source: GeoTiffRasterSource = new GeoTiffRasterSource(url)
 
   it("should be able to read upper left corner") {
-    val chip: Raster[MultibandTile] = source.read(GridBounds(0, 0, 10, 10)).get
+    val bounds = GridBounds(0, 0, 10, 10)
+    val chip: Raster[MultibandTile] = source.read(bounds).get
+    chip should have (
+      dimensions (bounds.width, bounds.height),
+      cellType (source.cellType)
+    )
+  }
+
+  it("should not read past file edges") {
+    Given("bounds larger than raster")
+    val bounds = GridBounds(0, 0, source.cols + 100, source.rows + 100)
+    When("reading by pixel bounds")
+    val chip = source.read(bounds).get
+    Then("return only pixels that exist")
+    chip.tile should have (dimensions (source.dimensions))
   }
 
   it("should be able to resample") {
@@ -43,9 +56,22 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers {
       val CellSize(w, h) = source.cellSize
       CellSize(w * 2, h * 2)
     }
-    val resampledSource = source.resample(source.cols / 2, source.rows / 2)
-    val chip: Raster[MultibandTile] = resampledSource.read(GridBounds(0, 0, 10, 10)).get
 
-    chip.cellSize should be (cellSize)
+    // read in the whole file and resample the pixels in memory
+    val expected: Raster[MultibandTile] =
+      GeoTiffReader
+        .readMultiband(url, streaming = false)
+        .raster
+        .resample((source.cols / 2).toInt , (source.rows / 2).toInt, NearestNeighbor)
+
+    val resampledSource =
+      source.resample(expected.tile.cols, expected.tile.rows)
+
+    resampledSource should have (dimensions (expected.tile.dimensions))
+
+    val actual: Raster[MultibandTile] =
+      source.read(GridBounds(0, 0, resampledSource.cols+100, resampledSource.rows)).get
+
+    assertTilesEqual(actual.tile, expected.tile)
   }
 }

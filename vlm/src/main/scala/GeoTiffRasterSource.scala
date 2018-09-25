@@ -37,7 +37,7 @@ class GeoTiffRasterSource(
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = tiff.cellType
 
-  def reproject(targetCRS: CRS, options: Reproject.Options): GeoTiffReprojectRasterSource = 
+  def reproject(targetCRS: CRS, options: Reproject.Options): GeoTiffReprojectRasterSource =
     new GeoTiffReprojectRasterSource(uri, targetCRS, options)
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
@@ -51,24 +51,22 @@ class GeoTiffRasterSource(
     }
     if (it.hasNext) Some(it.next) else None
   }
-    
+
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
-    val it = geoTiffTile.crop(List(bounds), bands.toArray).map { case (gb, tile) =>
-      Raster(tile, rasterExtent.extentFor(gb, clamp = false))
-    }
+    val it = readBounds(List(bounds), bands)
     if (it.hasNext) Some(it.next) else None
   }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = false))
+    val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = true))
     readBounds(bounds, bands)
   }
 
   override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
-    geoTiffTile.crop(bounds.toSeq, bands.toArray).map { case (gb, tile) =>
-      Raster(tile, rasterExtent.extentFor(gb, clamp = false))
+    val intersectingBounds = bounds.flatMap(_.intersection(this)).toSeq
+    geoTiffTile.crop(intersectingBounds, bands.toArray).map { case (gb, tile) =>
+      Raster(tile, rasterExtent.extentFor(gb, clamp = true))
     }
   }
 }
