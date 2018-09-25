@@ -18,7 +18,9 @@ package geotrellis.contrib.vlm
 
 import geotrellis.contrib.vlm.gdal._
 import geotrellis.raster._
+import geotrellis.raster.io.geotiff._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
+import geotrellis.raster.io.geotiff.writer._
 import geotrellis.raster.resample._
 import geotrellis.raster.reproject._
 import geotrellis.raster.testkit._
@@ -58,10 +60,24 @@ class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
 
           val expected: Raster[MultibandTile] = {
             val rr = implicitly[RasterRegionReproject[MultibandTile]]
-            rr.regionReproject(sourceTiff.raster, sourceTiff.crs, LatLng, testRasterExtent, testRasterExtent.extent.toPolygon, method)
+            rr.
+            regionReproject(
+              sourceTiff.raster,
+              sourceTiff.crs,
+              LatLng,
+              testRasterExtent,
+              testRasterExtent.extent.toPolygon,
+              method
+            )
           }
 
           val actual = warpRasterSource.read(bound).get
+
+          val actualGTiff = MultibandGeoTiff(actual, warpRasterSource.crs)
+          val expectedGTiff = MultibandGeoTiff(expected, LatLng)
+
+          actualGTiff.write(s"/tmp/actual-${method.toString}.tif")
+          expectedGTiff.write(s"/tmp/expected-${method.toString}.tif")
 
           val expectedTile = expected.tile.band(0)
           val actualTile = actual.tile.band(0)
@@ -76,6 +92,7 @@ class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
       }
     }
 
+    /*
     describe("WarpGeoTiffRasterSource") {
       val rasterSource = GeoTiffRasterSource(schemeURI)
 
@@ -87,6 +104,7 @@ class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
         testReprojection(rasterSource, Bilinear)
       }
     }
+    */
 
     describe("WarpGDALRasterSource") {
       val rasterSource = GDALRasterSource(uri)
@@ -97,6 +115,35 @@ class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
 
       it("should reproject using Bilinear") {
         testReprojection(rasterSource, Bilinear)
+      }
+    }
+  }
+
+  describe("It should match files created via the GDAL CLI") {
+    val baseFile = "/tmp/nlcd_tile_wsg84.tif"
+    val reprojectedFile = "/tmp/nlcd_tile_webmercator-nearestneighbor.tif"
+    val reprojectedFileURI = s"file:///tmp/nlcd_tile_webmercator-nearestneighbor.tif"
+
+    val rasterSource = GDALRasterSource(baseFile)
+    val sourceTiff = MultibandGeoTiff(reprojectedFile)
+
+    val warpedSource = rasterSource.reproject(sourceTiff.crs, NearestNeighbor, sourceTiff.rasterExtent)
+
+    it("should match when being read in as bounds") {
+      val result = warpedSource.read(GridBounds(0, 0, warpedSource.cols - 1, warpedSource.rows - 1))
+
+      result match {
+        case Some(actual) => assertEqual(actual.tile, sourceTiff.tile)
+        case None => throw new Error("The reprojection failed")
+      }
+    }
+
+    it("should match when being read in as extents") {
+      val result = warpedSource.read(warpedSource.extent)
+
+      result match {
+        case Some(actual) => assertEqual(actual.tile, sourceTiff.tile)
+        case None => throw new Error("The reprojection failed")
       }
     }
   }

@@ -19,6 +19,8 @@ package geotrellis.contrib.vlm
 import geotrellis.contrib.vlm.gdal._
 
 import geotrellis.raster._
+import geotrellis.raster.io.geotiff._
+import geotrellis.raster.io.geotiff.writer._
 import geotrellis.raster.resample.NearestNeighbor
 import geotrellis.raster.reproject.{Reproject, ReprojectRasterExtent}
 import geotrellis.vector._
@@ -39,6 +41,8 @@ import java.io.File
 
 class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
   val filePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
+  //val filePath = "/tmp/landsat-multiband-pixel-cropped-2.tiff"
+
   val uri = s"file://$filePath"
 
   val targetCRS = CRS.fromEpsgCode(3857)
@@ -78,6 +82,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
   }
   */
 
+ /*
   describe("reading in GeoTiffs as RDDs using GDALRasterSource") {
     val rasterSource = GDALRasterSource(filePath)
     val targetRasterExtent = {
@@ -112,12 +117,16 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
       values.map { value => (value.cols, value.rows) should be ((256, 256)) }
     }
   }
+  */
 
   describe("Match reprojection from HadoopGeoTiffRDD") {
     val geoTiffRDD = HadoopGeoTiffRDD.spatialMultiband(uri)
     val md = geoTiffRDD.collectMetadata[SpatialKey](floatingLayout)._2
 
     @transient val mapTrans = layout.mapTransform
+
+    @transient val toGTiff =
+      (k: SpatialKey, tile: MultibandTile) => MultibandGeoTiff(tile, mapTrans(k), targetCRS)
 
     val reprojectedExpectedRDD: MultibandTileLayerRDD[SpatialKey] =
       geoTiffRDD
@@ -135,15 +144,27 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
       actual: MultibandTileLayerRDD[SpatialKey]
     ): Unit = {
       val filteredExpected = expected.filter { case (k, _) =>
-        mapTrans.keyToExtent(k).intersects(expectedExtent)
+        mapTrans.keyToExtent(k).intersects(expectedExtent)// && k == SpatialKey(2303, 3222)
       }
 
       val filteredActual =
         actual.filter { case (k, _) =>
-          mapTrans.keyToExtent(k).intersects(expectedExtent)
+          mapTrans.keyToExtent(k).intersects(expectedExtent)// && k == SpatialKey(2303, 3222)
         }
 
       val joinedRDD = filteredExpected.leftOuterJoin(filteredActual)
+
+      /*
+      filteredActual.collect().toList.map { case (k, v) =>
+        val gtiff = toGTiff(k, v)
+        gtiff.write(s"/tmp/tiles/actual-${k.toString}.tif")
+      }
+
+      filteredExpected.collect().toList.map { case (k, v) =>
+        val gtiff = toGTiff(k, v)
+        gtiff.write(s"/tmp/tiles/expected-${k.toString}.tif")
+      }
+      */
 
       joinedRDD.collect().map { case (key, (expected, actualTile)) =>
         actualTile match {

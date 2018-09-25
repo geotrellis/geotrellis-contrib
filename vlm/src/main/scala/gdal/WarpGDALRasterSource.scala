@@ -93,7 +93,11 @@ case class WarpGDALRasterSource(
           initialTile.bands.map { band =>
             val protoTile = band.prototype(targetBounds.width, targetBounds.height)
 
-            protoTile.update(tile.actualBounds.colMin - targetBounds.colMin, tile.actualBounds.rowMin - targetBounds.rowMin, band)
+            protoTile
+              .update(
+                tile.actualBounds.colMin - targetBounds.colMin,
+                tile.actualBounds.rowMin - targetBounds.rowMin,
+                band)
             protoTile
           }
 
@@ -120,7 +124,7 @@ case class WarpGDALRasterSource(
     //println(s"This is the bounds produced by raster extent (ya clamp): ${data.gridBoundsForExtent(extent, clamp = true)}")
     //println(s"This is the width of the bounds produced by raster extent (ya clamp): ${data.gridBoundsForExtent(extent, clamp = true).width}")
     //println(s"This is the height of the bounds produced by raster extent (ya clamp): ${data.gridBoundsForExtent(extent, clamp = true).height}")
-    read(data.rasterExtent.gridBoundsFor(extent, clamp = false), bands)
+    read(rasterExtent.gridBoundsFor(extent, clamp = false), bands)
   }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {

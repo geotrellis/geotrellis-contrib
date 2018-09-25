@@ -85,11 +85,11 @@ object RasterSourceRDD {
                   .keysForGeometry(intersection.toPolygon)
 
               val intersectionGridBounds: GridBounds =
-                rasterExtent.gridBoundsFor(intersection)
+                rasterExtent.gridBoundsFor(intersection, clamp = true)
 
               val keyGridBounds =
                 keys
-                  .map { key => rasterExtent.gridBoundsFor(mapTransform(key)) }
+                  .map { key => rasterExtent.gridBoundsFor(mapTransform(key), clamp = true) }
 
               val combinedGridBounds = keyGridBounds.reduce { _ combine _ }
 
@@ -97,8 +97,13 @@ object RasterSourceRDD {
               println(s"This is the intersectionGridBounds: $intersectionGridBounds")
 
               val adjustedIntersectionGridBounds = {
-                val colMin = intersectionGridBounds.colMin - combinedGridBounds.colMin
-                val rowMin = intersectionGridBounds.rowMin - combinedGridBounds.rowMin
+                val colMin = intersectionGridBounds.colMin - combinedGridBounds.colMin// - 1
+                val rowMin = intersectionGridBounds.rowMin - combinedGridBounds.rowMin// - 1
+                //val colMax = combinedGridBounds.colMax - intersectionGridBounds.colMax
+                //val rowMax = combinedGridBounds.rowMax - intersectionGridBounds.rowMax
+
+                println(s"\nThis is the cols and rows: ${source.cols} ${source.rows}")
+                println(s"This is the width and height: ${intersectionGridBounds.width} ${intersectionGridBounds.height}")
 
                 GridBounds(
                   colMin,
@@ -123,7 +128,7 @@ object RasterSourceRDD {
               keyGridBounds.map { gb =>
                 val adjusted = gb.offset(-combinedGridBounds.colMin, -combinedGridBounds.rowMin)
 
-                println(s"This is the adjusted key gridBounds: $adjusted")
+                //println(s"This is the adjusted key gridBounds: $adjusted")
 
                 val result =
                   adjusted.intersection(adjustedIntersectionGridBounds).get
