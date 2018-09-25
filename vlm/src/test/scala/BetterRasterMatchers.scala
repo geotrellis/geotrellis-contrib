@@ -7,6 +7,7 @@ import geotrellis.vector.io.wkt.WKT
 import matchers._
 import spire.syntax.cfor._
 import geotrellis.raster.testkit.RasterMatchers
+import geotrellis.raster.render.ascii._
 
 import scala.reflect._
 
@@ -39,10 +40,15 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
   }
 
   /** Renders scaled diff tiles as a clue */
-  def withDiffRenderClue[T](actual: MultibandTile, expect: MultibandTile)(fun: => T) = {
+  def withDiffRenderClue[T](
+    actual: MultibandTile,
+    expect: MultibandTile,
+    palette: AsciiArtEncoder.Palette = AsciiArtEncoder.Palette.NARROW,
+    size: Int = 24
+  )(fun: => T) = {
     require(actual.bandCount == expect.bandCount, s"Band count doesn't match: ${actual.bandCount} != ${expect.bandCount}")
     val asciiDiffs = for (b <- 0 until actual.bandCount) yield
-      scaledDiff(actual.band(b), expect.band(b), maxDim = 20).renderAscii()
+      scaledDiff(actual.band(b), expect.band(b), maxDim = size).renderAscii(palette)
 
     val joinedDiffs: String = asciiDiffs
       .map(_.lines.toSeq)
