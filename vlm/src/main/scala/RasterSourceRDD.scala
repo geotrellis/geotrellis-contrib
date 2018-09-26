@@ -23,9 +23,13 @@ import geotrellis.spark.partition._
 import geotrellis.spark.tiling._
 import geotrellis.proj4._
 
+import spire.syntax.cfor._
+
 import org.apache.spark._
 import org.apache.spark.rdd._
 
+import scala.collection.mutable.ArrayBuilder
+import scala.reflect.ClassTag
 
 object RasterSourceRDD {
   final val PARTITION_BYTES: Long = 128l * 1024 * 1024
@@ -57,20 +61,109 @@ object RasterSourceRDD {
     val layerMetadata =
       TileLayerMetadata[SpatialKey](cellType, layout, combinedExtents, crs, layerKeyBounds)
 
-    val sourcesRDD: RDD[(RasterSource, Array[RasterExtent])] =
+    val rasterExtent =
+      RasterExtent(
+        layout.extent,
+        layout.cellwidth,
+        layout.cellheight,
+        layout.layoutCols * layout.tileCols,
+        layout.layoutRows * layout.tileRows
+      )
+
+    //val sourcesRDD: RDD[(RasterSource, Array[Extent])] =
+    //val sourcesRDD: RDD[(RasterSource, Array[GridBounds])] =
+    val sourcesRDD: RDD[(RasterSource, Array[PaddedTile])] =
       sc.parallelize(sources).flatMap { source =>
-        val rasterExtents: Traversable[RasterExtent] =
+        //val extents: Traversable[Extent] =
+        //val extents: Traversable[GridBounds] =
+        val extents: Traversable[PaddedTile] =
+        //val extents: Map[GridBounds, GridBounds] =
           extent.intersection(source.extent) match {
             case Some(intersection) =>
-              val keys = mapTransform.keysForGeometry(intersection.toPolygon)
+              val keys =
+                mapTransform
+                  .keysForGeometry(intersection.toPolygon)
 
-              keys.map { key => RasterExtent(mapTransform(key), layout.tileCols, layout.tileRows) }
-            case None => Seq.empty[RasterExtent]
+              val intersectionGridBounds: GridBounds =
+                rasterExtent.gridBoundsFor(intersection, clamp = true)
+
+              val keyGridBounds =
+                keys
+                  .map { key => rasterExtent.gridBoundsFor(mapTransform(key), clamp = true) }
+
+              val combinedGridBounds = keyGridBounds.reduce { _ combine _ }
+
+              println(s"\nThis is the combinedGridBounds: $combinedGridBounds")
+              println(s"This is the intersectionGridBounds: $intersectionGridBounds")
+
+              val adjustedIntersectionGridBounds = {
+                val colMin = intersectionGridBounds.colMin - combinedGridBounds.colMin// - 1
+                val rowMin = intersectionGridBounds.rowMin - combinedGridBounds.rowMin// - 1
+                //val colMax = combinedGridBounds.colMax - intersectionGridBounds.colMax
+                //val rowMax = combinedGridBounds.rowMax - intersectionGridBounds.rowMax
+
+                println(s"\nThis is the cols and rows: ${source.cols} ${source.rows}")
+                println(s"This is the width and height: ${intersectionGridBounds.width} ${intersectionGridBounds.height}")
+
+                GridBounds(
+                  colMin,
+                  rowMin,
+                  source.cols + colMin - 1,
+                  source.rows + rowMin - 1
+                )
+              }
+
+              println(s"This is the adjustedIntersectionGridBounds: $adjustedIntersectionGridBounds")
+
+              /*
+              println(s"\nThis is the gridBounds of the intersection: ${intersectionGridBounds}")
+              println(s"This is the gridBounds of the intersection: ${intersectionGridBounds}")
+              println(s"This is the width of the intersection: ${intersectionGridBounds.width}")
+              println(s"This is the height of the intersection: ${intersectionGridBounds.height}")
+              println(s"\nThis is the adjustedInterGridBounds: ${adjustedIntersectionGridBounds}")
+              println(s"This is the adjustedInterGridBounds' width: ${adjustedIntersectionGridBounds.width}")
+              println(s"This is the adjustedInterGridBounds' height: ${adjustedIntersectionGridBounds.height}")
+              */
+
+              keyGridBounds.map { gb =>
+                val adjusted = gb.offset(-combinedGridBounds.colMin, -combinedGridBounds.rowMin)
+
+                //println(s"This is the adjusted key gridBounds: $adjusted")
+
+                val result =
+                  adjusted.intersection(adjustedIntersectionGridBounds).get
+
+                PaddedTile(result, adjusted, mapTransform.boundsToExtent(gb), adjustedIntersectionGridBounds.colMin, adjustedIntersectionGridBounds.rowMin)
+              }
+
+
+              //adjustedKeyGridBounds.split(256, 256).toSeq
+
+              /*
+              val (colMin, rowMin) = {
+                val keyExtent = mapTransform(keys.head)
+
+                rasterExtent.mapToGrid(keyExtent.xmin, keyExtent.ymax)
+              }
+
+              val (colMax, rowMax) = {
+                val keyExtent = mapTransform(keys(keys.size - 1))
+
+                rasterExtent.mapToGrid(keyExtent.xmax, keyExtent.ymin)
+              }
+
+              GridBounds(0, 0, colMax - colMin, rowMax - rowMin)
+                .split(layout.tileCols, layout.tileRows)
+                .toSeq
+              */
+
+              //keys.map { key => mapTransform(key) }
+            //case None => Seq.empty[Extent]
+            //case None => Seq.empty[GridBounds]
+            case None => Seq.empty[PaddedTile]
           }
 
-        RasterExtentPartitioner
-          .partitionRasterExtents(rasterExtents, partitionBytes)
-          .map { res => (source, res) }
+        partition(extents, partitionBytes).map { res => (source, res) }
       }
 
     sourcesRDD.persist()
@@ -84,11 +177,14 @@ object RasterSourceRDD {
     }
 
     val result: RDD[(SpatialKey, MultibandTile)] =
-      repartitioned.flatMap { case (source, rasterExtents) =>
-        source.read(rasterExtents).map { raster =>
+      repartitioned.flatMap { case (source, extents) =>
+        //source.readExtents(extents).map { raster =>
+        //source.readBounds(extents).map { raster =>
+        source.readPaddedTiles(extents).map { raster =>
           val center = raster.extent.center
           val key = mapTransform.pointToKey(center)
-
+          //println(s"Tile.cols: ${raster.tile.cols} Tile.rows: ${raster.tile.rows}")
+          require(raster.tile.cols == layout.tileCols && raster.tile.rows == layout.tileRows)
           (key, raster.tile)
         }
       }
@@ -100,4 +196,47 @@ object RasterSourceRDD {
 
   def apply(source: RasterSource, layout: LayoutDefinition)(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
     apply(Seq(source), layout)
+
+  /** Partition a set of chunks not to exceed certain size per partition */
+  private def partition[T: ClassTag](
+    chunks: Traversable[T],
+    maxPartitionSize: Long,
+    chunkSize: T => Long = { c: T => 1l }
+  ): Array[Array[T]] = {
+    if (chunks.isEmpty) {
+      Array[Array[T]]()
+    } else {
+      val partition = ArrayBuilder.make[T]
+      partition.sizeHintBounded(128, chunks)
+      var partitionSize: Long = 0l
+      var partitionCount: Long = 0l
+      val partitions = ArrayBuilder.make[Array[T]]
+
+      def finalizePartition() {
+        val res = partition.result
+        if (res.nonEmpty) partitions += res
+        partition.clear()
+        partitionSize = 0l
+        partitionCount = 0l
+      }
+
+      def addToPartition(chunk: T) {
+        partition += chunk
+        partitionSize += chunkSize(chunk)
+        partitionCount += 1
+      }
+
+      for (chunk <- chunks) {
+        if ((partitionCount == 0) || (partitionSize + chunkSize(chunk)) < maxPartitionSize)
+          addToPartition(chunk)
+        else {
+          finalizePartition()
+          addToPartition(chunk)
+        }
+      }
+
+      finalizePartition()
+      partitions.result
+    }
+  }
 }

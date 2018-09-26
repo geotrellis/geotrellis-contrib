@@ -28,7 +28,8 @@ import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 case class WarpGeoTiffRasterSource(
   uri: String,
   crs: CRS,
-  resampleMethod: ResampleMethod = NearestNeighbor
+  resampleMethod: ResampleMethod = NearestNeighbor,
+  targetRasterExtent: Option[RasterExtent] = None
 ) extends RasterSource {
   @transient private lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
@@ -38,7 +39,8 @@ case class WarpGeoTiffRasterSource(
 
   private lazy val transform = Transform(baseCRS, crs)
   private lazy val backTransform = Transform(crs, baseCRS)
-  override lazy val rasterExtent = ReprojectRasterExtent(baseRasterExtent, transform)
+  override lazy val rasterExtent = targetRasterExtent
+    .getOrElse(ReprojectRasterExtent(baseRasterExtent, transform))
 
   def extent: Extent = rasterExtent.extent
   def cols: Int = rasterExtent.cols
@@ -46,14 +48,33 @@ case class WarpGeoTiffRasterSource(
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = tiff.cellType
 
-  def read(windows: Traversable[RasterExtent]): Iterator[Raster[MultibandTile]] = {
-    val intersectingWindows: Map[GridBounds, RasterExtent] =
-      windows.map { case targetRasterExtent =>
-        val sourceExtent = ReprojectRasterExtent.reprojectExtent(targetRasterExtent, backTransform)
-        val sourceGridBounds = tiff.rasterExtent.gridBoundsFor(sourceExtent, clamp = false)
+  def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+    val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
+    val it = readBounds(List(bounds), bands)
+    if (it.hasNext) Some(it.next) else None
+  }
 
-        (sourceGridBounds, targetRasterExtent)
-      }.toMap
+  def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+    val it = readBounds(List(bounds), bands)
+    if (it.hasNext) Some(it.next) else None
+  }
+
+  def readPaddedTiles(tiles: Traversable[PaddedTile], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
+    readBounds(tiles.map { _.targetBounds }, bands)
+
+  override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
+    // TODO: clamp = false when we have PaddedTile
+    val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = false))
+    readBounds(bounds, bands)
+  }
+
+  override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
+    val intersectingWindows = bounds.map { targetGridBounds =>
+      val targetRasterExtent = RasterExtent(rasterExtent.extentFor(targetGridBounds, clamp = false), targetGridBounds.width, targetGridBounds.height)
+      val sourceExtent = ReprojectRasterExtent.reprojectExtent(targetRasterExtent, backTransform)
+      val sourceGridBounds = tiff.rasterExtent.gridBoundsFor(sourceExtent, clamp = false)
+      (sourceGridBounds, targetRasterExtent)
+    }.toMap
 
     tiff.crop(intersectingWindows.keys.toSeq).map { case (gb, tile) =>
       val targetRasterExtent = intersectingWindows(gb)
@@ -76,4 +97,7 @@ case class WarpGeoTiffRasterSource(
     resampleMethod: ResampleMethod = NearestNeighbor
   ): WarpGeoTiffRasterSource =
     WarpGeoTiffRasterSource(uri, targetCRS, resampleMethod)
+
+  def reproject(targetCRS: CRS, resampleMethod: ResampleMethod, rasterExtent: RasterExtent): RasterSource = 
+    WarpGeoTiffRasterSource(uri, targetCRS, resampleMethod, Some(rasterExtent)) 
 }
