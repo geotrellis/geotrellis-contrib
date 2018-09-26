@@ -19,11 +19,10 @@ package geotrellis.contrib.vlm
 import geotrellis.vector._
 import geotrellis.raster._
 import geotrellis.raster.reproject._
-import geotrellis.raster.resample.{ResampleMethod, NearestNeighbor}
+import geotrellis.raster.resample.ResampleMethod
 import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.{MultibandGeoTiff, GeoTiffMultibandTile}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
-
 
 class GeoTiffReprojectRasterSource(
   val uri: String,

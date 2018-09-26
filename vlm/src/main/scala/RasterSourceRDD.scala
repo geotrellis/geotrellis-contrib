@@ -66,7 +66,7 @@ object RasterSourceRDD {
             case Some(intersection) =>
               val keys = mapTransform.keysForGeometry(intersection.toPolygon)
 
-              keys.map { key => mapTransform(key) }
+              keys.map { key => mapTransform.keyToExtent(key) }
             case None => Seq.empty[Extent]
           }
         

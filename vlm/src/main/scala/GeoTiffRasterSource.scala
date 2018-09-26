@@ -19,8 +19,8 @@ package geotrellis.contrib.vlm
 import geotrellis.vector._
 import geotrellis.proj4._
 import geotrellis.raster._
-import geotrellis.raster.reproject.{ReprojectRasterExtent, RasterRegionReproject, Reproject}
-import geotrellis.raster.resample.{ResampleMethod, NearestNeighbor}
+import geotrellis.raster.reproject.Reproject
+import geotrellis.raster.resample.ResampleMethod
 import geotrellis.raster.io.geotiff.{MultibandGeoTiff, GeoTiffMultibandTile}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
