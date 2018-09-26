@@ -37,7 +37,10 @@ package object vlm {
     val noQueryParams = URLEncodedUtils.parse(uri, Charset.forName("UTF-8")).isEmpty
 
     val rr =  javaURI.getScheme match {
-      case "file" | null =>
+      case null =>
+        FileRangeReader(Paths.get(javaURI.toString).toFile)      
+      
+      case "file" =>
         FileRangeReader(Paths.get(javaURI).toFile)
 
       case "http" | "https" if noQueryParams =>

@@ -55,7 +55,7 @@ lazy val vlm = project
   .settings(
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-vlm",
-    version := "0.0.1",
+    version := "0.1.0",
     libraryDependencies ++= Seq(
       geotrellisSpark, geotrellisS3, geotrellisUtil,
       catsCore, catsEffect,
@@ -64,6 +64,8 @@ lazy val vlm = project
       geotrellisSparkTestKit % Test,
       scalatest % Test),
     Test / fork := true,
+    Test / parallelExecution := false,
+    Test / testOptions += Tests.Argument("-oD"),
     javaOptions ++= Seq("-Xms1024m", "-Xmx6144m")
   )
 

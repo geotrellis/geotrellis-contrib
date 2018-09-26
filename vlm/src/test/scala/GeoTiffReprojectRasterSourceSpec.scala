@@ -28,7 +28,7 @@ import org.scalatest._
 import java.io.File
 
 
-class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
+class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with RasterMatchers {
   describe("Reprojecting a RasterSource") {
     val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
     val schemeURI = s"file://$uri"
@@ -37,27 +37,33 @@ class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
 
     val sourceTiff = GeoTiffReader.readMultiband(uri)
 
-    val reprojectedRasterExtent = {
+    
+    val expectedRasterExtent = {
       val re = ReprojectRasterExtent(rasterSource.rasterExtent, Transform(rasterSource.crs, LatLng))
       // stretch target raster extent slightly to avoid default case in ReprojectRasterExtent
       RasterExtent(re.extent, CellSize(re.cellheight * 1.1, re.cellwidth * 1.1))
     }
 
     def testReprojection(method: ResampleMethod) = {
-      val warpRasterSource = rasterSource.withCRS(LatLng, method)
-      val testBounds = GridBounds(0, 0, reprojectedRasterExtent.cols, reprojectedRasterExtent.rows).split(64,64).toSeq
+      val warpRasterSource = rasterSource.reprojectToRegion(LatLng, expectedRasterExtent, method)
+      
+      val testBounds = GridBounds(0, 0, expectedRasterExtent.cols, expectedRasterExtent.rows).split(64,64).toSeq
 
       for (bound <- testBounds) yield {
         withClue(s"Read window ${bound}: ") {
-          val targetExtent = reprojectedRasterExtent.extentFor(bound)
-          val testRasterExtent = RasterExtent(targetExtent, cols = bound.width, rows = bound.height)
+          val targetExtent = expectedRasterExtent.extentFor(bound)
+          val testRasterExtent = RasterExtent(
+            extent = targetExtent, 
+            cellwidth = expectedRasterExtent.cellwidth, 
+            cellheight = expectedRasterExtent.cellheight, 
+            cols = bound.width, rows = bound.height)
 
           val expected: Raster[MultibandTile] = {
             val rr = implicitly[RasterRegionReproject[MultibandTile]]
             rr.regionReproject(sourceTiff.raster, sourceTiff.crs, LatLng, testRasterExtent, testRasterExtent.extent.toPolygon, method)
           }
 
-          val actual = warpRasterSource.read(List(testRasterExtent)).next
+          val actual = warpRasterSource.read(bound).get
 
           val expectedTile = expected.tile.band(0)
           val actualTile = actual.tile.band(0)
