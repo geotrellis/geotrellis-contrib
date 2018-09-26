@@ -19,11 +19,10 @@ package geotrellis.contrib.vlm
 import geotrellis.vector._
 import geotrellis.raster._
 import geotrellis.raster.reproject._
-import geotrellis.raster.resample.{ResampleMethod, NearestNeighbor}
+import geotrellis.raster.resample.ResampleMethod
 import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.{MultibandGeoTiff, GeoTiffMultibandTile}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
-
 
 class GeoTiffReprojectRasterSource(
   val uri: String,
@@ -60,9 +59,6 @@ class GeoTiffReprojectRasterSource(
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     // TODO: clamp = true when we have PaddedTile
-    println(s"HHHHHHHHHHHHHHHH")
-    println(s"rasterExtent.cellSize: ${rasterExtent.cellSize}")
-    println(s"HHHHHHHHHHHHHHHH")
     val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = false))
     readBounds(bounds, bands)
   }

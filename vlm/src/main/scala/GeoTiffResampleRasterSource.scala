@@ -24,7 +24,6 @@ import geotrellis.raster.resample.{ResampleMethod, NearestNeighbor}
 import geotrellis.raster.io.geotiff.{GeoTiff, MultibandGeoTiff, GeoTiffMultibandTile, AutoHigherResolution}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
-
 class GeoTiffResampleRasterSource(
   val uri: String,
   val resampleGrid: ResampleGrid,

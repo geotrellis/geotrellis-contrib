@@ -7,7 +7,6 @@ import org.gdal.gdal.gdal
 import org.gdal.gdal.Dataset
 import org.gdal.gdalconst.gdalconstConstants
 
-
 // All of the logic in this file was taken from:
 // https://github.com/geotrellis/geotrellis-gdal/blob/master/gdal/src/main/scala/geotrellis/gdal/Gdal.scala
 
@@ -22,17 +21,43 @@ private[gdal] object GDALException {
 object GDAL {
   gdal.AllRegister()
 
-  def deriveGTCellType(datatype: GDALDataType): CellType =
+  def deriveGTCellType(datatype: GDALDataType, noDataValue: Option[Double] = None, typeSizeInBits: Option[Int] = None): CellType =
     datatype match {
-      case TypeUnknown => DoubleConstantNoDataCellType
-      case ByteConstantNoDataCellType => ShortConstantNoDataCellType
-      case TypeUInt16 => IntConstantNoDataCellType
-      case IntConstantNoDataCellType16 => ShortConstantNoDataCellType
-      case TypeUInt32 => FloatConstantNoDataCellType
-      case IntConstantNoDataCellType32 => IntConstantNoDataCellType
-      case FloatConstantNoDataCellType32 => FloatConstantNoDataCellType
-      case FloatConstantNoDataCellType64 => DoubleConstantNoDataCellType
-      case (TypeCInt16 | TypeCInt32 | TypeCFloat32 | TypeCFloat64) =>
+      case UnknownType | TypeFloat64 =>
+        noDataValue match {
+          case Some(nd) => DoubleUserDefinedNoDataCellType(nd)
+          case _ => DoubleConstantNoDataCellType
+        }
+      case TypeByte =>
+        typeSizeInBits match {
+          case Some(bits) if bits == 1 => BitCellType
+          case _ =>
+            noDataValue match {
+              case Some(nd) => ByteUserDefinedNoDataCellType(nd.toByte)
+              case _ => ByteCellType
+            }
+        }
+      case TypeUInt16 =>
+        noDataValue match {
+          case Some(nd) => UShortUserDefinedNoDataCellType(nd.toShort)
+          case _ => UShortConstantNoDataCellType
+        }
+      case TypeInt16 =>
+        noDataValue match {
+          case Some(nd) => ShortUserDefinedNoDataCellType(nd.toShort)
+          case _ => ShortConstantNoDataCellType
+        }
+      case TypeUInt32 | TypeInt32 =>
+        noDataValue match {
+          case Some(nd) => IntUserDefinedNoDataCellType(nd.toInt)
+          case _ => IntConstantNoDataCellType
+        }
+      case TypeFloat32 =>
+        noDataValue match {
+          case Some(nd) => FloatUserDefinedNoDataCellType(nd.toFloat)
+          case _ => FloatConstantNoDataCellType
+        }
+      case TypeCInt16 | TypeCInt32 | TypeCFloat32 | TypeCFloat64 =>
         throw new Exception("Complex datatypes are not supported")
     }
 

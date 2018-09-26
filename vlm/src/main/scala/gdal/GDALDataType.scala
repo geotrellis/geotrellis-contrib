@@ -5,8 +5,8 @@ import org.gdal.gdal.gdal
 object GDALDataType {
   val types =
     List(
-      TypeUnknown, ByteConstantNoDataCellType, TypeUInt16, IntConstantNoDataCellType16, TypeUInt32,
-      IntConstantNoDataCellType32, FloatConstantNoDataCellType32, FloatConstantNoDataCellType64, TypeCInt16,
+      UnknownType, TypeByte, TypeUInt16, TypeInt16, TypeUInt32,
+      TypeInt32, TypeFloat32, TypeFloat64, TypeCInt16,
       TypeCInt32, TypeCFloat32, TypeCFloat64
     )
 
@@ -25,14 +25,15 @@ abstract sealed class GDALDataType(val code: Int) {
   def toString: String = gdal.GetDataTypeName(code)
 }
 
-case object TypeUnknown extends GDALDataType(0)
-case object ByteConstantNoDataCellType extends GDALDataType(1)
+// https://github.com/OSGeo/gdal/blob/512aa6ae763424904a986613cd2a45569d8dbe5d/gdal/swig/include/gdal.i#L129-L143
+case object UnknownType extends GDALDataType(0)
+case object TypeByte extends GDALDataType(1)
 case object TypeUInt16 extends GDALDataType(2)
-case object IntConstantNoDataCellType16 extends GDALDataType(3)
+case object TypeInt16 extends GDALDataType(3)
 case object TypeUInt32 extends GDALDataType(4)
-case object IntConstantNoDataCellType32 extends GDALDataType(5)
-case object FloatConstantNoDataCellType32 extends GDALDataType(6)
-case object FloatConstantNoDataCellType64 extends GDALDataType(7)
+case object TypeInt32 extends GDALDataType(5)
+case object TypeFloat32 extends GDALDataType(6)
+case object TypeFloat64 extends GDALDataType(7)
 case object TypeCInt16 extends GDALDataType(8)
 case object TypeCInt32 extends GDALDataType(9)
 case object TypeCFloat32 extends GDALDataType(10)
