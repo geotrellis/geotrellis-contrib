@@ -24,7 +24,7 @@ lazy val commonSettings = Seq(
   publishArtifact in Test := false,
   pomIncludeRepository := { _ => false },
   addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.4" cross CrossVersion.binary),
-  addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full),
+  addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.1" cross CrossVersion.full),
   dependencyUpdatesFilter := moduleFilter(organization = "org.scala-lang"),
   resolvers ++= Seq(
     "geosolutions" at "http://maven.geo-solutions.it/",
@@ -57,16 +57,10 @@ lazy val vlm = project
     name := "geotrellis-contrib-vlm",
     version := "0.1.0",
     libraryDependencies ++= Seq(
-      geotrellisSpark,
-      geotrellisS3,
-      geotrellisUtil,
-      catsCore,
-      catsEffect,
-      fs2Core,
-      fs2Io,
-      gdal,
+      geotrellisSpark, geotrellisS3, geotrellisUtil, geotrellisMacros,
+      catsCore, catsEffect,
+      fs2Core, fs2Io,
       sparkCore % Provided,
-      sparkSQL % Test,
       geotrellisSparkTestKit % Test,
       scalatest % Test
     ),
