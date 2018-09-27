@@ -170,4 +170,25 @@ case class PaddedTile(chunk: Tile, colOffset: Int, rowOffset: Int, cols: Int, ro
 
     tile
   }
+
+  def foreachIntVisitor(visitor: IntTileVisitor): Unit = chunk.foreachIntVisitor(visitor)
+  def foreachDoubleVisitor(visitor: DoubleTileVisitor): Unit = chunk.foreachDoubleVisitor(visitor)
+
+  def mapIntMapper(mapper: IntTileMapper): Tile = {
+    val tile = ArrayTile.alloc(cellType, cols, rows)
+    chunk.foreach { (col, row, z) =>
+      tile.set(col, row, mapper(col, row, z))
+    }
+
+    tile
+  }
+
+  def mapDoubleMapper(mapper: DoubleTileMapper): Tile = {
+    val tile = ArrayTile.alloc(cellType, cols, rows)
+    chunk.foreachDouble { (col, row, z) =>
+      tile.setDouble(col, row, mapper(col, row, z))
+    }
+
+    tile
+  }
 }
