@@ -69,8 +69,8 @@ object RasterSourceRDD {
               keys.map { key => mapTransform.keyToExtent(key) }
             case None => Seq.empty[Extent]
           }
-        
-        partition(extents, partitionBytes).map { res => (source, res) }
+        val tileSize = layout.tileCols * layout.tileRows * cellType.bytes
+        partition(extents, partitionBytes)( _ => tileSize).map { res => (source, res) }
       }
 
     sourcesRDD.persist()
@@ -104,9 +104,8 @@ object RasterSourceRDD {
   /** Partition a set of chunks not to exceed certain size per partition */
   private def partition[T: ClassTag](
     chunks: Traversable[T],
-    maxPartitionSize: Long,
-    chunkSize: T => Long = { c: T => 1l }
-  ): Array[Array[T]] = {
+    maxPartitionSize: Long
+  )(chunkSize: T => Long = { c: T => 1l }): Array[Array[T]] = {
     if (chunks.isEmpty) {
       Array[Array[T]]()
     } else {
