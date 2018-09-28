@@ -72,7 +72,7 @@ class GeoTiffReprojectRasterSource(
       val sourcePixelBounds = tiff.rasterExtent.gridBoundsFor(sourceExtent, clamp = true)
       (sourcePixelBounds, targetRasterExtent)
     }}.toMap
-    
+
     val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
     geoTiffTile.crop(intersectingWindows.keys.toSeq, bands.toArray).map { case (sourcePixelBounds, tile) =>
       val targetRasterExtent = intersectingWindows(sourcePixelBounds)
@@ -84,14 +84,14 @@ class GeoTiffReprojectRasterSource(
         crs,
         targetRasterExtent,
         targetRasterExtent.extent.toPolygon,
-        options.method
-        // TODO: add options.errorThreshold with geotrellis 2.1
+        options.method,
+        options.errorThreshold
       )
     }
   }
 
-  def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource = 
-    new GeoTiffReprojectRasterSource(uri, targetCRS, options) 
+  def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
+    new GeoTiffReprojectRasterSource(uri, targetCRS, options)
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
     ???
