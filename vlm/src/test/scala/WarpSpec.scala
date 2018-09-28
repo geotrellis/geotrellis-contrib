@@ -120,9 +120,8 @@ class WarpSpec extends FunSpec with TestEnvironment with RasterMatchers {
   }
 
   describe("It should match files created via the GDAL CLI") {
-    val baseFile = "/tmp/nlcd_tile_wsg84.tif"
-    val reprojectedFile = "/tmp/nlcd_tile_webmercator-nearestneighbor.tif"
-    val reprojectedFileURI = s"file:///tmp/nlcd_tile_webmercator-nearestneighbor.tif"
+    val baseFile = s"${new File("").getAbsolutePath()}/src/test/resources/img/nlcd_tile_wsg84.tif"
+    val reprojectedFile = s"${new File("").getAbsolutePath()}/src/test/resources/img/nlcd_tile_webmercator-nearestneighbor.tif"
 
     val rasterSource = GDALRasterSource(baseFile)
     val sourceTiff = MultibandGeoTiff(reprojectedFile)
