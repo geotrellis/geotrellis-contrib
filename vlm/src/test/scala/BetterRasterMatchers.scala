@@ -6,6 +6,8 @@ import geotrellis.vector._
 import geotrellis.proj4.{CRS, LatLng}
 import geotrellis.vector.io.wkt.WKT
 import geotrellis.raster.io.geotiff.GeoTiff
+import geotrellis.spark.SpatialKey
+import geotrellis.spark.tiling.LayoutDefinition
 import matchers._
 import spire.syntax.cfor._
 import geotrellis.raster.testkit.RasterMatchers
@@ -62,12 +64,14 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
   def withDiffRenderClue[T](
     actual: MultibandTile,
     expect: MultibandTile,
+    mode: DiffMode = DiffMode.DiffSum,
+    eps: Double = 0,
     palette: AsciiArtEncoder.Palette = AsciiArtEncoder.Palette(" ░▒▓█"),
     size: Int = 24
   )(fun: => T) = withClue({
     require(actual.bandCount == expect.bandCount, s"Band count doesn't match: ${actual.bandCount} != ${expect.bandCount}")
     val diffs = for (b <- 0 until actual.bandCount) yield
-      scaledDiff(actual.band(b), expect.band(b), maxDim = size)
+      scaledDiff(actual.band(b), expect.band(b), mode = mode, maxDim = size, eps = eps)
 
     val asciiDiffs = diffs.map(_.renderAscii(palette))
 
@@ -87,21 +91,31 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
   })(fun)
 
   def withGeoTiffClue[T](
+    key: SpatialKey,
+    layout: LayoutDefinition,
+    actual: MultibandTile,
+    expect: MultibandTile,
+    crs: CRS
+  )(fun: => T): T = {
+    val extent = layout.mapTransform.keyToExtent(key)
+    withGeoTiffClue[T](Raster(actual, extent), Raster(expect, extent), crs)(fun)
+  }
+
+  def withGeoTiffClue[T](
     actual: Raster[MultibandTile],
     expect: Raster[MultibandTile],
-    crs: CRS = null
-  )(fun: => T) = withClue({
-    val fileCrs = Option(crs).getOrElse(LatLng)
+    crs: CRS
+  )(fun: => T): T = withClue({
     val tmpDir = Files.createTempDirectory(getClass.getSimpleName)
     val actualFile = tmpDir.resolve("actual.tiff")
     val expectFile = tmpDir.resolve("expect.tiff")
     var diffFile = tmpDir.resolve("diff.tiff")
-    GeoTiff(actual, fileCrs).write(actualFile.toString, optimizedOrder = true)
-    GeoTiff(expect, fileCrs).write(expectFile.toString, optimizedOrder = true)
+    GeoTiff(actual, crs).write(actualFile.toString, optimizedOrder = true)
+    GeoTiff(expect, crs).write(expectFile.toString, optimizedOrder = true)
 
     if ((actual.tile.bandCount == expect.tile.bandCount) && (actual.dimensions == expect.dimensions)) {
       val diff = actual.tile.bands.zip(expect.tile.bands).map { case (l, r) => l - r }.toArray
-      GeoTiff(ArrayMultibandTile(diff), actual.extent, fileCrs).write(diffFile.toString, optimizedOrder = true)
+      GeoTiff(ArrayMultibandTile(diff), actual.extent, crs).write(diffFile.toString, optimizedOrder = true)
     } else {
       diffFile = null
     }
@@ -114,11 +128,32 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
   })(fun)
 }
 
+
+sealed trait DiffMode {
+  def apply(acc: Double, next: Double): Double
+}
+
+object DiffMode {
+  case object DiffCount extends DiffMode {
+    def apply(acc: Double, next: Double) = if (isNoData(acc)) 1 else acc + 1
+  }
+  case object DiffSum extends DiffMode {
+    def apply(acc: Double, next: Double) = if (isNoData(acc)) next else acc + next
+  }
+  case object DiffMax extends DiffMode{
+    def apply(acc: Double, next: Double) = if (isNoData(acc)) next else math.max(acc, next)
+  }
+  case object DiffMin extends DiffMode{
+    def apply(acc: Double, next: Double) = if (isNoData(acc)) next else math.min(acc, next)
+  }
+}
+
 object BetterRasterMatchers {
-  def scaledDiff(actual: Tile, expect: Tile, maxDim: Int, eps: Double = Double.MinPositiveValue): Tile = {
-    // TODO: Add DiffMode (change count, accumulated value diff, change flag)
-    require(actual.cols == expect.cols)
-    require(actual.rows == expect.rows)
+
+  def scaledDiff(actual: Tile, expect: Tile, maxDim: Int, mode: DiffMode = DiffMode.DiffSum, eps: Double = 0): Tile = {
+    require(actual.dimensions == expect.dimensions,
+      s"dimensions mismatch: ${actual.dimensions}, ${expect.dimensions}")
+
     val cols = actual.cols
     val rows = actual.rows
     val scale: Double = maxDim / math.max(cols, rows).toDouble
@@ -130,17 +165,22 @@ object BetterRasterMatchers {
       cfor(0)(_ < rows, _ + 1) { row =>
         val v1 = actual.getDouble(col, row)
         val v2 = expect.getDouble(col, row)
-          val vd = math.abs(math.abs(v1) - math.abs(v2))
-          if (! (v1.isNaN && v2.isNaN) || (vd > eps)) {
-            val dcol = (colScale * col).toInt
-            val drow = (rowScale * row).toInt
-            val ac = diff.getDouble(dcol, drow)
-            if (isData(ac)) {
-              diff.setDouble(dcol, drow, ac + 1)
-            } else
-              diff.setDouble(dcol, drow, 1)
-            diffs += 1
-          }
+        val vd: Double =
+          if (isNoData(v1) && isNoData(v2)) Double.NaN
+          else if (isData(v1) && isNoData(v2)) math.abs(v1)
+          else if (isNoData(v1) && isData(v2)) math.abs(v2)
+          else math.abs(v1 - v2)
+
+        if (isData(vd) && (vd > eps)) {
+          val dcol = (colScale * col).toInt
+          val drow = (rowScale * row).toInt
+          val ac = diff.getDouble(dcol, drow)
+          if (isData(ac)) {
+            diff.setDouble(dcol, drow, ac + vd)
+          } else
+            diff.setDouble(dcol, drow, vd)
+          diffs += 1
+        }
       }
     }
     diff

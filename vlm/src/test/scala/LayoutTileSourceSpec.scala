@@ -62,7 +62,7 @@ class LayoutTileSourceSpec extends FunSpec with RasterMatchers with BetterRaster
         val actual = Raster(tile, re.extent)
         val expected = tiff.crop(rasterExtent = re)
 
-        withGeoTiffClue(actual, expected) {
+        withGeoTiffClue(actual, expected, source.source.crs) {
           assertRastersEqual(actual, expected)
         }
       }

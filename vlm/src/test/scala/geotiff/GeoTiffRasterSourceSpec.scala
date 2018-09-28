@@ -69,7 +69,7 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
     val actual: Raster[MultibandTile] =
       resampledSource.read(GridBounds(0, 0, resampledSource.cols - 1, resampledSource.rows - 1)).get
 
-    withGeoTiffClue(actual, expected)  {
+    withGeoTiffClue(actual, expected, resampledSource.crs)  {
       assertRastersEqual(actual, expected)
     }
   }
