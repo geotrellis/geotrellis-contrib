@@ -52,7 +52,7 @@ case class PaddedTile(chunk: Tile, colOffset: Int, rowOffset: Int, cols: Int, ro
   def getDouble(col: Int, row: Int): Double = {
     if (chunkBounds.contains(col, row))
       chunk.getDouble(col - colOffset, row - rowOffset)
-    else NODATA
+    else Double.NaN
   }
 
   def map(f: Int => Int): Tile = {
@@ -82,7 +82,7 @@ case class PaddedTile(chunk: Tile, colOffset: Int, rowOffset: Int, cols: Int, ro
 
   def foreachDouble(f: Double => Unit): Unit = {
     chunk.foreachDouble(f)
-    cfor(0)(_ < (this.size - chunk.size), _ + 1) { i => f(NODATA) }
+    cfor(0)(_ < (this.size - chunk.size), _ + 1) { i => f(Double.NaN) }
   }
 
   def mutable(): MutableArrayTile =

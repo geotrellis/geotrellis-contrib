@@ -45,6 +45,8 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
   }
 
   def assertRastersEqual(actual: Raster[MultibandTile], expected: Raster[MultibandTile]): Unit = {
+    actual.extent shouldBe expected.extent
+
     actual.tile should have (
       cellType (expected.cellType),
       dimensions (expected.dimensions),

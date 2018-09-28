@@ -19,6 +19,7 @@ package geotrellis.contrib.vlm
 import geotrellis.contrib.vlm.gdal._
 import geotrellis.raster._
 import geotrellis.raster.reproject.Reproject
+import geotrellis.raster.io.geotiff.reader._
 
 import geotrellis.proj4._
 import geotrellis.spark._
@@ -32,30 +33,39 @@ import org.scalatest._
 import java.io.File
 
 class LayoutTileSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers {
-  val testFile = Resource.uri("img/aspect-tiled.tif")
+  val testFile = Resource.path("img/aspect-tiled.tif")
+  val tiff = GeoTiffReader.readMultiband(testFile, streaming = false)
 
-  val targetCRS = CRS.fromEpsgCode(3857)
-  val scheme = ZoomedLayoutScheme(targetCRS)
-  val layout = scheme.levelForZoom(13).layout
-
-  val rasterSource = new GeoTiffRasterSource(testFile.toString)
-      .reprojectToGrid(targetCRS, layout)
+  val rasterSource = new GeoTiffRasterSource(testFile)
+  val scheme = FloatingLayoutScheme(256)
+  val layout = scheme.levelFor(rasterSource.extent, rasterSource.cellSize).layout
   val source = new LayoutTileSource(rasterSource, layout)
+
 
   it("should read all the keys") {
     val keys = source.layout
       .mapTransform
       .extentToBounds(rasterSource.extent)
-      .coordsIter
-      .map { case (col, row) => SpatialKey(col, row) }
-      .foreach{ key =>
-        withClue(s"$key:") {
-          val tile = source.read(key).get
-          tile should have (
-            dimensions (layout.tileCols, layout.tileRows),
-            cellType (rasterSource.cellType)     
-          )
+      .coordsIter.toList
+
+    for ((col, row) <- keys ) {
+      val key = SpatialKey(col, row)
+      val re = RasterExtent(
+        extent = layout.mapTransform.keyToExtent(key),
+        cellwidth = layout.cellwidth,
+        cellheight = layout.cellheight,
+        cols = layout.tileCols,
+        rows = layout.tileRows)
+
+      withClue(s"$key:") {
+        val tile = source.read(key).get
+        val actual = Raster(tile, re.extent)
+        val expected = tiff.crop(rasterExtent = re)
+
+        withGeoTiffClue(actual, expected) {
+          assertRastersEqual(actual, expected)
         }
       }
+    }
   }
 }
