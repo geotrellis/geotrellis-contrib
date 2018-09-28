@@ -41,7 +41,7 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
       bandCount (expected.bandCount)
     )
 
-    withDiffRenderClue(actual, expected){
+    withAsciiDiffClue(actual, expected){
       assertEqual(actual, expected)
     }
   }
@@ -55,13 +55,13 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
       bandCount (expected.tile.bandCount)
     )
 
-    withDiffRenderClue(actual.tile, expected.tile){
+    withAsciiDiffClue(actual.tile, expected.tile){
       assertEqual(actual.tile, expected.tile)
     }
   }
 
   /** Renders scaled diff tiles as a clue */
-  def withDiffRenderClue[T](
+  def withAsciiDiffClue[T](
     actual: MultibandTile,
     expect: MultibandTile,
     mode: DiffMode = DiffMode.DiffSum,
