@@ -58,23 +58,25 @@ class GeoTiffReprojectRasterSource(
   }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    // TODO: clamp = true when we have PaddedTile
-    val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = false))
+    val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = true))
     readBounds(bounds, bands)
   }
 
   override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    val intersectingWindows = bounds.map { targetPixelBounds =>
-      val targetRasterExtent = RasterExtent(rasterExtent.extentFor(targetPixelBounds, clamp = false), targetPixelBounds.width, targetPixelBounds.height)
+    val intersectingWindows = { for {
+      queryPixelBounds <- bounds
+      targetPixelBounds <- queryPixelBounds.intersection(this)
+    } yield {
+      val targetRasterExtent = RasterExtent(rasterExtent.extentFor(targetPixelBounds, clamp = true), targetPixelBounds.width, targetPixelBounds.height)
       val sourceExtent = ReprojectRasterExtent.reprojectExtent(targetRasterExtent, backTransform)
-      val sourcePixelBounds = tiff.rasterExtent.gridBoundsFor(sourceExtent, clamp = false)
+      val sourcePixelBounds = tiff.rasterExtent.gridBoundsFor(sourceExtent, clamp = true)
       (sourcePixelBounds, targetRasterExtent)
-    }.toMap
+    }}.toMap
+    
     val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
     geoTiffTile.crop(intersectingWindows.keys.toSeq, bands.toArray).map { case (sourcePixelBounds, tile) =>
       val targetRasterExtent = intersectingWindows(sourcePixelBounds)
-      val sourceRaster = Raster(tile, baseRasterExtent.extentFor(sourcePixelBounds, clamp = false))
-
+      val sourceRaster = Raster(tile, baseRasterExtent.extentFor(sourcePixelBounds, clamp = true))
       val rr = implicitly[RasterRegionReproject[MultibandTile]]
       rr.regionReproject(
         sourceRaster,

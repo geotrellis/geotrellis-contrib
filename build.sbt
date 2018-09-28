@@ -72,7 +72,7 @@ lazy val vlm = project
     ),
     Test / fork := true,
     Test / parallelExecution := false,
-    Test / testOptions += Tests.Argument("-oDF"),
+    Test / testOptions += Tests.Argument("-oD"),
     javaOptions ++= Seq("-Xms1024m", "-Xmx6144m", "-Djava.library.path=/usr/local/lib")
   )
 

@@ -29,7 +29,7 @@ case class PaddedTile(chunk: Tile, colOffset: Int, rowOffset: Int, cols: Int, ro
   require(colOffset >= 0 && rowOffset >= 0 && colOffset < cols && rowOffset < rows,
     s"chunk offset out of bounds: $colOffset, $rowOffset")
 
-  require((chunk.cols + colOffset < cols) && (chunk.rows + rowOffset < rows),
+  require((chunk.cols + colOffset <= cols) && (chunk.rows + rowOffset <= rows),
     s"chunk at $chunkBounds exceeds tile boundary at ($cols, $rows)")
 
   def cellType = chunk.cellType
