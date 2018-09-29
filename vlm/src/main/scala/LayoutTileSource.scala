@@ -27,7 +27,8 @@ import geotrellis.spark.{SpatialKey}
   * @param layout definition of a tile grid over the pixel grid
   */
 class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
-  // TODO: require that source and layout are grid alligned, consider floating point precision
+  LayoutTileSource.requireGridAligned(source.rasterExtent, layout)
+
   def sourceColOffset: Long = ((source.extent.xmin - layout.extent.xmin) / layout.cellwidth).toLong
   def sourceRowOffset: Long = ((layout.extent.ymax - source.extent.ymax) / layout.cellheight).toLong
 
@@ -83,5 +84,31 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
       }
       (key, tile)
     }
+  }
+}
+
+object LayoutTileSource {
+  private def requireGridAligned(a: GridExtent, b: GridExtent): Unit = {
+    import org.scalactic._
+    import TripleEquals._
+    import Tolerance._
+
+    val eps: Double = java.lang.Double.MIN_NORMAL
+
+    @inline def isWhole(x: Double) = math.floor(x) == x
+
+    @inline def offset(a: Double, b: Double, w: Double): Double = {
+      val cols = (a - b) / w
+      cols - math.floor(cols)
+    }
+
+    require((a.cellwidth === b.cellwidth +- eps) && (a.cellheight === b.cellheight +- eps),
+      s"CellSize differs: ${a.cellSize}, ${b.cellSize}")
+
+    require((a.extent.xmin === b.extent.xmin +- eps) || isWhole((a.extent.xmin - b.extent.xmin) / a.cellwidth),
+      s"x-aligned: offset by ${a.cellSize} ${offset(a.extent.xmin, b.extent.xmin, a.cellwidth)}")
+
+    require((a.extent.ymin === b.extent.ymin +- eps) || isWhole((a.extent.ymin - b.extent.ymin) / b.cellheight),
+      s"y-aligned: offset by ${a.cellSize} ${offset(a.extent.ymin, b.extent.ymin, a.cellheight)}")
   }
 }

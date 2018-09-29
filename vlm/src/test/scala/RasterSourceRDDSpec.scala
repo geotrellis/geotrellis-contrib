@@ -64,7 +64,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
     }
 
     it("should read in the tiles as squares") {
-      val reprojectedRasterSource = rasterSource.reproject(targetCRS)
+      val reprojectedRasterSource = rasterSource.reprojectToGrid(targetCRS, layout)
       val rdd = RasterSourceRDD(reprojectedRasterSource, layout)
       val rows = rdd.collect()
 

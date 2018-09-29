@@ -49,6 +49,7 @@ object Dependencies {
   val pureconfig          = "com.github.pureconfig"      %% "pureconfig"               % "0.9.1"
   val logging             = "com.typesafe.scala-logging" %% "scala-logging"            % "3.9.0"
   val scalatest           = "org.scalatest"              %% "scalatest"                % "3.0.5"
+  val scalactic           = "org.scalactic"              %% "scalactic"                % "3.0.5"
   val scalacheck          = "org.scalacheck"             %% "scalacheck"               % "1.14.0"
   val jts                 = "com.vividsolutions"          %  "jts-core"                % "1.14.0"
 
