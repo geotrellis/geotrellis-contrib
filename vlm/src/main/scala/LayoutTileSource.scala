@@ -85,6 +85,16 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
       (key, tile)
     }
   }
+
+  /** Set of keys that can be read from this tile source */
+  def keys(): Set[SpatialKey] = {
+    layout.extent.intersection(source.extent) match {
+      case Some(intersection) =>
+        layout.mapTransform.keysForGeometry(intersection.toPolygon)
+      case None =>
+        Set.empty[SpatialKey]
+    }
+  }
 }
 
 object LayoutTileSource {
