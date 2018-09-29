@@ -4,22 +4,62 @@ import geotrellis.contrib.vlm._
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.reproject.Reproject
-import geotrellis.raster.resample.ResampleMethod
+import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector._
-
-import org.gdal.gdal.gdal
+import org.gdal.gdal.{Dataset, WarpOptions, gdal}
 import org.gdal.osr.SpatialReference
 
-case class GDALRasterSource(uri: String) extends RasterSource {
-  @transient private lazy val dataset = GDAL.open(uri)
+import scala.collection.JavaConverters._
 
-  private lazy val geoTransform: Array[Double] = dataset.GetGeoTransform
-  
-  lazy val bandCount: Int = dataset.getRasterCount
+case class GDALResampleRasterSource(
+  uri: String,
+  resampleGrid: ResampleGrid,
+  method: ResampleMethod = NearestNeighbor
+) extends RasterSource {
+  @transient private lazy val vrt: Dataset = {
+    // For some reason, baseDataset can't be in
+    // the scope of the class or else a RunTime
+    // Error will be encountered. So it is
+    // created and closed when needed.
+    val baseDataset: Dataset = GDAL.open(uri)
+
+    val rasterExtent: RasterExtent = {
+      val colsLong: Long = baseDataset.getRasterXSize
+      val rowsLong: Long = baseDataset.getRasterYSize
+
+      val cols: Int = colsLong.toInt
+      val rows: Int = rowsLong.toInt
+
+      val geoTransform: Array[Double] = baseDataset.GetGeoTransform
+
+      val xmin: Double = geoTransform(0)
+      val ymin: Double = geoTransform(3) + geoTransform(5) * rows
+      val xmax: Double = geoTransform(0) + geoTransform(1) * cols
+      val ymax: Double = geoTransform(3)
+
+      RasterExtent(Extent(xmin, ymin, xmax, ymax), cols, rows)
+    }
+
+    val targetRasterExtent = resampleGrid(rasterExtent)
+
+    val warpParams =
+      List(
+        "-of", "VRT",
+        "-tr", targetRasterExtent.cellwidth.toString, targetRasterExtent.cellheight.toString,
+        "-r", s"${GDAL.deriveResampleMethodString(method)}"
+      ).asJava
+
+    val woptions = new WarpOptions(new java.util.Vector(warpParams))
+    val dataset = gdal.Warp("", Array(baseDataset), woptions)
+    baseDataset.delete
+    dataset
+  }
+
+  lazy val bandCount: Int = vrt.getRasterCount
 
   lazy val crs: CRS = {
     val projection: Option[String] = {
-      val proj = dataset.GetProjectionRef
+      val proj = vrt.GetProjectionRef
 
       if (proj == null || proj.isEmpty) None
       else Some(proj)
@@ -31,11 +71,14 @@ case class GDALRasterSource(uri: String) extends RasterSource {
     }.getOrElse(CRS.fromEpsgCode(4326))
   }
 
-  private lazy val reader: GDALReader = GDALReader(dataset)
+  private lazy val geoTransform: Array[Double] = vrt.GetGeoTransform
+  private lazy val invGeoTransofrm: Array[Double] = gdal.InvGeoTransform(geoTransform)
+
+  private lazy val reader: GDALReader = GDALReader(vrt)
 
   lazy val cellType: CellType = {
     val (noDataValue, bufferType, typeSizeInBits) = {
-      val baseBand = dataset.GetRasterBand(1)
+      val baseBand = vrt.GetRasterBand(1)
 
       val arr = Array.ofDim[java.lang.Double](1)
       baseBand.GetNoDataValue(arr)
@@ -49,8 +92,8 @@ case class GDALRasterSource(uri: String) extends RasterSource {
   }
 
   def rasterExtent: RasterExtent = {
-    val colsLong: Long = dataset.getRasterXSize
-    val rowsLong: Long = dataset.getRasterYSize
+    val colsLong: Long = vrt.getRasterXSize
+    val rowsLong: Long = vrt.getRasterYSize
 
     val cols: Int = colsLong.toInt
     val rows: Int = rowsLong.toInt

@@ -54,7 +54,7 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
   }
 
   // no resampling is implemented there
-  ignore("should be able to resample") {
+  it("should be able to resample") {
     // read in the whole file and resample the pixels in memory
     val expected: Raster[MultibandTile] =
       GeoTiffReader

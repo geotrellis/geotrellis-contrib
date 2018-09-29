@@ -7,35 +7,77 @@ import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.vector._
 
-import org.gdal.gdal.gdal
+import org.gdal.gdal.{Dataset, WarpOptions, gdal}
 import org.gdal.osr.SpatialReference
 
-case class GDALRasterSource(uri: String) extends RasterSource {
-  @transient private lazy val dataset = GDAL.open(uri)
+import scala.collection.JavaConverters._
 
-  private lazy val geoTransform: Array[Double] = dataset.GetGeoTransform
-  
-  lazy val bandCount: Int = dataset.getRasterCount
-
-  lazy val crs: CRS = {
-    val projection: Option[String] = {
-      val proj = dataset.GetProjectionRef
-
-      if (proj == null || proj.isEmpty) None
-      else Some(proj)
-    }
-
-    projection.map { proj =>
-      val srs = new SpatialReference(proj)
-      CRS.fromString(srs.ExportToProj4())
-    }.getOrElse(CRS.fromEpsgCode(4326))
+case class GDALReprojectRasterSource(
+  uri: String,
+  crs: CRS,
+  options: Reproject.Options = Reproject.Options.DEFAULT
+) extends RasterSource {
+  private lazy val baseSpatialReference = {
+    val baseDataset: Dataset = GDAL.open(uri)
+    val ref = new SpatialReference(baseDataset.GetProjection)
+    baseDataset.delete()
+    ref
   }
 
-  private lazy val reader: GDALReader = GDALReader(dataset)
+  private lazy val targetSpatialReference: SpatialReference = {
+    val spatialReference = new SpatialReference()
+    spatialReference.ImportFromProj4(crs.toProj4String)
+    spatialReference
+  }
+
+  @transient private lazy val vrt: Dataset = {
+    val warpParams = {
+      val list =
+        List(
+          "-of", "VRT",
+          "-r", s"${GDAL.deriveResampleMethodString(options.method)}",
+          "-et", s"${options.errorThreshold}"
+        )
+
+      // specify target resolution if necessary
+      val res = options.targetRasterExtent match {
+        case Some(re) => List("-tr", re.cellwidth.toString, re.cellheight.toString) ::: list
+        case _ => options.targetCellSize match {
+          case Some(cz) => List("-tr", cz.width.toString, cz.height.toString) ::: list
+          case _ => list
+        }
+      }
+
+      // do we need to reproject it?
+      val reproject =
+        if(baseSpatialReference != targetSpatialReference)
+          List("-s_srs", baseSpatialReference.ExportToProj4, "-t_srs", targetSpatialReference.ExportToProj4) ::: res
+        else res
+
+      reproject.asJava
+    }
+
+    // For some reason, baseDataset can't be in
+    // the scope of the class or else a RunTime
+    // Error will be encountered. So it is
+    // created and closed when needed.
+    val baseDataset: Dataset = GDAL.open(uri)
+    val woptions = new WarpOptions(new java.util.Vector(warpParams))
+    val dataset = gdal.Warp("", Array(baseDataset), woptions)
+    baseDataset.delete
+    dataset
+  }
+
+  lazy val bandCount: Int = vrt.getRasterCount
+
+  private lazy val geoTransform: Array[Double] = vrt.GetGeoTransform
+  private lazy val invGeoTransofrm: Array[Double] = gdal.InvGeoTransform(geoTransform)
+
+  private lazy val reader: GDALReader = GDALReader(vrt)
 
   lazy val cellType: CellType = {
     val (noDataValue, bufferType, typeSizeInBits) = {
-      val baseBand = dataset.GetRasterBand(1)
+      val baseBand = vrt.GetRasterBand(1)
 
       val arr = Array.ofDim[java.lang.Double](1)
       baseBand.GetNoDataValue(arr)
@@ -49,8 +91,8 @@ case class GDALRasterSource(uri: String) extends RasterSource {
   }
 
   def rasterExtent: RasterExtent = {
-    val colsLong: Long = dataset.getRasterXSize
-    val rowsLong: Long = dataset.getRasterYSize
+    val colsLong: Long = vrt.getRasterXSize
+    val rowsLong: Long = vrt.getRasterYSize
 
     val cols: Int = colsLong.toInt
     val rows: Int = rowsLong.toInt
