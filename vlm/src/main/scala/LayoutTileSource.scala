@@ -86,6 +86,10 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
     }
   }
 
+  /** Read all available tiles */
+  def readAll(): Iterator[(SpatialKey, MultibandTile)] =
+    readAll(keys.toIterator)
+
   /** Set of keys that can be read from this tile source */
   def keys(): Set[SpatialKey] = {
     layout.extent.intersection(source.extent) match {
