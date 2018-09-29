@@ -49,6 +49,7 @@ trait RasterSource extends CellGrid with Serializable {
     def extent: Extent = rasterExtent.extent
     def cols: Int = rasterExtent.cols
     def rows: Int = rasterExtent.rows
+    def bounds: GridBounds = GridBounds(0, 0, cols - 1, rows - 1)
 
     /** Reproject to different CRS with explicit sampling options.
       * @see [[geotrellis.raster.reproject.Reproject]]
@@ -164,4 +165,21 @@ trait RasterSource extends CellGrid with Serializable {
       LayoutTileSource(resampleToGrid(layout, resampleMethod), layout)
 
     def close = { }
+
+    def readRef(ref: RasterRef): Option[Raster[MultibandTile]] = {
+      for {
+        bounds <- ref.bounds.intersection(this)
+        raster <- read(bounds)
+      } yield {
+        if (raster.tile.cols == ref.cols && raster.tile.rows == ref.cols) {
+          raster
+        } else { // we didn't get all the pixels we wanted, pad them out
+          // ref bounds are relative to this source
+          // offsets to be padded are relative to bounds that were requested
+          val colOffset = math.abs(ref.bounds.colMin - bounds.colMin)
+          val rowOffset = math.abs(ref.bounds.rowMin - bounds.rowMin)
+          raster.mapTile(_.mapBands { (_, band) => PaddedTile(band, colOffset, rowOffset, ref.cols, ref.rows) })
+        }
+      }
+   }
 }
