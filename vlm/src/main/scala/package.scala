@@ -16,20 +16,16 @@
 
 package geotrellis.contrib
 
-import java.nio.file.Paths
-import java.net.{URI, URL}
-import java.nio.charset.Charset
-import org.apache.http.client.utils.URLEncodedUtils
-
-
-import com.amazonaws.services.s3.{AmazonS3URI, AmazonS3Client => AWSAmazonS3Client}
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
-import com.amazonaws.services.s3.AmazonS3URI
-
-import geotrellis.util.{FileRangeReader, RangeReader, StreamingByteReader}
+import geotrellis.util.{FileRangeReader, StreamingByteReader}
 import geotrellis.spark.io.http.util.HttpRangeReader
 import geotrellis.spark.io.s3.util.S3RangeReader
 import geotrellis.spark.io.s3.AmazonS3Client
+import org.apache.http.client.utils.URLEncodedUtils
+import com.amazonaws.services.s3.{AmazonS3ClientBuilder, AmazonS3URI}
+
+import java.nio.file.Paths
+import java.net.{URI, URL}
+import java.nio.charset.Charset
 
 package object vlm {
   private[vlm] def getByteReader(uri: String): StreamingByteReader = {
@@ -51,7 +47,7 @@ package object vlm {
 
       case "s3" =>
         val s3Uri = new AmazonS3URI(java.net.URLDecoder.decode(uri, "UTF-8"))
-        val s3Client = new AmazonS3Client(new AWSAmazonS3Client(new DefaultAWSCredentialsProviderChain))
+        val s3Client = new AmazonS3Client(AmazonS3ClientBuilder.defaultClient())
         S3RangeReader(s3Uri.getBucket, s3Uri.getKey, s3Client)
 
       case scheme =>

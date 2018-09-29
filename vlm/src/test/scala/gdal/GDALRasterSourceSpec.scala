@@ -48,7 +48,7 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
     chip.tile should have (dimensions (source.dimensions))
 
     // check also that the tile is valid
-    withGeoTiffClue(chip, expected.get)  {
+    withGeoTiffClue(chip, expected.get, source.crs)  {
       assertRastersEqual(chip, expected.get)
     }
   }
@@ -71,7 +71,7 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
     val actual: Raster[MultibandTile] =
       resampledSource.read(GridBounds(0, 0, resampledSource.cols - 1, resampledSource.rows - 1)).get
 
-    withGeoTiffClue(actual, expected)  {
+    withGeoTiffClue(actual, expected, resampledSource.crs)  {
       assertRastersEqual(actual, expected)
     }
   }

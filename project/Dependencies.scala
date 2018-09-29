@@ -40,6 +40,7 @@ object Dependencies {
   val geotrellisSparkTestKit  = "org.locationtech.geotrellis" %% "geotrellis-spark-testkit"  % Version.geotrellis
   val geotrellisS3            = "org.locationtech.geotrellis" %% "geotrellis-s3"             % Version.geotrellis
   val geotrellisRaster        = "org.locationtech.geotrellis" %% "geotrellis-raster"         % Version.geotrellis
+  val geotrellisMacros        = "org.locationtech.geotrellis" %% "geotrellis-macros"         % Version.geotrellis
   val geotrellisRasterTestkit = "org.locationtech.geotrellis" %% "geotrellis-raster-testkit" % Version.geotrellis
   val geotrellisVector        = "org.locationtech.geotrellis" %% "geotrellis-vector"         % Version.geotrellis
   val geotrellisUtil          = "org.locationtech.geotrellis" %% "geotrellis-util"           % Version.geotrellis
@@ -48,6 +49,7 @@ object Dependencies {
   val pureconfig          = "com.github.pureconfig"      %% "pureconfig"               % "0.9.1"
   val logging             = "com.typesafe.scala-logging" %% "scala-logging"            % "3.9.0"
   val scalatest           = "org.scalatest"              %% "scalatest"                % "3.0.5"
+  val scalactic           = "org.scalactic"              %% "scalactic"                % "3.0.5"
   val scalacheck          = "org.scalacheck"             %% "scalacheck"               % "1.14.0"
   val jts                 = "com.vividsolutions"          %  "jts-core"                % "1.14.0"
 

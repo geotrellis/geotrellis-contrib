@@ -27,29 +27,34 @@ import geotrellis.spark.tiling._
 import geotrellis.spark.testkit._
 
 import org.scalatest._
+import Inspectors._
 
 import java.io.File
 
-class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
+class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRasterMatchers {
   val filePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
   val uri = s"file://$filePath"
   val rasterSource = new GeoTiffRasterSource(uri)
-
   val targetCRS = CRS.fromEpsgCode(3857)
   val scheme = ZoomedLayoutScheme(targetCRS)
   val layout = scheme.levelForZoom(13).layout
 
+  val reprojectedSource = rasterSource.reprojectToGrid(targetCRS, layout)
+
   describe("reading in GeoTiffs as RDDs") {
     // TODO: fix the test
-    ignore("should have the right number of tiles") {
+    it("should have the right number of tiles") {
       val expectedKeys =
         layout
           .mapTransform
-          .keysForGeometry(rasterSource.extent.toPolygon)
+          .keysForGeometry(reprojectedSource.extent.toPolygon)
           .toSeq
           .sortBy { key => (key.col, key.row) }
 
-      val rdd = RasterSourceRDD(rasterSource, layout)
+      info(s"RasterSource CRS: ${reprojectedSource.crs}")
+
+      val rdd = RasterSourceRDD(reprojectedSource, layout)
+
 
       val actualKeys = rdd.keys.collect().sortBy { key => (key.col, key.row) }
 
@@ -58,14 +63,20 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
       }
     }
 
-    // TODO: fix the test
-    ignore("should read in the tiles as squares") {
-      val reprojectedRasterSource = rasterSource.reproject(targetCRS)
+    it("should read in the tiles as squares") {
+      val reprojectedRasterSource = rasterSource.reprojectToGrid(targetCRS, layout)
       val rdd = RasterSourceRDD(reprojectedRasterSource, layout)
+      val rows = rdd.collect()
 
-      val values = rdd.values.collect()
-
-      values.map { value => (value.cols, value.rows) should be((256, 256)) }
+      forAll(rows) { case (key, tile) =>
+        withClue(s"$key") {
+          tile should have (
+            dimensions (256, 256),
+            cellType (rasterSource.cellType),
+            bandCount (rasterSource.bandCount)
+          )
+        }
+      }
     }
   }
 
@@ -79,8 +90,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
         .tileToLayout(md)
         .reproject(
           targetCRS,
-          layout,
-          Reproject.Options(targetCellSize = Some(layout.cellSize))
+          layout
         )._2.persist()
     }
 
@@ -91,14 +101,20 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
 
       joinedRDD.collect().foreach { case (key, (expected, actualTile)) =>
         actualTile match {
-          case Some(actual) => assertEqual(expected, actual)
-          case None => throw new Exception(s"$key does not exist in the rasterSourceRDD")
+          case Some(actual) =>
+            // withGeoTiffClue(key, layout, actual, expected, targetCRS) {
+            withClue(s"$key:") {
+              assertTilesEqual(expected, actual)
+            }
+            // }
+
+          case None =>
+            throw new Exception(s"$key does not exist in the rasterSourceRDD")
         }
       }
     }
 
-    // TODO: fix the test
-    ignore("should reproduce tileToLayout") {
+    it("should reproduce tileToLayout") {
       // This should be the same as result of .tileToLayout(md.layout)
       val rasterSourceRDD: MultibandTileLayerRDD[SpatialKey] =
         RasterSourceRDD(rasterSource, md.layout)
@@ -110,18 +126,10 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment {
       assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSource)
     }
 
-    // TODO: fix the test
+    // TODO: fix test, there appears to be edge resample artifact on partial intersect
     ignore("should reproduce tileToLayout followed by reproject") {
       val reprojectedSourceRDD: MultibandTileLayerRDD[SpatialKey] =
-        RasterSourceRDD(
-          rasterSource.reproject(
-            targetCRS,
-            options = Reproject.Options.DEFAULT.copy(
-            targetCellSize = Some(layout.cellSize)
-            )
-          ),
-          layout
-        )
+        RasterSourceRDD(rasterSource.reprojectToGrid(targetCRS, layout), layout)
 
       assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSourceRDD)
     }
