@@ -26,7 +26,7 @@ import org.scalatest._
 class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
   val url = Resource.path("img/aspect-tiled.tif")
 
-  val source: GDALRasterSource = new GDALRasterSource(url)
+  val source: GDALRasterSource = GDALRasterSource(url)
 
   it("should be able to read upper left corner") {
     val bounds = GridBounds(0, 0, 10, 10)
