@@ -18,8 +18,6 @@ package geotrellis.contrib.vlm
 
 import geotrellis.contrib.vlm.gdal._
 import geotrellis.raster._
-import geotrellis.raster.reproject.Reproject
-
 import geotrellis.proj4._
 import geotrellis.spark._
 import geotrellis.spark.io.hadoop._
@@ -146,6 +144,14 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
           rasterSourceRDD.reproject(targetCRS, layout)._2
 
         assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSource)
+      }
+
+      ignore("should reproduce tileToLayout followed by reproject") {
+        // This should be the same as .tileToLayout(md.layout).reproject(crs, layout)
+        val reprojectedSourceRDD: MultibandTileLayerRDD[SpatialKey] =
+          RasterSourceRDD(rasterSource.reprojectToGrid(targetCRS, layout), layout)
+
+        assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSourceRDD)
       }
     }
   }

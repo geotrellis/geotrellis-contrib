@@ -26,7 +26,7 @@ import org.scalatest._
 class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
   val url = Resource.path("img/aspect-tiled.tif")
 
-  val source: GDALRasterSource = new GDALRasterSource(url)
+  val source: GDALRasterSource = GDALRasterSource(url)
 
   it("should be able to read upper left corner") {
     val bounds = GridBounds(0, 0, 10, 10)
@@ -54,7 +54,7 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
   }
 
   // no resampling is implemented there
-  ignore("should be able to resample") {
+  it("should be able to resample") {
     // read in the whole file and resample the pixels in memory
     val expected: Raster[MultibandTile] =
       GeoTiffReader
