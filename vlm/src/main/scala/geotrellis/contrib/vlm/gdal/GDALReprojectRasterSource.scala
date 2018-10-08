@@ -30,7 +30,7 @@ case class GDALReprojectRasterSource(
       case sz if sz.nonEmpty => sz
       case _ => options.targetCellSize match {
         case sz if sz.nonEmpty => sz
-        case _ => options.parentGridExtent.map(_.cellSize)
+        case _ => options.parentGridExtent.map(_.toRasterExtent().cellSize)
       }
     }
 
