@@ -12,7 +12,7 @@ import org.gdal.osr.SpatialReference
 trait GDALBaseRasterSource extends RasterSource {
   val dataset: Dataset
 
-  private lazy val geoTransform: Array[Double] = dataset.GetGeoTransform
+  lazy val geoTransform: Array[Double] = dataset.GetGeoTransform
 
   lazy val bandCount: Int = dataset.getRasterCount
 
@@ -67,18 +67,17 @@ trait GDALBaseRasterSource extends RasterSource {
       bounds.map { gb =>
         val re = rasterExtent.rasterExtentFor(gb)
         val boundsClamped = rasterExtent.gridBoundsFor(re.extent, clamp = true)
-        val bounds = rasterExtent.gridBoundsFor(re.extent, clamp = false)
-        (bounds, boundsClamped, re)
+        (gb, boundsClamped, re)
       }
 
     tuples.map { case (gb, gbc, re) =>
-      val initialTile = reader.read(gbc, bands = bands)
+      val initialTile = reader.read(gb, bands = bands)
 
       val (gridBounds, tile) =
         if (initialTile.cols != re.cols || initialTile.rows != re.rows) {
           val updatedTiles = initialTile.bands.map { band =>
             // TODO: it can't be larger than the source is, fix it
-            val protoTile = band.prototype(math.min(re.cols, cols), math.min(re.rows, rows))
+            val protoTile = band.prototype(re.cols, re.rows)
 
             protoTile.update(gb.colMin - gbc.colMin, gb.rowMin - gbc.rowMin, band)
             protoTile

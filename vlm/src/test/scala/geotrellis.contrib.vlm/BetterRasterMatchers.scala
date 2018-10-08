@@ -3,18 +3,20 @@ package geotrellis.contrib.vlm
 import org.scalatest._
 import geotrellis.raster._
 import geotrellis.vector._
-import geotrellis.proj4.{CRS, LatLng}
-import geotrellis.vector.io.wkt.WKT
+import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.GeoTiff
+import geotrellis.raster.render.png.{PngColorEncoding, RgbaPngEncoding}
 import geotrellis.spark.SpatialKey
 import geotrellis.spark.tiling.LayoutDefinition
-import matchers._
-import spire.syntax.cfor._
 import geotrellis.raster.testkit.RasterMatchers
 import geotrellis.raster.render.ascii._
 
+import matchers._
+import org.scalatest.tools.BetterPrinters
+import spire.syntax.cfor._
+
 import scala.reflect._
-import java.nio.file.Files
+import java.nio.file.{Files, Paths}
 
 trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
   import BetterRasterMatchers._
@@ -126,6 +128,36 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
     |+ diff  : ${Option(diffFile).getOrElse("--")}
     """stripMargin
   })(fun)
+
+  def writePngOutputTile(
+    tile: MultibandTile,
+    colorEncoding: PngColorEncoding = RgbaPngEncoding,
+    band: Int = 0,
+    name: String = "output",
+    discriminator: String = "",
+    outputDir: Option[String] = None
+  ): MultibandTile = {
+    val tmpDir = outputDir.fold(Files.createTempDirectory(getClass.getSimpleName))(Paths.get(_))
+    val outputFile = tmpDir.resolve(s"${name}${discriminator}.png")
+    tile.band(band).renderPng().write(outputFile.toString)
+
+    val msg = s"""
+    |+ png output path  : ${outputFile}
+    """stripMargin
+
+    BetterPrinters.printAnsiGreen(msg)
+    tile
+  }
+
+  def writePngOutputRaster(
+    raster: Raster[MultibandTile],
+    colorEncoding: PngColorEncoding = RgbaPngEncoding,
+    band: Int = 0,
+    name: String = "output",
+    discriminator: String = "",
+    outputDir: Option[String] = None
+  ): Raster[MultibandTile] =
+    raster.mapTile(writePngOutputTile(_, colorEncoding, band, name, discriminator, outputDir))
 }
 
 

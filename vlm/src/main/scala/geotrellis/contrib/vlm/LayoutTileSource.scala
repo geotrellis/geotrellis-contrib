@@ -70,8 +70,8 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
       sourcePixelBounds = GridBounds(
         colMin = (col * layout.tileCols - sourceColOffset).toInt,
         rowMin = (row * layout.tileRows - sourceRowOffset).toInt,
-        colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset).toInt,
-        rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset).toInt)
+        colMax = ((col + 1) * layout.tileCols - 1 - sourceColOffset).toInt,
+        rowMax = ((row + 1) * layout.tileRows - 1 - sourceRowOffset).toInt)
       bounds <- sourcePixelBounds.intersection(source)
       raster <- source.read(bounds)
     } yield {
@@ -116,13 +116,17 @@ object LayoutTileSource {
       cols - math.floor(cols)
     }
 
-    require((a.cellwidth === b.cellwidth +- eps) && (a.cellheight === b.cellheight +- eps),
+    /**
+      * TODO: This is ignored at the moment to make it soft and to make GDAL work,
+      * we need to reconsider these things to be softer (?)
+      */
+    /*require((a.cellwidth === b.cellwidth +- eps) && (a.cellheight === b.cellheight +- eps),
       s"CellSize differs: ${a.cellSize}, ${b.cellSize}")
 
     require((a.extent.xmin === b.extent.xmin +- eps) || isWhole((a.extent.xmin - b.extent.xmin) / a.cellwidth),
       s"x-aligned: offset by ${a.cellSize} ${offset(a.extent.xmin, b.extent.xmin, a.cellwidth)}")
 
     require((a.extent.ymin === b.extent.ymin +- eps) || isWhole((a.extent.ymin - b.extent.ymin) / b.cellheight),
-      s"y-aligned: offset by ${a.cellSize} ${offset(a.extent.ymin, b.extent.ymin, a.cellheight)}")
+      s"y-aligned: offset by ${a.cellSize} ${offset(a.extent.ymin, b.extent.ymin, a.cellheight)}")*/
   }
 }
