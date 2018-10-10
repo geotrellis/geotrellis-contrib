@@ -1,5 +1,7 @@
 # GeoTrellis Contributions repo
 
+[![Build Status](https://travis-ci.org/geotrellis/geotrellis-contrib.svg?branch=master)](https://travis-ci.org/geotrellis/geotrellis-contrib)
+
 This is a repository is a place to put extra [GeoTrellis](https://github.com/locationtech/geotrellis) projects, that were not included into the main repo for various reasons.
 
  - Project names should be of the form `geotrellis-contrib-{feature}`
