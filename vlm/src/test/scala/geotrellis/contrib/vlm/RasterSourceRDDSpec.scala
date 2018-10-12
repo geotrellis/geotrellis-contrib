@@ -40,7 +40,6 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
   val reprojectedSource = rasterSource.reprojectToGrid(targetCRS, layout)
 
   describe("reading in GeoTiffs as RDDs") {
-    // TODO: fix the test
     it("should have the right number of tiles") {
       val expectedKeys =
         layout
@@ -93,7 +92,9 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
     }
 
     def assertRDDLayersEqual(
-      expected: MultibandTileLayerRDD[SpatialKey], actual: MultibandTileLayerRDD[SpatialKey]
+      expected: MultibandTileLayerRDD[SpatialKey],
+      actual: MultibandTileLayerRDD[SpatialKey],
+      matchRasters: Boolean = false
     ): Unit = {
       val joinedRDD = expected.filter{ case (_, t) => !t.band(0).isNoDataTile }.leftOuterJoin(actual)
 
@@ -115,7 +116,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
             // withGeoTiffClue(key, layout, actual, expected, targetCRS) {
             withClue(s"$key:") {
               expected.dimensions should be (actual.dimensions)
-             // assertTilesEqual(expected, actual)
+              if(matchRasters) assertTilesEqual(expected, actual)
             }
             // }
 
@@ -127,12 +128,10 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
     it("should reproduce tileToLayout") {
       // This should be the same as result of .tileToLayout(md.layout)
-      val rasterSourceRDD: MultibandTileLayerRDD[SpatialKey] =
-        RasterSourceRDD(rasterSource, md.layout)
+      val rasterSourceRDD: MultibandTileLayerRDD[SpatialKey] = RasterSourceRDD(rasterSource, md.layout)
 
       // Complete the reprojection
-      val reprojectedSource =
-        rasterSourceRDD.reproject(targetCRS, layout)._2
+      val reprojectedSource = rasterSourceRDD.reproject(targetCRS, layout)._2
 
       assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSource)
     }
@@ -146,26 +145,27 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
     }
 
     describe("GDALRasterSource") {
+      val expectedFilePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-near-merc-rdd.tif"
+      val reprojectedExpectedRDDGDAL: MultibandTileLayerRDD[SpatialKey] =
+        RasterSourceRDD(GDALRasterSource(expectedFilePath), layout)
+
       val rasterSource = GDALRasterSource(filePath)
       it("should reproduce tileToLayout") {
         // This should be the same as result of .tileToLayout(md.layout)
-        val rasterSourceRDD: MultibandTileLayerRDD[SpatialKey] =
-          RasterSourceRDD(rasterSource, md.layout)
+        val rasterSourceRDD: MultibandTileLayerRDD[SpatialKey] = RasterSourceRDD(rasterSource, md.layout)
 
         // Complete the reprojection
-        val reprojectedSource =
-          rasterSourceRDD.reproject(targetCRS, layout)._2
+        val reprojectedSource = rasterSourceRDD.reproject(targetCRS, layout)._2
 
-        assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSource)
+        assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSource, true)
       }
 
-      // TODO: fix test, compare to GDAL WARP results
-      it("should reproduce tileToLayout followed by reproject") {
+      it("should reproduce tileToLayout followed by reproject GDAL") {
         // This should be the same as .tileToLayout(md.layout).reproject(crs, layout)
         val reprojectedSourceRDD: MultibandTileLayerRDD[SpatialKey] =
           RasterSourceRDD(rasterSource.reprojectToGrid(targetCRS, layout), layout)
 
-        assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSourceRDD)
+        assertRDDLayersEqual(reprojectedExpectedRDDGDAL, reprojectedSourceRDD, true)
       }
     }
   }

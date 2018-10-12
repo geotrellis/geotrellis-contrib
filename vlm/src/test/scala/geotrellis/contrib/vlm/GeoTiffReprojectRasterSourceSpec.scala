@@ -20,23 +20,20 @@ import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.resample._
 import geotrellis.raster.reproject._
-import geotrellis.raster.testkit._
 import geotrellis.proj4._
 import geotrellis.spark.testkit._
+
 import org.scalatest._
 
 import java.io.File
 
-
-class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with RasterMatchers {
+class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
   describe("Reprojecting a RasterSource") {
     val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
     val schemeURI = s"file://$uri"
 
     val rasterSource = new GeoTiffRasterSource(schemeURI)
-
     val sourceTiff = GeoTiffReader.readMultiband(uri)
-
     
     val expectedRasterExtent = {
       val re = ReprojectRasterExtent(rasterSource.rasterExtent, Transform(rasterSource.crs, LatLng))
@@ -53,10 +50,12 @@ class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with
         withClue(s"Read window ${bound}: ") {
           val targetExtent = expectedRasterExtent.extentFor(bound)
           val testRasterExtent = RasterExtent(
-            extent = targetExtent, 
-            cellwidth = expectedRasterExtent.cellwidth, 
+            extent     = targetExtent,
+            cellwidth  = expectedRasterExtent.cellwidth,
             cellheight = expectedRasterExtent.cellheight, 
-            cols = bound.width, rows = bound.height)
+            cols       = bound.width,
+            rows       = bound.height
+          )
 
           val expected: Raster[MultibandTile] = {
             val rr = implicitly[RasterRegionReproject[MultibandTile]]
@@ -65,15 +64,15 @@ class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with
 
           val actual = warpRasterSource.read(bound).get
 
-          val expectedTile = expected.tile.band(0)
-          val actualTile = actual.tile.band(0)
-
           actual.extent.covers(expected.extent) should be (true)
           actual.rasterExtent.extent.xmin should be (expected.rasterExtent.extent.xmin +- 0.00001)
           actual.rasterExtent.extent.ymax should be (expected.rasterExtent.extent.ymax +- 0.00001)
           actual.rasterExtent.cellwidth should be (expected.rasterExtent.cellwidth +- 0.00001)
           actual.rasterExtent.cellheight should be (expected.rasterExtent.cellheight +- 0.00001)
-          assertEqual(actual, expected)
+
+          withGeoTiffClue(actual, expected, LatLng)  {
+            assertRastersEqual(actual, expected)
+          }
         }
       }
     }
