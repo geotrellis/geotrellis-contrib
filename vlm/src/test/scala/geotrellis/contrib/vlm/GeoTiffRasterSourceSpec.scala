@@ -17,12 +17,20 @@
 package geotrellis.contrib.vlm
 
 import geotrellis.raster._
+import geotrellis.raster.prototype._
+import geotrellis.raster.merge._
+import geotrellis.raster.io.geotiff.MultibandGeoTiff
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.resample._
 import geotrellis.raster.reproject._
 import geotrellis.raster.testkit._
+import geotrellis.vector.{Extent, ProjectedExtent}
 import geotrellis.proj4._
+import geotrellis.spark._
+import geotrellis.spark.tiling._
 import geotrellis.spark.testkit._
+import geotrellis.util._
+
 import org.scalatest._
 
 import java.io.File
@@ -71,6 +79,65 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
 
     withGeoTiffClue(actual, expected, resampledSource.crs)  {
       assertRastersEqual(actual, expected)
+    }
+  }
+
+  it("should perform a tileToLayout") {
+    val targetCellSize: CellSize = CellSize(20.0, 20.0)
+    val targetExtent: Extent = source.extent.buffer(10.0)
+
+    val scheme = FloatingLayoutScheme(256)
+    val layout = scheme.levelFor(targetExtent, targetCellSize).layout
+    val mapTransform = layout.mapTransform
+
+    val testSource: MultibandGeoTiff =
+      GeoTiffReader.readMultiband(url, streaming = false)
+
+    val testTile = testSource.tile
+
+    val pe = ProjectedExtent(testSource.extent, testSource.crs)
+
+    val expected: List[(SpatialKey, MultibandTile)] =
+      mapTransform(pe.extent)
+        .coordsIter.map { spatialComponent =>
+          val key = pe.translate(spatialComponent)
+          val newTile = testTile.prototype(source.cellType, layout.tileCols, layout.tileRows)
+          (key,
+            newTile.merge(
+              mapTransform.keyToExtent(key.getComponent[SpatialKey]),
+              pe.extent,
+              testTile,
+              NearestNeighbor
+            )
+          )
+        }.toList
+
+    val actual: List[(SpatialKey, MultibandTile)] = source.tileToLayout(layout).readAll().toList
+
+    println(s"This is the count for expected: ${expected.size}")
+    println(s"This is the count for actual: ${actual.size}")
+
+    actual.size should be (expected.size)
+
+    println("\nThese are the expected keys")
+    expected.sortBy { case (key, _) => (key.col, key.row) }.foreach { case (k, _) => println(k) }
+    println("\nThese are the actual keys")
+    actual.sortBy { case (key, _) => (key.col, key.row) }.foreach { case (k, _) => println(k) }
+
+    val grouped: List[(Raster[MultibandTile], Raster[MultibandTile])] =
+      actual
+        .sortBy { case (k, _) => (k.col, k.row) }
+        .map { case (k, v) => Raster(v, mapTransform.keyToExtent(k)) }
+        .zip(
+          expected
+            .sortBy { case (k, _) => (k.col, k.row) }
+            .map { case (k, v) => Raster(v, mapTransform.keyToExtent(k)) }
+        )
+
+    grouped.map { case (actualTile, expectedTile) =>
+      withGeoTiffClue(actualTile, expectedTile, source.crs)  {
+        assertRastersEqual(actualTile, expectedTile)
+      }
     }
   }
 }
