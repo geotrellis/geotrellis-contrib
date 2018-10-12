@@ -40,7 +40,12 @@ class GDALReprojectRasterSourceSpec extends FunSpec with RasterMatchers with Bet
     val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
 
     val expectedUri = Map[ResampleMethod, String](
-      Bilinear -> s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-bilinear.tif",
+      Bilinear -> {
+        if(System.getProperty("os.name").toLowerCase().startsWith("mac"))
+          s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-bilinear.tif"
+        else
+          s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-bilinear-linux.tif"
+      },
       NearestNeighbor -> s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-near.tif"
     )
 
