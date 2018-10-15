@@ -85,12 +85,7 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
   }
 
   it("should perform a tileToLayout") {
-    val targetCellSize: CellSize = CellSize(20.0, 20.0)
-    val targetExtent: Extent = source.extent.buffer(10.0)
-
-    val scheme = FloatingLayoutScheme(256)
-    val layout = scheme.levelFor(targetExtent, targetCellSize).layout
-    val mapTransform = layout.mapTransform
+    val targetCellSize: CellSize = CellSize(11.0, 11.0)
 
     val testSource: MultibandGeoTiff =
       GeoTiffReader.readMultiband(url, streaming = false)
@@ -99,9 +94,14 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
 
     val pe = ProjectedExtent(testSource.extent, testSource.crs)
 
+    val scheme = FloatingLayoutScheme(256)
+    val layout = scheme.levelFor(pe.extent, targetCellSize).layout
+    val mapTransform = layout.mapTransform
+
     val expected: List[(SpatialKey, MultibandTile)] =
       mapTransform(pe.extent)
-        .coordsIter.map { spatialComponent =>
+        .coordsIter
+        .map { spatialComponent =>
           val key = pe.translate(spatialComponent)
           val newTile = testTile.prototype(source.cellType, layout.tileCols, layout.tileRows)
           (key,
@@ -116,25 +116,20 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
 
     val actual: List[(SpatialKey, MultibandTile)] = source.tileToLayout(layout).readAll().toList
 
-    println(s"This is the count for expected: ${expected.size}")
-    println(s"This is the count for actual: ${actual.size}")
-
     actual.size should be (expected.size)
 
-    println("\nThese are the expected keys")
-    expected.sortBy { case (key, _) => (key.col, key.row) }.foreach { case (k, _) => println(k) }
-    println("\nThese are the actual keys")
-    actual.sortBy { case (key, _) => (key.col, key.row) }.foreach { case (k, _) => println(k) }
+   val sortedActual: List[Raster[MultibandTile]] =
+     actual
+       .sortBy { case (k, _) => (k.col, k.row) }
+       .map { case (k, v) => Raster(v, mapTransform.keyToExtent(k)) }
+
+   val sortedExpected: List[Raster[MultibandTile]] =
+     expected
+       .sortBy { case (k, _) => (k.col, k.row) }
+       .map { case (k, v) => Raster(v, mapTransform.keyToExtent(k)) }
 
     val grouped: List[(Raster[MultibandTile], Raster[MultibandTile])] =
-      actual
-        .sortBy { case (k, _) => (k.col, k.row) }
-        .map { case (k, v) => Raster(v, mapTransform.keyToExtent(k)) }
-        .zip(
-          expected
-            .sortBy { case (k, _) => (k.col, k.row) }
-            .map { case (k, v) => Raster(v, mapTransform.keyToExtent(k)) }
-        )
+      sortedActual.zip(sortedExpected)
 
     grouped.map { case (actualTile, expectedTile) =>
       withGeoTiffClue(actualTile, expectedTile, source.crs)  {
