@@ -47,6 +47,7 @@ case class GDALResampleRasterSource(
           val targetRasterExtent = resampleGrid(rasterExtent)
           GDALWarpOptions(
             cellSize = targetRasterExtent.cellSize.some,
+            alignTargetPixels = false,
             resampleMethod = method.some
           )
       }
