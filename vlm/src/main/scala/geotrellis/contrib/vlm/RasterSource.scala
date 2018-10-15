@@ -22,6 +22,7 @@ import geotrellis.raster.resample._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.proj4._
 import geotrellis.spark.tiling.LayoutDefinition
+import geotrellis.util.GetComponent
 
 /**
   * Single threaded instance of a reader that is able to read windows from larger raster.
@@ -182,4 +183,9 @@ trait RasterSource extends CellGrid with Serializable {
         }
       }
    }
+}
+
+object RasterSource {
+  implicit def projectedExtentComponent[T <: RasterSource]: GetComponent[T, ProjectedExtent] =
+    GetComponent(rs => ProjectedExtent(rs.extent, rs.crs))
 }

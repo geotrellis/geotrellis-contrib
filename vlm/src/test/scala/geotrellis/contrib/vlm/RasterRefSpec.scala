@@ -1,22 +1,15 @@
 package geotrellis.contrib.vlm
 
-import geotrellis.contrib.vlm.gdal._
-import geotrellis.raster._
 import geotrellis.raster.io.geotiff._
-import geotrellis.raster.reproject.Reproject
 
 import geotrellis.proj4._
 import geotrellis.spark._
-import geotrellis.spark.io.hadoop._
 import geotrellis.spark.tiling._
 import geotrellis.spark.testkit._
 
-import org.apache.spark._
 import org.apache.spark.rdd._
 import org.scalatest._
 import Inspectors._
-
-import java.io.File
 
 class RasterRefSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
   it("reads RDD of raster refs") {
