@@ -84,11 +84,6 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
 
   it("should perform a tileToLayout") {
     val targetCellSize: CellSize = CellSize(20.0, 20.0)
-    val targetExtent: Extent = source.extent.buffer(10.0)
-
-    val scheme = FloatingLayoutScheme(256)
-    val layout = scheme.levelFor(targetExtent, targetCellSize).layout
-    val mapTransform = layout.mapTransform
 
     val testSource: MultibandGeoTiff =
       GeoTiffReader.readMultiband(url, streaming = false)
@@ -96,6 +91,10 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
     val testTile = testSource.tile
 
     val pe = ProjectedExtent(testSource.extent, testSource.crs)
+
+    val scheme = FloatingLayoutScheme(256)
+    val layout = scheme.levelFor(pe.extent, targetCellSize).layout
+    val mapTransform = layout.mapTransform
 
     val expected: List[(SpatialKey, MultibandTile)] =
       mapTransform(pe.extent)
@@ -112,18 +111,45 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
           )
         }.toList
 
-    val actual: List[(SpatialKey, MultibandTile)] = source.tileToLayout(layout).readAll().toList
+    val result = source.tileToLayout(layout)
+    //val actual: List[(SpatialKey, MultibandTile)] = source.tileToLayout(layout).readAll().toList
+    val actual: List[(SpatialKey, MultibandTile)] = result.readAll().toList
 
-    println(s"This is the count for expected: ${expected.size}")
-    println(s"This is the count for actual: ${actual.size}")
+    println(s"\nThis is the layout extent: ${layout.extent}")
+    println(s"This is the layout extent: ${layout.cellwidth}, ${layout.cellheight}")
+    println(s"\nThis is the actual extent: ${result.source.extent}")
+    println(s"This is the actual cellSize: ${result.source.cellSize}")
+
+    //println(s"This is the count for expected: ${expected.size}")
+    //println(s"This is the count for actual: ${actual.size}")
 
     actual.size should be (expected.size)
 
-    println("\nThese are the expected keys")
-    expected.sortBy { case (key, _) => (key.col, key.row) }.foreach { case (k, _) => println(k) }
-    println("\nThese are the actual keys")
-    actual.sortBy { case (key, _) => (key.col, key.row) }.foreach { case (k, _) => println(k) }
+   val sortedActual: List[Raster[MultibandTile]] =
+     actual
+       .sortBy { case (k, _) => (k.col, k.row) }
+       .map { case (k, v) => Raster(v, mapTransform.keyToExtent(k)) }
 
+   val sortedExpected: List[Raster[MultibandTile]] =
+     expected
+       .sortBy { case (k, _) => (k.col, k.row) }
+       .map { case (k, v) => Raster(v, mapTransform.keyToExtent(k)) }
+
+    val grouped: List[(Raster[MultibandTile], Raster[MultibandTile])] =
+      sortedActual.zip(sortedExpected)
+
+    grouped.map { case (actualTile, expectedTile) =>
+      withGeoTiffClue(actualTile, expectedTile, source.crs)  {
+        assertRastersEqual(actualTile, expectedTile)
+      }
+    }
+
+    //println("\nThese are the expected keys")
+    //expected.sortBy { case (key, _) => (key.col, key.row) }.foreach { case (k, _) => println(k) }
+    //println("\nThese are the actual keys")
+    //actual.sortBy { case (key, _) => (key.col, key.row) }.foreach { case (k, _) => println(k) }
+
+    /*
     val grouped: List[(Raster[MultibandTile], Raster[MultibandTile])] =
       actual
         .sortBy { case (k, _) => (k.col, k.row) }
@@ -139,5 +165,6 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
         assertRastersEqual(actualTile, expectedTile)
       }
     }
+    */
   }
 }

@@ -70,6 +70,9 @@ class GeoTiffResampleRasterSource(
   override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     val geoTiffTile = closetTiffOverview.tile.asInstanceOf[GeoTiffMultibandTile]
 
+    println(s"\nThis is the extent of the overview: ${closestTiffOverview.extent}")
+    println(s"This is the cellSize of the overview: ${closestTiffOverview.raster.cellSize}")
+
     val windows = { for {
       queryPixelBounds <- bounds
       targetPixelBounds <- queryPixelBounds.intersection(this)

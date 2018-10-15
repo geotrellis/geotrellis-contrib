@@ -28,7 +28,7 @@ case class Dimensions(cols: Int, rows: Int) extends ResampleGrid {
 }
 
 case class TargetGrid(grid: GridExtent) extends ResampleGrid {
-  def apply(source: RasterExtent): RasterExtent = 
+  def apply(source: RasterExtent): RasterExtent =
     grid.createAlignedRasterExtent(source.extent)
 }
 
