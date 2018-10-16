@@ -23,9 +23,6 @@ import geotrellis.raster.reproject.Reproject
 import geotrellis.proj4._
 import geotrellis.spark.tiling.LayoutDefinition
 
-import cats.effect.IO
-import java.net.URI
-
 /**
   * Single threaded instance of a reader that is able to read windows from larger raster.
   * Some initilization step is expected to provide metadata about source raster
@@ -165,4 +162,6 @@ trait RasterSource extends CellGrid with Serializable {
      */
     def tileToLayout(layout: LayoutDefinition, resampleMethod: ResampleMethod = NearestNeighbor): LayoutTileSource =
       LayoutTileSource(resampleToGrid(layout, resampleMethod), layout)
+
+    def close = { }
 }

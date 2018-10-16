@@ -82,56 +82,64 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
     }
   }
 
-  it("should perform a tileToLayout") {
-    val targetCellSize: CellSize = CellSize(11.0, 11.0)
-
-    val testSource: MultibandGeoTiff = GeoTiffReader.readMultiband(url)
-    val testTile = testSource.tile.toArrayTile
-
-    val pe = ProjectedExtent(testSource.extent, testSource.crs)
-
-    val scheme = FloatingLayoutScheme(256)
-    val layout = scheme.levelFor(pe.extent, targetCellSize).layout
-    val mapTransform = layout.mapTransform
-
-    val expected: List[(SpatialKey, MultibandTile)] =
-      mapTransform(pe.extent)
-        .coordsIter
-        .map { spatialComponent =>
-          val key = pe.translate(spatialComponent)
-          val newTile = testTile.prototype(source.cellType, layout.tileCols, layout.tileRows)
-          (key,
-            newTile.merge(
-              mapTransform.keyToExtent(key.getComponent[SpatialKey]),
-              pe.extent,
-              testTile,
-              NearestNeighbor
-            )
-          )
-        }.toList
-
-    val actual: List[(SpatialKey, MultibandTile)] = source.tileToLayout(layout).readAll().toList
-
-    withClue(s"actual.size: ${actual.size} expected.size: ${expected.size}") {
-      actual.size should be (expected.size)
+  describe("should perform a tileToLayout") {
+    val cellSizes = {
+      val tiff = GeoTiffReader.readMultiband(url)
+      (tiff +: tiff.overviews).map(_.rasterExtent.cellSize).map { case CellSize(w, h) =>
+        CellSize(w + 1, h + 1)
+      }
     }
 
-   val sortedActual: List[Raster[MultibandTile]] =
-     actual
-       .sortBy { case (k, _) => (k.col, k.row) }
-       .map { case (k, v) => Raster(v, mapTransform.keyToExtent(k)) }
+    cellSizes.foreach { targetCellSize =>
+      it(s"should perform a tileToLayout for cellSize: ${targetCellSize}") {
+        val pe = ProjectedExtent(source.extent, source.crs)
+        val scheme = FloatingLayoutScheme(256)
+        val layout = scheme.levelFor(pe.extent, targetCellSize).layout
+        val mapTransform = layout.mapTransform
+        val resampledSource = source.resampleToGrid(layout)
 
-   val sortedExpected: List[Raster[MultibandTile]] =
-     expected
-       .sortBy { case (k, _) => (k.col, k.row) }
-       .map { case (k, v) => Raster(v, mapTransform.keyToExtent(k)) }
+        val expected: List[(SpatialKey, MultibandTile)] =
+          mapTransform(pe.extent).coordsIter.map { spatialComponent =>
+            val key = pe.translate(spatialComponent)
+            val ext = mapTransform.keyToExtent(key.getComponent[SpatialKey])
+            val raster = resampledSource.read(ext).get
+            val newTile = raster.tile.prototype(source.cellType, layout.tileCols, layout.tileRows)
+            key -> newTile.merge(
+              ext,
+              raster.extent,
+              raster.tile,
+              NearestNeighbor
+            )
+          }.toList
 
-    val grouped: List[(Raster[MultibandTile], Raster[MultibandTile])] =
-      sortedActual.zip(sortedExpected)
+        val layoutSource = source.tileToLayout(layout)
+        val actual: List[(SpatialKey, MultibandTile)] = layoutSource.readAll().toList
 
-    grouped.foreach { case (actualTile, expectedTile) =>
-      withGeoTiffClue(actualTile, expectedTile, source.crs)  {
-        assertRastersEqual(actualTile, expectedTile)
+        withClue(s"actual.size: ${actual.size} expected.size: ${expected.size}") {
+          actual.size should be(expected.size)
+        }
+
+        val sortedActual: List[Raster[MultibandTile]] =
+          actual
+            .sortBy { case (k, _) => (k.col, k.row) }
+            .map { case (k, v) => Raster(v, mapTransform.keyToExtent(k)) }
+
+        val sortedExpected: List[Raster[MultibandTile]] =
+          expected
+            .sortBy { case (k, _) => (k.col, k.row) }
+            .map { case (k, v) => Raster(v, mapTransform.keyToExtent(k)) }
+
+        val grouped: List[(Raster[MultibandTile], Raster[MultibandTile])] =
+          sortedActual.zip(sortedExpected)
+
+        grouped.foreach { case (actualTile, expectedTile) =>
+          withGeoTiffClue(actualTile, expectedTile, source.crs) {
+            assertRastersEqual(actualTile, expectedTile)
+          }
+        }
+
+        resampledSource.close
+        layoutSource.source.close
       }
     }
   }
