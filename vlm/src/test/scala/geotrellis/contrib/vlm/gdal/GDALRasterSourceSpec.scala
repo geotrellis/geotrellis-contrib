@@ -14,17 +14,15 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
+package geotrellis.contrib.vlm.gdal
 
-import geotrellis.contrib.vlm.gdal._
+import geotrellis.contrib.vlm._
 import geotrellis.raster._
-import geotrellis.raster.prototype._
-import geotrellis.raster.merge._
 import geotrellis.raster.io.geotiff.MultibandGeoTiff
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.resample._
 import geotrellis.raster.testkit._
-import geotrellis.vector.{Extent, ProjectedExtent}
+import geotrellis.vector._
 import geotrellis.spark._
 import geotrellis.spark.tiling._
 import geotrellis.util._
@@ -87,10 +85,8 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
   it("should perform a tileToLayout") {
     val targetCellSize: CellSize = CellSize(11.0, 11.0)
 
-    val testSource: MultibandGeoTiff =
-      GeoTiffReader.readMultiband(url, streaming = false)
-
-    val testTile = testSource.tile
+    val testSource: MultibandGeoTiff = GeoTiffReader.readMultiband(url)
+    val testTile = testSource.tile.toArrayTile
 
     val pe = ProjectedExtent(testSource.extent, testSource.crs)
 
@@ -131,7 +127,7 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
     val grouped: List[(Raster[MultibandTile], Raster[MultibandTile])] =
       sortedActual.zip(sortedExpected)
 
-    grouped.map { case (actualTile, expectedTile) =>
+    grouped.foreach { case (actualTile, expectedTile) =>
       withGeoTiffClue(actualTile, expectedTile, source.crs)  {
         assertRastersEqual(actualTile, expectedTile)
       }

@@ -85,10 +85,8 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
   it("should perform a tileToLayout") {
     val targetCellSize: CellSize = CellSize(20.0, 20.0)
 
-    val testSource: MultibandGeoTiff =
-      GeoTiffReader.readMultiband(url, streaming = false)
-
-    val testTile = testSource.tile
+    val testSource: MultibandGeoTiff = GeoTiffReader.readMultiband(url)
+    val testTile = testSource.tile.toArrayTile
 
     val pe = ProjectedExtent(testSource.extent, testSource.crs)
 
@@ -120,8 +118,8 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
     println(s"\nThis is the actual extent: ${result.source.extent}")
     println(s"This is the actual cellSize: ${result.source.cellSize}")
 
-    //println(s"This is the count for expected: ${expected.size}")
-    //println(s"This is the count for actual: ${actual.size}")
+    println(s"This is the count for expected: ${expected.size}")
+    println(s"This is the count for actual: ${actual.size}")
 
     actual.size should be (expected.size)
 

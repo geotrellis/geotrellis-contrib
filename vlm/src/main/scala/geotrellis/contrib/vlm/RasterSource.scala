@@ -164,8 +164,5 @@ trait RasterSource extends CellGrid with Serializable {
      *
      */
     def tileToLayout(layout: LayoutDefinition, resampleMethod: ResampleMethod = NearestNeighbor): LayoutTileSource =
-      LayoutTileSource(
-        resampleToGrid(GridExtent(layout.extent, layout.cellwidth, layout.cellheight), resampleMethod),
-        layout
-      )
+      LayoutTileSource(resampleToGrid(layout, resampleMethod), layout)
 }

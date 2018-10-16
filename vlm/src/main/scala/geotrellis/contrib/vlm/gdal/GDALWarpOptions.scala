@@ -30,10 +30,8 @@ case class GDALWarpOptions(
     errorThreshold.toList.flatMap { et => List("-et", s"${et}") } :::
     cellSize.toList.flatMap { cz =>
       // the -tap parameter can only be set if -tr is set as well
-      if (alignTargetPixels)
-        List("-tap", "-tr", s"${cz.width}", s"${cz.height}")
-      else
-        List("-tr", s"${cz.width}", s"${cz.height}")
+      val tr = List("-tr", s"${cz.width}", s"${cz.height}")
+      if (alignTargetPixels) "-tap" +: tr else tr
     } :::
     dimensions.toList.flatMap { case (c, r) => List("-ts", s"$c", s"$r") } :::
     (sourceCRS, targetCRS).mapN { (source, target) =>
