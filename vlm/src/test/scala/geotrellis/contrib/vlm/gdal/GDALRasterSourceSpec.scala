@@ -112,7 +112,9 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
 
     val actual: List[(SpatialKey, MultibandTile)] = source.tileToLayout(layout).readAll().toList
 
-    actual.size should be (expected.size)
+    withClue(s"actual.size: ${actual.size} expected.size: ${expected.size}") {
+      actual.size should be (expected.size)
+    }
 
    val sortedActual: List[Raster[MultibandTile]] =
      actual
