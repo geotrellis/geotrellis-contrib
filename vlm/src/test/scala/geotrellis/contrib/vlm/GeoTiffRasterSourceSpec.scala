@@ -75,32 +75,26 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
   }
 
   it("should perform a tileToLayout") {
-    val targetCellSize: CellSize = CellSize(19.0, 19.0)
-
-    val testSource = GeoTiffReader.readMultiband(url).getClosestOverview(targetCellSize)
-    val testTile = testSource.tile.toArrayTile
-
-    val pe = ProjectedExtent(testSource.extent, testSource.crs)
-
+    val targetCellSize: CellSize = CellSize(11.0, 11.0)
+    val pe = ProjectedExtent(source.extent, source.crs)
     val scheme = FloatingLayoutScheme(256)
     val layout = scheme.levelFor(pe.extent, targetCellSize).layout
     val mapTransform = layout.mapTransform
+    val resampledSource = source.resampleToGrid(layout)
 
     val expected: List[(SpatialKey, MultibandTile)] =
-      mapTransform(pe.extent)
-        .coordsIter
-        .map { spatialComponent =>
-          val key = pe.translate(spatialComponent)
-          val newTile = testTile.prototype(source.cellType, layout.tileCols, layout.tileRows)
-          (key,
-            newTile.merge(
-              mapTransform.keyToExtent(key.getComponent[SpatialKey]),
-              pe.extent,
-              testTile,
-              NearestNeighbor
-            )
-          )
-        }.toList
+      mapTransform(pe.extent).coordsIter.map { spatialComponent =>
+        val key = pe.translate(spatialComponent)
+        val ext = mapTransform.keyToExtent(key.getComponent[SpatialKey])
+        val raster = resampledSource.read(ext).get
+        val newTile = raster.tile.prototype(source.cellType, layout.tileCols, layout.tileRows)
+        key -> newTile.merge(
+          ext,
+          raster.extent,
+          raster.tile,
+          NearestNeighbor
+        )
+      }.toList
 
     val actual: List[(SpatialKey, MultibandTile)] = source.tileToLayout(layout).readAll().toList
 
