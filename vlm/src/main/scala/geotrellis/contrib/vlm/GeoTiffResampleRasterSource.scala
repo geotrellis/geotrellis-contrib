@@ -40,7 +40,7 @@ class GeoTiffResampleRasterSource(
   override lazy val rasterExtent =
     resampleGrid(tiff.rasterExtent)
 
-  @transient lazy val closetTiffOverview: GeoTiff[MultibandTile] =
+  @transient lazy val closestTiffOverview: GeoTiff[MultibandTile] =
     tiff.getClosestOverview(rasterExtent.cellSize, AutoHigherResolution)
 
   def reproject(targetCRS: CRS, options: Reproject.Options): GeoTiffReprojectRasterSource =
@@ -68,14 +68,14 @@ class GeoTiffResampleRasterSource(
   }
 
   override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    val geoTiffTile = closetTiffOverview.tile.asInstanceOf[GeoTiffMultibandTile]
+    val geoTiffTile = closestTiffOverview.tile.asInstanceOf[GeoTiffMultibandTile]
 
     val windows = { for {
       queryPixelBounds <- bounds
       targetPixelBounds <- queryPixelBounds.intersection(this)
     } yield {
       val targetExtent = rasterExtent.extentFor(targetPixelBounds)
-      val sourcePixelBounds = closetTiffOverview.rasterExtent.gridBoundsFor(targetExtent, clamp = true)
+      val sourcePixelBounds = closestTiffOverview.rasterExtent.gridBoundsFor(targetExtent, clamp = true)
       val targetRasterExtent = RasterExtent(targetExtent, targetPixelBounds.width, targetPixelBounds.height)
       (sourcePixelBounds, targetRasterExtent)
     }}.toMap

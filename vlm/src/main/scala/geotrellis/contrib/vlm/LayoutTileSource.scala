@@ -102,6 +102,9 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
 }
 
 object LayoutTileSource {
+  def apply(source: RasterSource, layout: LayoutDefinition): LayoutTileSource =
+    new LayoutTileSource(source, layout)
+
   private def requireGridAligned(a: GridExtent, b: GridExtent): Unit = {
     import org.scalactic._
     import TripleEquals._

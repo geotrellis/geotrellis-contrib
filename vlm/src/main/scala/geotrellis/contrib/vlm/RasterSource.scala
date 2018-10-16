@@ -21,8 +21,7 @@ import geotrellis.raster._
 import geotrellis.raster.resample._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.proj4._
-import cats.effect.IO
-import java.net.URI
+import geotrellis.spark.tiling.LayoutDefinition
 
 /**
   * Single threaded instance of a reader that is able to read windows from larger raster.
@@ -154,4 +153,15 @@ trait RasterSource extends CellGrid with Serializable {
       */
     def readBounds(bounds: Traversable[GridBounds]): Iterator[Raster[MultibandTile]] =
         bounds.toIterator.flatMap(read(_, (0 until bandCount)).toIterator)
+
+    /**
+     * Applies the given [[LayoutDefinition]] to the source data producing a [[LayoutTileSource]].
+     * In order to fit to the given layout, the source data is resampled to match the Extent
+     * and CellSize of the layout.
+     *
+     */
+    def tileToLayout(layout: LayoutDefinition, resampleMethod: ResampleMethod = NearestNeighbor): LayoutTileSource =
+      LayoutTileSource(resampleToGrid(layout, resampleMethod), layout)
+
+    def close = { }
 }

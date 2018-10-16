@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
+package geotrellis.contrib.vlm.gdal
 
-import geotrellis.contrib.vlm.gdal._
+import geotrellis.contrib.vlm._
 import geotrellis.raster._
+import geotrellis.raster.io.geotiff.MultibandGeoTiff
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.resample._
 import geotrellis.raster.testkit._
+import geotrellis.vector._
+import geotrellis.spark._
+import geotrellis.spark.tiling._
+import geotrellis.util._
+
 import org.scalatest._
 
 class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
@@ -73,6 +79,68 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
 
     withGeoTiffClue(actual, expected, resampledSource.crs)  {
       assertRastersEqual(actual, expected)
+    }
+  }
+
+  describe("should perform a tileToLayout") {
+    val cellSizes = {
+      val tiff = GeoTiffReader.readMultiband(url)
+      (tiff +: tiff.overviews).map(_.rasterExtent.cellSize).map { case CellSize(w, h) =>
+        CellSize(w + 1, h + 1)
+      }
+    }
+
+    cellSizes.foreach { targetCellSize =>
+      it(s"should perform a tileToLayout for cellSize: ${targetCellSize}") {
+        val pe = ProjectedExtent(source.extent, source.crs)
+        val scheme = FloatingLayoutScheme(256)
+        val layout = scheme.levelFor(pe.extent, targetCellSize).layout
+        val mapTransform = layout.mapTransform
+        val resampledSource = source.resampleToGrid(layout)
+
+        val expected: List[(SpatialKey, MultibandTile)] =
+          mapTransform(pe.extent).coordsIter.map { spatialComponent =>
+            val key = pe.translate(spatialComponent)
+            val ext = mapTransform.keyToExtent(key.getComponent[SpatialKey])
+            val raster = resampledSource.read(ext).get
+            val newTile = raster.tile.prototype(source.cellType, layout.tileCols, layout.tileRows)
+            key -> newTile.merge(
+              ext,
+              raster.extent,
+              raster.tile,
+              NearestNeighbor
+            )
+          }.toList
+
+        val layoutSource = source.tileToLayout(layout)
+        val actual: List[(SpatialKey, MultibandTile)] = layoutSource.readAll().toList
+
+        withClue(s"actual.size: ${actual.size} expected.size: ${expected.size}") {
+          actual.size should be(expected.size)
+        }
+
+        val sortedActual: List[Raster[MultibandTile]] =
+          actual
+            .sortBy { case (k, _) => (k.col, k.row) }
+            .map { case (k, v) => Raster(v, mapTransform.keyToExtent(k)) }
+
+        val sortedExpected: List[Raster[MultibandTile]] =
+          expected
+            .sortBy { case (k, _) => (k.col, k.row) }
+            .map { case (k, v) => Raster(v, mapTransform.keyToExtent(k)) }
+
+        val grouped: List[(Raster[MultibandTile], Raster[MultibandTile])] =
+          sortedActual.zip(sortedExpected)
+
+        grouped.foreach { case (actualTile, expectedTile) =>
+          withGeoTiffClue(actualTile, expectedTile, source.crs) {
+            assertRastersEqual(actualTile, expectedTile)
+          }
+        }
+
+        resampledSource.close
+        layoutSource.source.close
+      }
     }
   }
 }

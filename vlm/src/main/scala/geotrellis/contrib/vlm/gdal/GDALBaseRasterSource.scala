@@ -111,4 +111,6 @@ trait GDALBaseRasterSource extends RasterSource {
     val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = false))
     readBounds(bounds, 0 until bandCount)
   }
+
+  override def close = dataset.delete()
 }
