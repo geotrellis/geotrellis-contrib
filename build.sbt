@@ -55,7 +55,7 @@ lazy val vlm = project
   .settings(
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-vlm",
-    version := "0.1.1",
+    version := "0.2.0",
     libraryDependencies ++= Seq(
       geotrellisSpark,
       geotrellisS3,
