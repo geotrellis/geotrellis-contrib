@@ -17,24 +17,16 @@
 package geotrellis.contrib.vlm
 
 import geotrellis.raster._
-import geotrellis.raster.prototype._
-import geotrellis.raster.merge._
 import geotrellis.raster.io.geotiff.MultibandGeoTiff
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.resample._
-import geotrellis.raster.reproject._
 import geotrellis.raster.testkit._
-import geotrellis.vector.{Extent, ProjectedExtent}
-import geotrellis.proj4._
+import geotrellis.vector._
 import geotrellis.spark._
 import geotrellis.spark.tiling._
-import geotrellis.spark.testkit._
 import geotrellis.util._
 
 import org.scalatest._
-
-import java.io.File
-
 
 class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
   val url = Resource.path("img/aspect-tiled.tif")
@@ -85,7 +77,7 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
   it("should perform a tileToLayout") {
     val targetCellSize: CellSize = CellSize(20.0, 20.0)
 
-    val testSource: MultibandGeoTiff = GeoTiffReader.readMultiband(url)
+    val testSource = GeoTiffReader.readMultiband(url).getClosestOverview(targetCellSize)
     val testTile = testSource.tile.toArrayTile
 
     val pe = ProjectedExtent(testSource.extent, testSource.crs)
@@ -136,7 +128,7 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
     val grouped: List[(Raster[MultibandTile], Raster[MultibandTile])] =
       sortedActual.zip(sortedExpected)
 
-    grouped.map { case (actualTile, expectedTile) =>
+    grouped.foreach { case (actualTile, expectedTile) =>
       withGeoTiffClue(actualTile, expectedTile, source.crs)  {
         assertRastersEqual(actualTile, expectedTile)
       }

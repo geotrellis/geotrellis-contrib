@@ -2,8 +2,10 @@ package geotrellis.contrib.vlm.gdal
 
 import geotrellis.raster.CellSize
 import geotrellis.raster.resample.ResampleMethod
-import cats.implicits._
+import geotrellis.proj4.CRS
+import geotrellis.vector.Extent
 
+import cats.implicits._
 import org.gdal.gdal.WarpOptions
 import org.gdal.osr.SpatialReference
 
@@ -18,7 +20,9 @@ case class GDALWarpOptions(
   alignTargetPixels: Boolean = true,
   dimensions: Option[(Int, Int)] = None,
   sourceCRS: Option[SpatialReference] = None,
-  targetCRS: Option[SpatialReference] = None
+  targetCRS: Option[SpatialReference] = None,
+  te: Option[(Extent, CRS)] = None,
+  ovr: Option[String] = Some("AUTO")
 ) {
 
   def roundUp(d: Double, digits: Int = 7): Double =
@@ -37,7 +41,13 @@ case class GDALWarpOptions(
     (sourceCRS, targetCRS).mapN { (source, target) =>
       if(source != target) List("-s_srs", source.ExportToProj4, "-t_srs", target.ExportToProj4)
       else Nil
-    }.toList.flatten
+    }.toList.flatten ::: ovr.toList.flatMap { o => List("-ovr", o) } :::
+      te.toList.flatMap { case (ext, crs) =>
+        List(
+          "-te", s"${ext.xmin}", s"${ext.ymin}", s"${ext.xmax}", s"${ext.ymax}",
+          "-te_srs", s"${crs.toProj4String}"
+        )
+      }
   }
 
   def toWarpOptions: WarpOptions =
