@@ -43,7 +43,7 @@ lazy val root = Project("geotrellis-contrib", file(".")).
     vlm
   ).
   settings(commonSettings: _*).
-  settings(skip in publish := true).
+  settings(publish / skip := true).
   settings(
     initialCommands in console :=
       """
@@ -55,15 +55,10 @@ lazy val vlm = project
   .settings(
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-vlm",
-    version := "0.3.0-SNAPSHOT",
     libraryDependencies ++= Seq(
       geotrellisSpark,
       geotrellisS3,
       geotrellisUtil,
-      catsCore,
-      catsEffect,
-      fs2Core,
-      fs2Io,
       gdal,
       scalactic,
       sparkCore % Provided,
@@ -79,3 +74,4 @@ lazy val vlm = project
 
 lazy val benchmark = (project in file("benchmark"))
   .settings(commonSettings: _*)
+  .settings( publish / skip := true)
