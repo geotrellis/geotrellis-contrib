@@ -19,9 +19,8 @@ import sbt._
 object Version {
   val geotrellis  = "2.1.0"
   val scala       = "2.11.12"
-  val circe       = "0.9.3"
   val hadoop      = "2.8.0"
-  val spark       = "2.3.0"
+  val spark       = "2.3.1"
   val gdal        = "2.3.0"
 }
 
@@ -41,14 +40,13 @@ object Dependencies {
   val scalatest           = "org.scalatest"              %% "scalatest"                % "3.0.5"
   val scalactic           = "org.scalactic"              %% "scalactic"                % "3.0.5"
 
+  val catsCore            = "org.typelevel"              %% "cats-core"                % "1.4.0"
+  val catsEffect          = "org.typelevel"              %% "cats-effect"              % "1.0.0"
+  val fs2Core             = "co.fs2"                     %% "fs2-core"                 % "1.0.0"
+  val fs2Io               = "co.fs2"                     %% "fs2-io"                   % "1.0.0"
+
   val sparkCore           = "org.apache.spark"           %% "spark-core"               % Version.spark
   val sparkSQL            = "org.apache.spark"           %% "spark-sql"                % Version.spark
   val hadoopClient        = "org.apache.hadoop"           % "hadoop-client"            % Version.hadoop
-
-  val circeCore           = "io.circe"                   %% "circe-core"               % Version.circe
-  val circeGeneric        = "io.circe"                   %% "circe-generic"            % Version.circe
-  val circeGenericExtras  = "io.circe"                   %% "circe-generic-extras"     % Version.circe
-  val circeParser         = "io.circe"                   %% "circe-parser"             % Version.circe
-
   val gdal                = "org.gdal"                    % "gdal"                     % Version.gdal
 }
