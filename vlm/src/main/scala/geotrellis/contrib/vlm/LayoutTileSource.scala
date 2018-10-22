@@ -32,6 +32,18 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
   def sourceColOffset: Long = ((source.extent.xmin - layout.extent.xmin) / layout.cellwidth).toLong
   def sourceRowOffset: Long = ((layout.extent.ymax - source.extent.ymax) / layout.cellheight).toLong
 
+  /** Generate RasterRef for key */
+  def rasterRef(key: SpatialKey): RasterRef = {
+    val col = key.col.toLong
+    val row = key.row.toLong
+    val sourcePixelBounds = GridBounds(
+      colMin = (col * layout.tileCols - sourceColOffset).toInt,
+      rowMin = (row * layout.tileRows - sourceRowOffset).toInt,
+      colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset).toInt,
+      rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset).toInt)
+    RasterRef(source, sourcePixelBounds)
+  }
+
   /** Read tile according to key.
     * If tile area intersects source partially the non-intersecting pixels will be filled with NODATA.
     * If tile area does not intersect source None will be returned.
@@ -48,12 +60,16 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
       bounds <- sourcePixelBounds.intersection(source)
       raster <- source.read(bounds)
     } yield {
-      // raster is smaller but not bigger than I think ...
-      // its offset is relative to the raster we wished we had
-      val colOffset = bounds.colMin - sourcePixelBounds.colMin
-      val rowOffset = bounds.rowMin - sourcePixelBounds.rowMin
-      raster.tile.mapBands{ (_, band) =>
-        PaddedTile(band, colOffset, rowOffset, layout.tileCols, layout.tileRows)
+      if (raster.tile.cols == layout.tileCols && raster.tile.rows == layout.tileRows) {
+        raster.tile
+      } else {
+        // raster is smaller but not bigger than I think ...
+        // its offset is relative to the raster we wished we had
+        val colOffset = bounds.colMin - sourcePixelBounds.colMin
+        val rowOffset = bounds.rowMin - sourcePixelBounds.rowMin
+        raster.tile.mapBands { (_, band) =>
+          PaddedTile(band, colOffset, rowOffset, layout.tileCols, layout.tileRows)
+        }
       }
     }
   }
@@ -75,13 +91,18 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
       bounds <- sourcePixelBounds.intersection(source)
       raster <- source.read(bounds)
     } yield {
-      // raster is smaller but not bigger than I think ...
-      // its offset is relative to the raster we wished we had
-      val colOffset = bounds.colMin - sourcePixelBounds.colMin
-      val rowOffset = bounds.rowMin - sourcePixelBounds.rowMin
-      val tile = raster.tile.mapBands{ (_, band) =>
-        PaddedTile(band, colOffset, rowOffset, layout.tileCols, layout.tileRows)
-      }
+      val tile =
+        if (raster.tile.cols == layout.tileCols && raster.tile.rows == layout.tileRows) {
+          raster.tile
+        } else {
+          // raster is smaller but not bigger than I think ...
+          // its offset is relative to the raster we wished we had
+          val colOffset = bounds.colMin - sourcePixelBounds.colMin
+          val rowOffset = bounds.rowMin - sourcePixelBounds.rowMin
+          raster.tile.mapBands { (_, band) =>
+            PaddedTile(band, colOffset, rowOffset, layout.tileCols, layout.tileRows)
+          }
+        }
       (key, tile)
     }
   }

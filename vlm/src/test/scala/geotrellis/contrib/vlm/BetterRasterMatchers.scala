@@ -6,7 +6,7 @@ import geotrellis.vector._
 import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.render.png.{PngColorEncoding, RgbaPngEncoding}
-import geotrellis.spark.SpatialKey
+import geotrellis.spark.{SpatialKey, Bounds}
 import geotrellis.spark.tiling.LayoutDefinition
 import geotrellis.raster.testkit.RasterMatchers
 import geotrellis.raster.render.ascii._
@@ -34,6 +34,12 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
 
   def bandCount(count: Int) = HavePropertyMatcher[MultibandTile, Int] { tile =>
       HavePropertyMatchResult(tile.bandCount == count, "bandCount", count, tile.bandCount)
+  }
+
+  def containKey(key: SpatialKey) = Matcher[Bounds[SpatialKey]] { bounds =>
+    MatchResult(bounds.includes(key),
+      s"""$bounds does not contain $key""",
+      s"""$bounds contains $key""")
   }
 
   def assertTilesEqual(actual: MultibandTile, expected: MultibandTile): Unit = {
