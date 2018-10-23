@@ -28,15 +28,15 @@ class GeoTiffReprojectRasterSource(
   val uri: String,
   val crs: CRS,
   val options: Reproject.Options = Reproject.Options.DEFAULT
-) extends RasterSource {
-  @transient private lazy val tiff: MultibandGeoTiff =
+) extends RasterSource { self =>
+  @transient lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 
-  private lazy val baseCRS = tiff.crs
-  private lazy val baseRasterExtent = tiff.rasterExtent
+  lazy val baseCRS = tiff.crs
+  lazy val baseRasterExtent = tiff.rasterExtent
 
-  private lazy val transform = Transform(baseCRS, crs)
-  private lazy val backTransform = Transform(crs, baseCRS)
+  lazy val transform = Transform(baseCRS, crs)
+  lazy val backTransform = Transform(crs, baseCRS)
   override lazy val rasterExtent: RasterExtent = options.targetRasterExtent match {
     case Some(targetRasterExtent) =>
       targetRasterExtent
@@ -94,6 +94,9 @@ class GeoTiffReprojectRasterSource(
     new GeoTiffReprojectRasterSource(uri, targetCRS, options)
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
-    new GeoTiffResampleRasterSource(uri, resampleGrid, method)
+    new GeoTiffResampleRasterSource(uri, resampleGrid, method) {
+      override def crs: CRS = self.crs
+      override lazy val rasterExtent = resampleGrid(self.rasterExtent)
+    }
 
 }
