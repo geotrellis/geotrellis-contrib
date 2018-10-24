@@ -3,7 +3,7 @@ package geotrellis.contrib.vlm
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellGrid, CellSize, CellType, RasterExtent}
 import geotrellis.spark._
-import geotrellis.spark.tiling.{LayoutDefinition, LayoutScheme}
+import geotrellis.spark.tiling.{LayoutDefinition, LayoutLevel, LayoutScheme}
 import geotrellis.util._
 import geotrellis.vector.{Extent, ProjectedExtent}
 import org.apache.spark.rdd.RDD
@@ -16,6 +16,10 @@ case class RasterSourceMetadata(
   cells: Long,
   count: Long
 ) {
+  def levelFor(layoutScheme: LayoutScheme): LayoutLevel =
+    layoutScheme.levelFor(extent, cellSize)
+
+
   def toRasterExtent: RasterExtent = RasterExtent(extent, cellSize)
 
   def layoutDefinition(scheme: LayoutScheme): LayoutDefinition = scheme.levelFor(extent, cellSize).layout
@@ -67,6 +71,12 @@ object RasterSourceMetadata {
       .values
       .collect
       .toSeq
+  }
+
+  def fromRDD[V <: CellGrid: GetComponent[?, ProjectedExtent]](rdd: RDD[V]): RasterSourceMetadata = {
+    val all = collect[V](rdd)
+    require(all.size == 1, "multiple CRSs detected") // what to do in this case?
+    all.head
   }
 }
 
