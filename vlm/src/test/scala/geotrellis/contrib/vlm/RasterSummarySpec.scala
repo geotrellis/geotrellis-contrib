@@ -11,9 +11,9 @@ import geotrellis.vector.Extent
 import org.apache.spark.rdd._
 import org.scalatest._
 
-class RasterSourceMetadataSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
-  describe("Should collect GeoTiffRasterSource metadata correct") {
-    it("should collect metadata for a raw source") {
+  class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
+  describe("Should collect GeoTiffRasterSource RasterSummary correct") {
+    it("should collect summary for a raw source") {
       val inputPath = Resource.path("img/aspect-tiled.tif")
       val files = inputPath :: Nil
 
@@ -22,7 +22,7 @@ class RasterSourceMetadataSpec extends FunSpec with TestEnvironment with BetterR
           .map(uri => new GeoTiffRasterSource(uri): RasterSource)
           .cache()
 
-      val metadata = RasterSourceMetadata.fromRDD(sourceRDD)
+      val metadata = RasterSummary.fromRDD(sourceRDD)
       val rasterSource = new GeoTiffRasterSource(inputPath)
 
       rasterSource.crs shouldBe metadata.crs
@@ -33,7 +33,7 @@ class RasterSourceMetadataSpec extends FunSpec with TestEnvironment with BetterR
       files.length shouldBe metadata.count
     }
 
-    it("should collect metadata for a tiled to layout source") {
+    it("should collect summary for a tiled to layout source") {
       val inputPath = Resource.path("img/aspect-tiled.tif")
       val files = inputPath :: Nil
       val targetCRS = WebMercator
@@ -45,11 +45,11 @@ class RasterSourceMetadataSpec extends FunSpec with TestEnvironment with BetterR
           .map(uri => new GeoTiffRasterSource(uri).reproject(targetCRS, method): RasterSource)
           .cache()
 
-      val metadata = RasterSourceMetadata.fromRDD(sourceRDD)
+      val metadata = RasterSummary.fromRDD(sourceRDD)
       val layout = metadata.levelFor(layoutScheme).layout
       val tiledRDD = sourceRDD.map(_.tileToLayout(layout, method))
 
-      val metadataCollected = RasterSourceMetadata.fromRDD(tiledRDD.map(_.source))
+      val metadataCollected = RasterSummary.fromRDD(tiledRDD.map(_.source))
       val metadataResampled = metadata.resample(TargetGrid(layout))
 
       metadataCollected.crs shouldBe metadataResampled.crs
@@ -68,8 +68,8 @@ class RasterSourceMetadataSpec extends FunSpec with TestEnvironment with BetterR
     }
   }
 
-  describe("Should collect GDALRasterSource metadata correct") {
-    it("should collect metadata for a raw source") {
+  describe("Should collect GDALRasterSource RasterSummary correct") {
+    it("should collect summary for a raw source") {
       val inputPath = Resource.path("img/aspect-tiled.tif")
       val files = inputPath :: Nil
 
@@ -78,7 +78,7 @@ class RasterSourceMetadataSpec extends FunSpec with TestEnvironment with BetterR
           .map(uri => GDALRasterSource(uri): RasterSource)
           .cache()
 
-      val metadata = RasterSourceMetadata.fromRDD(sourceRDD)
+      val metadata = RasterSummary.fromRDD(sourceRDD)
       val rasterSource = GDALRasterSource(inputPath)
 
       rasterSource.crs shouldBe metadata.crs
@@ -91,7 +91,7 @@ class RasterSourceMetadataSpec extends FunSpec with TestEnvironment with BetterR
 
     // TODO: the problem is in a GDAL -tap parameter usage
     // should be fixed
-    ignore("should collect metadata for a tiled to layout source GDAL") {
+    ignore("should collect summary for a tiled to layout source") {
       val inputPath = Resource.path("img/aspect-tiled.tif")
       val files = inputPath :: Nil
       val targetCRS = WebMercator
@@ -103,11 +103,11 @@ class RasterSourceMetadataSpec extends FunSpec with TestEnvironment with BetterR
           .map(uri => GDALRasterSource(uri).reproject(targetCRS, method): RasterSource)
           .cache()
 
-      val metadata = RasterSourceMetadata.fromRDD(sourceRDD)
+      val metadata = RasterSummary.fromRDD(sourceRDD)
       val layout = metadata.levelFor(layoutScheme).layout
       val tiledRDD = sourceRDD.map(_.tileToLayout(layout, method))
 
-      val metadataCollected = RasterSourceMetadata.fromRDD(tiledRDD.map(_.source))
+      val metadataCollected = RasterSummary.fromRDD(tiledRDD.map(_.source))
       val metadataResampled = metadata.resample(TargetGrid(layout))
 
       metadataCollected.crs shouldBe metadataResampled.crs

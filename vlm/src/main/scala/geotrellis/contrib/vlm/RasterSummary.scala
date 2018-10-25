@@ -8,7 +8,7 @@ import geotrellis.util._
 import geotrellis.vector.{Extent, ProjectedExtent}
 import org.apache.spark.rdd.RDD
 
-case class RasterSourceMetadata(
+case class RasterSummary(
   crs: CRS,
   cellType: CellType,
   cellSize: CellSize,
@@ -23,10 +23,10 @@ case class RasterSourceMetadata(
 
   def layoutDefinition(scheme: LayoutScheme): LayoutDefinition = scheme.levelFor(extent, cellSize).layout
 
-  def combine(other: RasterSourceMetadata) = {
+  def combine(other: RasterSummary) = {
     require(other.crs == crs, s"Can't combine LayerExtent for different CRS: $crs, ${other.crs}")
     val smallestCellSize = if (cellSize.resolution < other.cellSize.resolution) cellSize else other.cellSize
-    RasterSourceMetadata(
+    RasterSummary(
       crs,
       cellType.union(other.cellType),
       smallestCellSize,
@@ -42,9 +42,9 @@ case class RasterSourceMetadata(
     TileLayerMetadata[SpatialKey](cellType, ld, extent, crs, dataBounds) -> zoom
   }
 
-  def resample(resampleGrid: ResampleGrid): RasterSourceMetadata = {
+  def resample(resampleGrid: ResampleGrid): RasterSummary = {
     val re = resampleGrid(toRasterExtent)
-    RasterSourceMetadata(
+    RasterSummary(
       crs      = crs,
       cellType = cellType,
       cellSize = re.cellSize,
@@ -55,14 +55,14 @@ case class RasterSourceMetadata(
   }
 }
 
-object RasterSourceMetadata {
-  /** Collect [[RasterSourceMetadata]] from unstructred rasters, grouped by CRS */
-  def collect[V <: CellGrid: GetComponent[?, ProjectedExtent]](rdd: RDD[V]): Seq[RasterSourceMetadata] = {
+object RasterSummary {
+  /** Collect [[RasterSummary]] from unstructred rasters, grouped by CRS */
+  def collect[V <: CellGrid: GetComponent[?, ProjectedExtent]](rdd: RDD[V]): Seq[RasterSummary] = {
     rdd
       .map { grid =>
         val ProjectedExtent(extent, crs) = grid.getComponent[ProjectedExtent]
         val cellSize = CellSize(extent, grid.cols, grid.rows)
-        (crs, RasterSourceMetadata(crs, grid.cellType, cellSize, extent, grid.size, 1))
+        (crs, RasterSummary(crs, grid.cellType, cellSize, extent, grid.size, 1))
       }
       .reduceByKey { _ combine _ }
       .values
@@ -71,8 +71,8 @@ object RasterSourceMetadata {
   }
 
   // TODO: should be refactored, we need to reproject all metadata into a common CRS
-  // this code is for the current convinece
-  def fromRDD[V <: CellGrid: GetComponent[?, ProjectedExtent]](rdd: RDD[V]): RasterSourceMetadata = {
+  // this code is for the current code simplification
+  def fromRDD[V <: CellGrid: GetComponent[?, ProjectedExtent]](rdd: RDD[V]): RasterSummary = {
     val all = collect[V](rdd)
     require(all.size == 1, "multiple CRSs detected") // what to do in this case?
     all.head

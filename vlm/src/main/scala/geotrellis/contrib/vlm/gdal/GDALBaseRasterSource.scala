@@ -6,6 +6,7 @@ import geotrellis.raster._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.vector._
+
 import org.gdal.gdal.{Dataset, gdal}
 import org.gdal.osr.SpatialReference
 
