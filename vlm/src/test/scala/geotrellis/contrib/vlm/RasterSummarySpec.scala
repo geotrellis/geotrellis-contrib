@@ -4,6 +4,7 @@ import geotrellis.contrib.vlm.gdal.GDALRasterSource
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.resample.Bilinear
+import geotrellis.spark._
 import geotrellis.spark.testkit._
 import geotrellis.spark.tiling._
 import geotrellis.vector.Extent
@@ -11,7 +12,7 @@ import geotrellis.vector.Extent
 import org.apache.spark.rdd._
 import org.scalatest._
 
-  class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
+class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
   describe("Should collect GeoTiffRasterSource RasterSummary correct") {
     it("should collect summary for a raw source") {
       val inputPath = Resource.path("img/aspect-tiled.tif")
@@ -33,7 +34,7 @@ import org.scalatest._
       files.length shouldBe metadata.count
     }
 
-    it("should collect summary for a tiled to layout source") {
+    it("should collect summary for a tiled to layout source TEST") {
       val inputPath = Resource.path("img/aspect-tiled.tif")
       val files = inputPath :: Nil
       val targetCRS = WebMercator
@@ -45,26 +46,63 @@ import org.scalatest._
           .map(uri => new GeoTiffRasterSource(uri).reproject(targetCRS, method): RasterSource)
           .cache()
 
-      val metadata = RasterSummary.fromRDD(sourceRDD)
-      val layout = metadata.levelFor(layoutScheme).layout
-      val tiledRDD = sourceRDD.map(_.tileToLayout(layout, method))
+      val summary = RasterSummary.fromRDD(sourceRDD)
+      val layoutLevel @ LayoutLevel(zoom, layout) = summary.levelFor(layoutScheme)
+      val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
 
-      val metadataCollected = RasterSummary.fromRDD(tiledRDD.map(_.source))
-      val metadataResampled = metadata.resample(TargetGrid(layout))
+      val summaryCollected = RasterSummary.fromRDD(tiledLayoutSource.map(_.source))
+      val summaryResampled = summary.resample(TargetGrid(layout))
 
-      metadataCollected.crs shouldBe metadataResampled.crs
-      metadataCollected.cellType shouldBe metadataResampled.cellType
+      val metadata = summary.toTileLayerMetadata(layoutLevel)
+      val metadataResampled = summaryResampled.toTileLayerMetadata(GlobalLayout(256, zoom, 0.1))
 
-      val CellSize(widthCollected, heightCollected) = metadataCollected.cellSize
-      val CellSize(widthResampled, heightResampled) = metadataResampled.cellSize
+      metadata shouldBe metadataResampled
+
+      summaryCollected.crs shouldBe summaryResampled.crs
+      summaryCollected.cellType shouldBe summaryResampled.cellType
+
+      val CellSize(widthCollected, heightCollected) = summaryCollected.cellSize
+      val CellSize(widthResampled, heightResampled) = summaryResampled.cellSize
 
       // the only weird place where cellSize is a bit different
       widthCollected shouldBe (widthResampled +- 1e-7)
       heightCollected shouldBe (heightResampled +- 1e-7)
 
-      metadataCollected.extent shouldBe metadataResampled.extent
-      metadataCollected.cells shouldBe metadataResampled.cells
-      metadataCollected.count shouldBe metadataResampled.count
+      summaryCollected.extent shouldBe summaryResampled.extent
+      summaryCollected.cells shouldBe summaryResampled.cells
+      summaryCollected.count shouldBe summaryResampled.count
+    }
+
+    it("should create ContextRDD from RDD of RasterSources") {
+      val inputPath = Resource.path("img/aspect-tiled.tif")
+      val files = inputPath :: Nil
+      val targetCRS = WebMercator
+      val method = Bilinear
+      val layoutScheme = ZoomedLayoutScheme(targetCRS, tileSize = 256)
+
+      // read sources
+      val sourceRDD: RDD[RasterSource] =
+        sc.parallelize(files, files.length)
+          .map(uri => new GeoTiffRasterSource(uri).reproject(targetCRS, method): RasterSource)
+          .cache()
+
+      // collect raster summary
+      val summary = RasterSummary.fromRDD(sourceRDD)
+      val layoutLevel @ LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
+      val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
+
+      // Create RDD of references, references contain information how to read rasters
+      val rasterRefRdd: RDD[(SpatialKey, RasterRef)] = tiledLayoutSource.flatMap(_.toRasterRefs)
+      val tileRDD: RDD[(SpatialKey, MultibandTile)] =
+        rasterRefRdd // group by keys and distribute raster references using SpatialPartitioner
+          .groupByKey(SpatialPartitioner(summary.estimatePartitionsNumber))
+          .mapValues(iter => MultibandTile(iter.flatMap(_.raster.toSeq.flatMap(_.tile.bands)))) // read rasters
+
+      val (metadata, zoom) = summary.toTileLayerMetadata(layoutLevel)
+      val contextRDD: MultibandTileLayerRDD[SpatialKey] = ContextRDD(tileRDD, metadata)
+
+      contextRDD.count() shouldBe rasterRefRdd.count()
+      contextRDD.count() shouldBe 72
     }
   }
 
@@ -78,15 +116,15 @@ import org.scalatest._
           .map(uri => GDALRasterSource(uri): RasterSource)
           .cache()
 
-      val metadata = RasterSummary.fromRDD(sourceRDD)
+      val summary = RasterSummary.fromRDD(sourceRDD)
       val rasterSource = GDALRasterSource(inputPath)
 
-      rasterSource.crs shouldBe metadata.crs
-      rasterSource.extent shouldBe metadata.extent
-      rasterSource.cellSize shouldBe metadata.cellSize
-      rasterSource.cellType shouldBe metadata.cellType
-      rasterSource.size shouldBe metadata.cells
-      files.length shouldBe metadata.count
+      rasterSource.crs shouldBe summary.crs
+      rasterSource.extent shouldBe summary.extent
+      rasterSource.cellSize shouldBe summary.cellSize
+      rasterSource.cellType shouldBe summary.cellType
+      rasterSource.size shouldBe summary.cells
+      files.length shouldBe summary.count
     }
 
     // TODO: the problem is in a GDAL -tap parameter usage
@@ -103,25 +141,25 @@ import org.scalatest._
           .map(uri => GDALRasterSource(uri).reproject(targetCRS, method): RasterSource)
           .cache()
 
-      val metadata = RasterSummary.fromRDD(sourceRDD)
-      val layout = metadata.levelFor(layoutScheme).layout
+      val summary = RasterSummary.fromRDD(sourceRDD)
+      val layout = summary.levelFor(layoutScheme).layout
       val tiledRDD = sourceRDD.map(_.tileToLayout(layout, method))
 
-      val metadataCollected = RasterSummary.fromRDD(tiledRDD.map(_.source))
-      val metadataResampled = metadata.resample(TargetGrid(layout))
+      val summaryCollected = RasterSummary.fromRDD(tiledRDD.map(_.source))
+      val summaryResampled = summary.resample(TargetGrid(layout))
 
-      metadataCollected.crs shouldBe metadataResampled.crs
-      metadataCollected.cellType shouldBe metadataResampled.cellType
+      summaryCollected.crs shouldBe summaryResampled.crs
+      summaryCollected.cellType shouldBe summaryResampled.cellType
 
-      val CellSize(widthCollected, heightCollected) = metadataCollected.cellSize
-      val CellSize(widthResampled, heightResampled) = metadataResampled.cellSize
+      val CellSize(widthCollected, heightCollected) = summaryCollected.cellSize
+      val CellSize(widthResampled, heightResampled) = summaryResampled.cellSize
 
       // the only weird place where cellSize is a bit different
       widthCollected shouldBe (widthResampled +- 1e-7)
       heightCollected shouldBe (heightResampled +- 1e-7)
 
-      val Extent(xminc, yminc, xmaxc, ymaxc) = metadataCollected.extent
-      val Extent(xminr, yminr, xmaxr, ymaxr) = metadataResampled.extent
+      val Extent(xminc, yminc, xmaxc, ymaxc) = summaryCollected.extent
+      val Extent(xminr, yminr, xmaxr, ymaxr) = summaryResampled.extent
 
       // extent probably can be calculated a bit different via GeoTrellis API
       xminc shouldBe xminr +- 1e-5
@@ -129,8 +167,8 @@ import org.scalatest._
       xmaxc shouldBe xmaxr +- 1e-5
       ymaxc shouldBe ymaxr +- 1e-5
 
-      metadataCollected.cells shouldBe metadataResampled.cells
-      metadataCollected.count shouldBe metadataResampled.count
+      summaryCollected.cells shouldBe summaryResampled.cells
+      summaryCollected.count shouldBe summaryResampled.count
     }
   }
 }

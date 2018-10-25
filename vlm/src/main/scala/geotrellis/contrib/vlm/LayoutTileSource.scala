@@ -120,6 +120,9 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
         Set.empty[SpatialKey]
     }
   }
+
+  def toRasterRefs: Iterator[(SpatialKey, RasterRef)] =
+    keys().toIterator.map(key => (key, rasterRef(key)))
 }
 
 object LayoutTileSource {

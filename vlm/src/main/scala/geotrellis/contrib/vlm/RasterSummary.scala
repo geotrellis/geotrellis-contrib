@@ -16,6 +16,15 @@ case class RasterSummary(
   cells: Long,
   count: Long
 ) {
+
+  def estimatePartitionsNumber: Int = {
+    import squants.information._
+    val bytes = Bytes(cellType.bytes * cells)
+    val numPartitions: Int = math.max((bytes / Megabytes(64)).toInt, 1)
+    println(s"Using $numPartitions partitions for ${bytes.toString(Gigabytes)}")
+    numPartitions
+  }
+
   def levelFor(layoutScheme: LayoutScheme): LayoutLevel =
     layoutScheme.levelFor(extent, cellSize)
 
@@ -23,7 +32,7 @@ case class RasterSummary(
 
   def layoutDefinition(scheme: LayoutScheme): LayoutDefinition = scheme.levelFor(extent, cellSize).layout
 
-  def combine(other: RasterSummary) = {
+  def combine(other: RasterSummary): RasterSummary = {
     require(other.crs == crs, s"Can't combine LayerExtent for different CRS: $crs, ${other.crs}")
     val smallestCellSize = if (cellSize.resolution < other.cellSize.resolution) cellSize else other.cellSize
     RasterSummary(
@@ -36,7 +45,17 @@ case class RasterSummary(
     )
   }
 
-  def toTileLayerMetadata(layoutType: LayoutType) = {
+  def toTileLayerMetadata(layoutLevel: LayoutLevel): (TileLayerMetadata[SpatialKey], Some[Int]) = {
+    val LayoutLevel(zoom, layoutDefinition) = layoutLevel
+    val re = TargetGrid(layoutDefinition)(toRasterExtent)
+    val dataBounds = KeyBounds(layoutDefinition.mapTransform.extentToBounds(re.extent))
+    TileLayerMetadata[SpatialKey](cellType, layoutDefinition, re.extent, crs, dataBounds) -> Some(zoom)
+  }
+
+  def toTileLayerMetadata(layoutDefinition: LayoutDefinition, zoom: Int): (TileLayerMetadata[SpatialKey], Some[Int]) =
+    toTileLayerMetadata(LayoutLevel(zoom, layoutDefinition))
+
+  def toTileLayerMetadata(layoutType: LayoutType): (TileLayerMetadata[SpatialKey], Option[Int]) = {
     val (ld, zoom) = layoutType.layoutDefinitionWithZoom(crs, extent, cellSize)
     val dataBounds: Bounds[SpatialKey] = KeyBounds(ld.mapTransform.extentToBounds(extent))
     TileLayerMetadata[SpatialKey](cellType, ld, extent, crs, dataBounds) -> zoom

@@ -49,4 +49,6 @@ object Dependencies {
   val sparkSQL            = "org.apache.spark"           %% "spark-sql"                % Version.spark
   val hadoopClient        = "org.apache.hadoop"           % "hadoop-client"            % Version.hadoop
   val gdal                = "org.gdal"                    % "gdal"                     % Version.gdal
+
+  val squants = "org.typelevel" %% "squants" % "1.3.0"
 }
