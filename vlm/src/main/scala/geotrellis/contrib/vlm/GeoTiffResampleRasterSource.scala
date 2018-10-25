@@ -19,7 +19,7 @@ package geotrellis.contrib.vlm
 import geotrellis.vector._
 import geotrellis.proj4._
 import geotrellis.raster._
-import geotrellis.raster.reproject.{ReprojectRasterExtent, RasterRegionReproject, Reproject}
+import geotrellis.raster.reproject.{ReprojectRasterExtent, Reproject}
 import geotrellis.raster.resample.{ResampleMethod, NearestNeighbor}
 import geotrellis.raster.io.geotiff.{GeoTiff, MultibandGeoTiff, GeoTiffMultibandTile, AutoHigherResolution}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
@@ -28,23 +28,26 @@ class GeoTiffResampleRasterSource(
   val uri: String,
   val resampleGrid: ResampleGrid,
   val method: ResampleMethod = NearestNeighbor
-) extends RasterSource {
-
-  @transient private lazy val tiff: MultibandGeoTiff =
+) extends RasterSource { self =>
+  @transient protected lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = tiff.cellType
 
-  override lazy val rasterExtent =
-    resampleGrid(tiff.rasterExtent)
+  override lazy val rasterExtent = resampleGrid(tiff.rasterExtent)
 
-  @transient lazy val closestTiffOverview: GeoTiff[MultibandTile] =
+  @transient protected lazy val closestTiffOverview: GeoTiff[MultibandTile] =
     tiff.getClosestOverview(rasterExtent.cellSize, AutoHigherResolution)
 
   def reproject(targetCRS: CRS, options: Reproject.Options): GeoTiffReprojectRasterSource =
-    new GeoTiffReprojectRasterSource(uri, targetCRS, options)
+    new GeoTiffReprojectRasterSource(uri, targetCRS, options) {
+      override lazy val rasterExtent: RasterExtent = options.targetRasterExtent match {
+        case Some(targetRasterExtent) => targetRasterExtent
+        case None => ReprojectRasterExtent(self.rasterExtent, this.transform, this.options)
+      }
+    }
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
     new GeoTiffResampleRasterSource(uri, resampleGrid, method)

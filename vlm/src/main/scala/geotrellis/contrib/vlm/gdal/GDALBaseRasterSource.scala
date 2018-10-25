@@ -6,13 +6,15 @@ import geotrellis.raster._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.vector._
+
 import org.gdal.gdal.{Dataset, gdal}
 import org.gdal.osr.SpatialReference
 
 trait GDALBaseRasterSource extends RasterSource {
   val dataset: Dataset
+  def baseDataset: Dataset = GDAL.open(uri)
 
-  lazy val geoTransform: Array[Double] = dataset.GetGeoTransform
+  protected lazy val geoTransform: Array[Double] = dataset.GetGeoTransform
 
   lazy val bandCount: Int = dataset.getRasterCount
 
@@ -112,5 +114,8 @@ trait GDALBaseRasterSource extends RasterSource {
     readBounds(bounds, 0 until bandCount)
   }
 
-  override def close = dataset.delete()
+  override def close = {
+    // baseDataset.delete()
+    dataset.delete()
+  }
 }

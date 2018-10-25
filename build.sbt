@@ -61,6 +61,7 @@ lazy val vlm = project
       geotrellisUtil,
       gdal,
       scalactic,
+      squants,
       sparkCore % Provided,
       sparkSQL % Test,
       geotrellisSparkTestKit % Test,
