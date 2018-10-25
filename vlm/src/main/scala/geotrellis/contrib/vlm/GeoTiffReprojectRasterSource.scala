@@ -94,7 +94,8 @@ class GeoTiffReprojectRasterSource(
     new GeoTiffReprojectRasterSource(uri, targetCRS, options)
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
-    new GeoTiffReprojectRasterSource(uri, crs, options.copy(method = method)) {
-      override lazy val rasterExtent = resampleGrid(self.rasterExtent)
-    }
+    new GeoTiffReprojectRasterSource(uri, crs, options.copy(
+      method = method,
+      targetRasterExtent = Some(resampleGrid(self.rasterExtent))
+    ))
 }

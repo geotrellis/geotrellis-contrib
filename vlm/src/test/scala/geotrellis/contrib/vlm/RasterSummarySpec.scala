@@ -179,7 +179,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
   // this test works as expected, though crashes with a core dump exception
   // works slower than a GeoTiff version, there is an interesting discussion here: https://github.com/OpenDroneMap/OpenDroneMap/issues/778
   // also mb we should pass a resampled RasterExtent like we did in a GeoTiff case
-  ignore("should create ContextRDD from RDD of RasterSources") {
+  ignore("should create ContextRDD from RDD of RasterSources GDAL") {
     val inputPath = Resource.path("img/aspect-tiled.tif")
     val files = inputPath :: Nil
     val targetCRS = WebMercator
