@@ -4,22 +4,19 @@ import geotrellis.contrib.vlm._
 import geotrellis.raster._
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector._
+import geotrellis.proj4.CRS
+import geotrellis.raster.reproject.Reproject
 
-import org.gdal.gdal.{Dataset, gdal}
 import cats.implicits._
+import org.gdal.gdal.{Dataset, gdal}
 
 case class GDALResampleRasterSource(
   uri: String,
   resampleGrid: ResampleGrid,
   method: ResampleMethod = NearestNeighbor
-) extends GDALBaseRasterSource {
+) extends GDALBaseRasterSource { self =>
   @transient lazy val dataset: Dataset = {
-    // For some reason, baseDataset can't be in
-    // the scope of the class or else a RunTime
-    // Error will be encountered. So it is
-    // created and closed when needed.
-    val baseDataset: Dataset = GDAL.open(uri)
-
+    val baseDataset = self.baseDataset
     val warpOptions =
       resampleGrid match {
         case Dimensions(cols, rows) =>
@@ -53,6 +50,17 @@ case class GDALResampleRasterSource(
       }
 
     val dataset = gdal.Warp("", Array(baseDataset), warpOptions.toWarpOptions)
+    baseDataset.delete
     dataset
   }
+
+  override def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
+    new GDALReprojectRasterSource(uri, targetCRS, options) {
+      override def baseDataset: Dataset = self.dataset
+    }
+
+  override def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
+    new GDALResampleRasterSource(uri, resampleGrid, method) {
+      override def baseDataset: Dataset = self.dataset
+    }
 }

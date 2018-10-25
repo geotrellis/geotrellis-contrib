@@ -19,7 +19,6 @@ case class RasterSourceMetadata(
   def levelFor(layoutScheme: LayoutScheme): LayoutLevel =
     layoutScheme.levelFor(extent, cellSize)
 
-
   def toRasterExtent: RasterExtent = RasterExtent(extent, cellSize)
 
   def layoutDefinition(scheme: LayoutScheme): LayoutDefinition = scheme.levelFor(extent, cellSize).layout
@@ -36,8 +35,6 @@ case class RasterSourceMetadata(
       count + other.count
     )
   }
-
-  def toTileLayoutMetadata(scheme: LayoutScheme) = ???
 
   def toTileLayerMetadata(layoutType: LayoutType) = {
     val (ld, zoom) = layoutType.layoutDefinitionWithZoom(crs, extent, cellSize)
@@ -73,6 +70,8 @@ object RasterSourceMetadata {
       .toSeq
   }
 
+  // TODO: should be refactored, we need to reproject all metadata into a common CRS
+  // this code is for the current convinece
   def fromRDD[V <: CellGrid: GetComponent[?, ProjectedExtent]](rdd: RDD[V]): RasterSourceMetadata = {
     val all = collect[V](rdd)
     require(all.size == 1, "multiple CRSs detected") // what to do in this case?

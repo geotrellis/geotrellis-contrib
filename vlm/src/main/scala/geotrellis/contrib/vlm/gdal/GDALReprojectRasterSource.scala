@@ -2,6 +2,8 @@ package geotrellis.contrib.vlm.gdal
 
 import geotrellis.proj4._
 import geotrellis.raster.reproject.Reproject
+import geotrellis.contrib.vlm.{RasterSource, ResampleGrid}
+import geotrellis.raster.resample.ResampleMethod
 
 import cats.implicits._
 import org.gdal.gdal.{Dataset, gdal}
@@ -11,14 +13,9 @@ case class GDALReprojectRasterSource(
   uri: String,
   targetCRS: CRS,
   options: Reproject.Options = Reproject.Options.DEFAULT
-) extends GDALBaseRasterSource {
+) extends GDALBaseRasterSource { self =>
   @transient lazy val dataset: Dataset = {
-    // For some reason, baseDataset can't be in
-    // the scope of the class or else a RunTime
-    // Error will be encountered. So it is
-    // created and closed when needed.
-    val baseDataset: Dataset = GDAL.open(uri)
-
+    val baseDataset = self.baseDataset
     val baseSpatialReference = new SpatialReference(baseDataset.GetProjection)
     val targetSpatialReference: SpatialReference = {
       val spatialReference = new SpatialReference()
@@ -48,4 +45,14 @@ case class GDALReprojectRasterSource(
     baseDataset.delete
     dataset
   }
+
+  override def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
+    new GDALReprojectRasterSource(uri, targetCRS, options) {
+      override def baseDataset: Dataset = self.dataset
+    }
+
+  override def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
+    new GDALResampleRasterSource(uri, resampleGrid, method) {
+      override def baseDataset: Dataset = self.dataset
+    }
 }
