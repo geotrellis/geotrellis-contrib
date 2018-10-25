@@ -4,6 +4,7 @@ package.html
 lib
 site/
 docs/_build/
+.cluster_id
 
 project/boot
 project/plugins/project
