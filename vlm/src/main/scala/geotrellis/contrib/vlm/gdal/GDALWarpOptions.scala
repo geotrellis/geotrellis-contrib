@@ -42,12 +42,12 @@ case class GDALWarpOptions(
       if(source != target) List("-s_srs", source.ExportToProj4, "-t_srs", target.ExportToProj4)
       else Nil
     }.toList.flatten ::: ovr.toList.flatMap { o => List("-ovr", o) } :::
-      te.toList.flatMap { case (ext, crs) =>
-        List(
-          "-te", s"${ext.xmin}", s"${ext.ymin}", s"${ext.xmax}", s"${ext.ymax}",
-          "-te_srs", s"${crs.toProj4String}"
-        )
-      }
+    te.toList.flatMap { case (ext, crs) =>
+      List(
+        "-te", s"${ext.xmin}", s"${ext.ymin}", s"${ext.xmax}", s"${ext.ymax}",
+        "-te_srs", s"${crs.toProj4String}"
+      )
+    }
   }
 
   def toWarpOptions: WarpOptions =

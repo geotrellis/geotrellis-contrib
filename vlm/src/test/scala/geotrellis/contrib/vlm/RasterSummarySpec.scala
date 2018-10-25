@@ -34,7 +34,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
       files.length shouldBe metadata.count
     }
 
-    it("should collect summary for a tiled to layout source TEST") {
+    it("should collect summary for a tiled to layout source") {
       val inputPath = Resource.path("img/aspect-tiled.tif")
       val files = inputPath :: Nil
       val targetCRS = WebMercator
@@ -74,7 +74,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     }
   }
 
-  it("should create ContextRDD from RDD of RasterSources TIFF") {
+  it("should create ContextRDD from RDD of RasterSources") {
     val inputPath = Resource.path("img/aspect-tiled.tif")
     val files = inputPath :: Nil
     val targetCRS = WebMercator
@@ -131,6 +131,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
 
     // TODO: the problem is in a GDAL -tap parameter usage
     // should be fixed
+    // actually GDAL version of seqential computations work slower
     ignore("should collect summary for a tiled to layout source") {
       val inputPath = Resource.path("img/aspect-tiled.tif")
       val files = inputPath :: Nil
@@ -176,6 +177,8 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
 
   // TODO: fix JNI management here
   // this test works as expected, though crashes with a core dump exception
+  // works slower than a GeoTiff version, there is an interesting discussion here: https://github.com/OpenDroneMap/OpenDroneMap/issues/778
+  // also mb we should pass a resampled RasterExtent like we did in a GeoTiff case
   ignore("should create ContextRDD from RDD of RasterSources") {
     val inputPath = Resource.path("img/aspect-tiled.tif")
     val files = inputPath :: Nil
