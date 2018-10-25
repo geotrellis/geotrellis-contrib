@@ -50,7 +50,7 @@ case class GDALResampleRasterSource(
       }
 
     val dataset = gdal.Warp("", Array(baseDataset), warpOptions.toWarpOptions)
-    baseDataset.delete
+    // baseDataset.delete
     dataset
   }
 

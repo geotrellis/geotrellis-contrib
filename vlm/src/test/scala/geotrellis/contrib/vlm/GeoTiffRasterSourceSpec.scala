@@ -17,7 +17,6 @@
 package geotrellis.contrib.vlm
 
 import geotrellis.raster._
-import geotrellis.raster.io.geotiff.MultibandGeoTiff
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.resample._
 import geotrellis.raster.testkit._

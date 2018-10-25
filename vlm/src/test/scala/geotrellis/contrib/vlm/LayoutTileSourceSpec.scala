@@ -30,8 +30,6 @@ import geotrellis.raster.testkit.RasterMatchers
 
 import org.scalatest._
 
-import java.io.File
-
 class LayoutTileSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers {
   val testFile = Resource.path("img/aspect-tiled.tif")
   val tiff = GeoTiffReader.readMultiband(testFile, streaming = false)

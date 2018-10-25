@@ -72,38 +72,40 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
       summaryCollected.cells shouldBe summaryResampled.cells
       summaryCollected.count shouldBe summaryResampled.count
     }
+  }
 
-    it("should create ContextRDD from RDD of RasterSources") {
-      val inputPath = Resource.path("img/aspect-tiled.tif")
-      val files = inputPath :: Nil
-      val targetCRS = WebMercator
-      val method = Bilinear
-      val layoutScheme = ZoomedLayoutScheme(targetCRS, tileSize = 256)
+  it("should create ContextRDD from RDD of RasterSources TIFF") {
+    val inputPath = Resource.path("img/aspect-tiled.tif")
+    val files = inputPath :: Nil
+    val targetCRS = WebMercator
+    val method = Bilinear
+    val layoutScheme = ZoomedLayoutScheme(targetCRS, tileSize = 256)
 
-      // read sources
-      val sourceRDD: RDD[RasterSource] =
-        sc.parallelize(files, files.length)
-          .map(uri => new GeoTiffRasterSource(uri).reproject(targetCRS, method): RasterSource)
-          .cache()
+    // read sources
+    val sourceRDD: RDD[RasterSource] =
+      sc.parallelize(files, files.length)
+        .map(uri => new GeoTiffRasterSource(uri).reproject(targetCRS, method): RasterSource)
+        .cache()
 
-      // collect raster summary
-      val summary = RasterSummary.fromRDD(sourceRDD)
-      val layoutLevel @ LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
-      val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
+    // collect raster summary
+    val summary = RasterSummary.fromRDD(sourceRDD)
+    val layoutLevel @ LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
+    val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
 
-      // Create RDD of references, references contain information how to read rasters
-      val rasterRefRdd: RDD[(SpatialKey, RasterRef)] = tiledLayoutSource.flatMap(_.toRasterRefs)
-      val tileRDD: RDD[(SpatialKey, MultibandTile)] =
-        rasterRefRdd // group by keys and distribute raster references using SpatialPartitioner
-          .groupByKey(SpatialPartitioner(summary.estimatePartitionsNumber))
-          .mapValues(iter => MultibandTile(iter.flatMap(_.raster.toSeq.flatMap(_.tile.bands)))) // read rasters
+    // Create RDD of references, references contain information how to read rasters
+    val rasterRefRdd: RDD[(SpatialKey, RasterRef)] = tiledLayoutSource.flatMap(_.toRasterRefs)
+    val tileRDD: RDD[(SpatialKey, MultibandTile)] =
+      rasterRefRdd // group by keys and distribute raster references using SpatialPartitioner
+        .groupByKey(SpatialPartitioner(summary.estimatePartitionsNumber))
+        .mapValues { iter => MultibandTile(iter.flatMap(_.raster.toSeq.flatMap(_.tile.bands))) } // read rasters
 
-      val (metadata, zoom) = summary.toTileLayerMetadata(layoutLevel)
-      val contextRDD: MultibandTileLayerRDD[SpatialKey] = ContextRDD(tileRDD, metadata)
+    val (metadata, zoom) = summary.toTileLayerMetadata(layoutLevel)
+    val contextRDD: MultibandTileLayerRDD[SpatialKey] = ContextRDD(tileRDD, metadata)
 
-      contextRDD.count() shouldBe rasterRefRdd.count()
-      contextRDD.count() shouldBe 72
-    }
+    contextRDD.count() shouldBe rasterRefRdd.count()
+    contextRDD.count() shouldBe 72
+
+    contextRDD.stitch.tile.band(0).renderPng().write("/tmp/raster-source-contextrdd.png")
   }
 
   describe("Should collect GDALRasterSource RasterSummary correct") {
@@ -170,5 +172,41 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
       summaryCollected.cells shouldBe summaryResampled.cells
       summaryCollected.count shouldBe summaryResampled.count
     }
+  }
+
+  // TODO: fix JNI management here
+  // this test works as expected, though crashes with a core dump exception
+  ignore("should create ContextRDD from RDD of RasterSources") {
+    val inputPath = Resource.path("img/aspect-tiled.tif")
+    val files = inputPath :: Nil
+    val targetCRS = WebMercator
+    val method = Bilinear
+    val layoutScheme = ZoomedLayoutScheme(targetCRS, tileSize = 256)
+
+    // read sources
+    val sourceRDD: RDD[RasterSource] =
+      sc.parallelize(files, files.length)
+        .map(uri => GDALRasterSource(uri).reproject(targetCRS, method): RasterSource)
+        .cache()
+
+    // collect raster summary
+    val summary = RasterSummary.fromRDD(sourceRDD)
+    val layoutLevel @ LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
+    val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
+
+    // Create RDD of references, references contain information how to read rasters
+    val rasterRefRdd: RDD[(SpatialKey, RasterRef)] = tiledLayoutSource.flatMap(_.toRasterRefs)
+    val tileRDD: RDD[(SpatialKey, MultibandTile)] =
+      rasterRefRdd // group by keys and distribute raster references using SpatialPartitioner
+        .groupByKey(SpatialPartitioner(summary.estimatePartitionsNumber))
+        .mapValues { iter => MultibandTile(iter.flatMap(_.raster.toSeq.flatMap(_.tile.bands))) } // read rasters
+
+    val (metadata, zoom) = summary.toTileLayerMetadata(layoutLevel)
+    val contextRDD: MultibandTileLayerRDD[SpatialKey] = ContextRDD(tileRDD, metadata)
+
+    contextRDD.count() shouldBe rasterRefRdd.count()
+    contextRDD.count() shouldBe 72
+
+    contextRDD.stitch.tile.band(0).renderPng().write("/tmp/raster-source-contextrdd-gdal.png")
   }
 }

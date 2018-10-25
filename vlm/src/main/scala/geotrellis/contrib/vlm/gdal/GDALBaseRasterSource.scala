@@ -115,5 +115,8 @@ trait GDALBaseRasterSource extends RasterSource {
     readBounds(bounds, 0 until bandCount)
   }
 
-  override def close = dataset.delete()
+  override def close = {
+    // baseDataset.delete()
+    dataset.delete()
+  }
 }

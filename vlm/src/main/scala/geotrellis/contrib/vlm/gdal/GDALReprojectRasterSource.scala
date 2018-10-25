@@ -42,7 +42,7 @@ case class GDALReprojectRasterSource(
       )
 
     val dataset = gdal.Warp("", Array(baseDataset), warpOptions.toWarpOptions)
-    baseDataset.delete
+    // baseDataset.delete
     dataset
   }
 
