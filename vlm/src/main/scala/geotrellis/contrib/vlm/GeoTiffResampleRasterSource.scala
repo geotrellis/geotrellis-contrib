@@ -29,8 +29,7 @@ class GeoTiffResampleRasterSource(
   val resampleGrid: ResampleGrid,
   val method: ResampleMethod = NearestNeighbor
 ) extends RasterSource { self =>
-
-  @transient lazy val tiff: MultibandGeoTiff =
+  @transient protected lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 
   def crs: CRS = tiff.crs
@@ -39,7 +38,7 @@ class GeoTiffResampleRasterSource(
 
   override lazy val rasterExtent = resampleGrid(tiff.rasterExtent)
 
-  @transient lazy val closestTiffOverview: GeoTiff[MultibandTile] =
+  @transient protected lazy val closestTiffOverview: GeoTiff[MultibandTile] =
     tiff.getClosestOverview(rasterExtent.cellSize, AutoHigherResolution)
 
   def reproject(targetCRS: CRS, options: Reproject.Options): GeoTiffReprojectRasterSource =

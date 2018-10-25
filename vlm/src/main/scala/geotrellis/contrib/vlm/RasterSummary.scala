@@ -61,6 +61,7 @@ case class RasterSummary(
     TileLayerMetadata[SpatialKey](cellType, ld, extent, crs, dataBounds) -> zoom
   }
 
+  // TODO: probably this function should be removed in the future
   def resample(resampleGrid: ResampleGrid): RasterSummary = {
     val re = resampleGrid(toRasterExtent)
     RasterSummary(

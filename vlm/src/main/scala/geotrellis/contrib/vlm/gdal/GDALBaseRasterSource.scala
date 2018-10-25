@@ -11,11 +11,10 @@ import org.gdal.gdal.{Dataset, gdal}
 import org.gdal.osr.SpatialReference
 
 trait GDALBaseRasterSource extends RasterSource {
-  val uri: String
   val dataset: Dataset
   def baseDataset: Dataset = GDAL.open(uri)
 
-  lazy val geoTransform: Array[Double] = dataset.GetGeoTransform
+  protected lazy val geoTransform: Array[Double] = dataset.GetGeoTransform
 
   lazy val bandCount: Int = dataset.getRasterCount
 
