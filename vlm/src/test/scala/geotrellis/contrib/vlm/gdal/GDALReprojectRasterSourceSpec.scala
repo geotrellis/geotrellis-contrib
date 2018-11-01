@@ -97,6 +97,7 @@ class GDALReprojectRasterSourceSpec extends FunSpec with RasterMatchers with Bet
 
       warpRasterSource.close()
       expectedRasterSource.close()
+      rasterSource.close()
     }
 
     it("should reproject using NearestNeighbor") {
