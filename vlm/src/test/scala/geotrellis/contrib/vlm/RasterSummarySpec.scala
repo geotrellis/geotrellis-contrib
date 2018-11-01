@@ -223,10 +223,21 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     val targetCRS = WebMercator
     val method = Bilinear
     val layout = LayoutDefinition(GridExtent(Extent(-2.0037508342789244E7, -2.0037508342789244E7, 2.0037508342789244E7, 2.0037508342789244E7), 9.554628535647032, 9.554628535647032), 256)
+    val RasterExtent(Extent(exmin, eymin, exmax, eymax), ecw, ech, ecols, erows) = GridExtent(Extent(-8769150.640916323, 4257706.177727701, -8750633.77081424, 4274455.441550691),9.554628535646703,9.554628535647199).toRasterExtent
 
     cfor(0)(_ < 11, _ + 1) { _ =>
       val reference = GDALRasterSource(inputPath).reproject(targetCRS, method).tileToLayout(layout, method)
-      reference.source.rasterExtent
+      val RasterExtent(Extent(axmin, aymin, axmax, aymax), acw, ach, acols, arows) = reference.source.rasterExtent
+
+      axmin shouldBe exmin +- 1e-5
+      aymin shouldBe eymin +- 1e-5
+      axmax shouldBe exmax +- 1e-5
+      aymax shouldBe eymax +- 1e-5
+      acw shouldBe ecw +- 1e-5
+      ach shouldBe ech +- 1e-5
+      acols shouldBe ecols
+      arows shouldBe erows
+
       reference.close
     }
   }

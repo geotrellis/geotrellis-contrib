@@ -18,10 +18,10 @@ trait GDALBaseRasterSource extends RasterSource {
   // the list of transformation options including the current one
   lazy val warpList: List[GDALWarpOptions] = baseWarpList :+ warpOptions
 
-  // generate a vrt to before the current options application
-  def fromBaseWarpList = GDAL.fromGDALWarpOptions(uri, baseWarpList)
-  // generate  a vrt with the curretn options application
-  def fromWarpList = GDAL.fromGDALWarpOptions(uri, warpList)
+  // generate a vrt before the current options application
+  @transient lazy val fromBaseWarpList: Dataset = GDAL.fromGDALWarpOptions(uri, baseWarpList)
+  // generate a vrt with the current options application
+  @transient lazy val fromWarpList: Dataset = GDAL.fromGDALWarpOptions(uri, warpList)
 
   // current dataset
   @transient lazy val dataset: Dataset = fromWarpList
@@ -30,19 +30,11 @@ trait GDALBaseRasterSource extends RasterSource {
 
   lazy val bandCount: Int = dataset.getRasterCount
 
-  lazy val crs: CRS = {
-    val projection: Option[String] = {
-      val proj = dataset.GetProjectionRef
-
-      if (proj == null || proj.isEmpty) None
-      else Some(proj)
-    }
-
-    projection.map { proj =>
-      val srs = new SpatialReference(proj)
-      CRS.fromString(srs.ExportToProj4())
-    }.getOrElse(CRS.fromEpsgCode(4326))
-  }
+  lazy val crs: CRS =
+    Option(dataset.GetProjectionRef)
+      .filter(_.nonEmpty)
+      .map(new SpatialReference(_).toCRS)
+      .getOrElse(CRS.fromEpsgCode(4326))
 
   private lazy val reader: GDALReader = GDALReader(dataset)
 

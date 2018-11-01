@@ -40,8 +40,8 @@ case class GDALReprojectRasterSource(
       errorThreshold = options.errorThreshold.some,
       cellSize = cellSize,
       alignTargetPixels = true,
-      sourceCRS = baseSpatialReference.some,
-      targetCRS = targetSpatialReference.some
+      sourceCRS = baseSpatialReference.toCRS.some,
+      targetCRS = targetSpatialReference.toCRS.some
     )
 
     res

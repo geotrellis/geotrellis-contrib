@@ -7,7 +7,6 @@ import geotrellis.vector.Extent
 
 import cats.implicits._
 import org.gdal.gdal.WarpOptions
-import org.gdal.osr.SpatialReference
 
 import scala.collection.JavaConverters._
 
@@ -19,8 +18,8 @@ case class GDALWarpOptions(
   cellSize: Option[CellSize] = None,
   alignTargetPixels: Boolean = true,
   dimensions: Option[(Int, Int)] = None,
-  sourceCRS: Option[SpatialReference] = None,
-  targetCRS: Option[SpatialReference] = None,
+  sourceCRS: Option[CRS] = None,
+  targetCRS: Option[CRS] = None,
   te: Option[(Extent, CRS)] = None,
   ovr: Option[String] = Some("AUTO")
 ) {
@@ -39,7 +38,7 @@ case class GDALWarpOptions(
     } :::
     dimensions.toList.flatMap { case (c, r) => List("-ts", s"$c", s"$r") } :::
     (sourceCRS, targetCRS).mapN { (source, target) =>
-      if(source != target) List("-s_srs", source.ExportToProj4, "-t_srs", target.ExportToProj4)
+      if(source != target) List("-s_srs", source.toProj4String, "-t_srs", target.toProj4String)
       else Nil
     }.toList.flatten ::: ovr.toList.flatMap { o => List("-ovr", o) } :::
     te.toList.flatMap { case (ext, crs) =>
