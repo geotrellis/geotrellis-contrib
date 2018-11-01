@@ -23,7 +23,7 @@ case class GDALResampleRasterSource(
           resampleMethod = method.some
         )
       case _ =>
-        val rasterExtent: RasterExtent = {
+        lazy val rasterExtent: RasterExtent = {
           val baseDataset = fromBaseWarpList
           val colsLong: Long = baseDataset.getRasterXSize
           val rowsLong: Long = baseDataset.getRasterYSize
@@ -41,6 +41,7 @@ case class GDALResampleRasterSource(
 
           RasterExtent(Extent(xmin, ymin, xmax, ymax), cols, rows)
         }
+        // raster extent won't be calculated if it's not called in the apply function body explicitly
         val targetRasterExtent = resampleGrid(rasterExtent)
         GDALWarpOptions(
           cellSize = targetRasterExtent.cellSize.some,
