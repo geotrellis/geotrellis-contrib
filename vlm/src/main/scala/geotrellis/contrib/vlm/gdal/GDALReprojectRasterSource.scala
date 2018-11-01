@@ -52,5 +52,4 @@ case class GDALReprojectRasterSource(
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
     closed(GDALResampleRasterSource(uri, resampleGrid, method, warpList))
-
 }

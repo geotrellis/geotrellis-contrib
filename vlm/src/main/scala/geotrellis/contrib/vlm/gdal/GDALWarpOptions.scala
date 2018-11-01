@@ -23,10 +23,6 @@ case class GDALWarpOptions(
   te: Option[(Extent, CRS)] = None,
   ovr: Option[String] = Some("AUTO")
 ) {
-
-  def roundUp(d: Double, digits: Int = 7): Double =
-    BigDecimal(d).setScale(digits, BigDecimal.RoundingMode.HALF_UP).toDouble
-
   def toWarpOptionsList: List[String] = {
     outputFormat.toList.flatMap { of => List("-of", of) } :::
     resampleMethod.toList.flatMap { method => List("-r", s"${GDAL.deriveResampleMethodString(method)}") } :::
