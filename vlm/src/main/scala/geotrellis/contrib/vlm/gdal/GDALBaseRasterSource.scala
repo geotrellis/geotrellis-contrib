@@ -11,8 +11,19 @@ import org.gdal.gdal.{Dataset, gdal}
 import org.gdal.osr.SpatialReference
 
 trait GDALBaseRasterSource extends RasterSource {
-  val dataset: Dataset
-  def baseDataset: Dataset = GDAL.open(uri)
+  val baseWarpList: List[GDALWarpOptions]
+  lazy val warpList: List[GDALWarpOptions] = Nil
+
+  private def fromWarpOptionsList(list: List[GDALWarpOptions]): Dataset = {
+    list.foldLeft(GDAL.open(uri)) { (baseDataset, warpOptions) =>
+      try gdal.Warp("", Array(baseDataset), warpOptions.toWarpOptions) finally baseDataset.delete
+    }
+  }
+
+  def fromBaseWarpList = fromWarpOptionsList(baseWarpList)
+  def fromWarpList = fromWarpOptionsList(warpList)
+
+  @transient lazy val dataset: Dataset = fromWarpList
 
   protected lazy val geoTransform: Array[Double] = dataset.GetGeoTransform
 
@@ -49,7 +60,7 @@ trait GDALBaseRasterSource extends RasterSource {
     GDAL.deriveGTCellType(bufferType, noDataValue, typeSizeInBits)
   }
 
-  def rasterExtent: RasterExtent = {
+  lazy val rasterExtent: RasterExtent = {
     val colsLong: Long = dataset.getRasterXSize
     val rowsLong: Long = dataset.getRasterYSize
 
@@ -93,10 +104,10 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, options)
+    try GDALReprojectRasterSource(uri, targetCRS, options) finally this.close
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method)
+    try GDALResampleRasterSource(uri, resampleGrid, method) finally this.close
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
@@ -114,8 +125,5 @@ trait GDALBaseRasterSource extends RasterSource {
     readBounds(bounds, 0 until bandCount)
   }
 
-  override def close = {
-    // baseDataset.delete()
-    dataset.delete()
-  }
+  override def close = dataset.delete()
 }

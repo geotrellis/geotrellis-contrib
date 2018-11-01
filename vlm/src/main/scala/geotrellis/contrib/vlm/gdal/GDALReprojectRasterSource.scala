@@ -6,17 +6,21 @@ import geotrellis.contrib.vlm.{RasterSource, ResampleGrid}
 import geotrellis.raster.resample.ResampleMethod
 
 import cats.implicits._
-import org.gdal.gdal.{Dataset, gdal}
 import org.gdal.osr.SpatialReference
 
 case class GDALReprojectRasterSource(
   uri: String,
   targetCRS: CRS,
-  options: Reproject.Options = Reproject.Options.DEFAULT
-) extends GDALBaseRasterSource { self =>
-  @transient lazy val dataset: Dataset = {
-    val baseDataset = self.baseDataset
-    val baseSpatialReference = new SpatialReference(baseDataset.GetProjection)
+  options: Reproject.Options = Reproject.Options.DEFAULT,
+  baseWarpList: List[GDALWarpOptions] = Nil
+) extends GDALBaseRasterSource {
+  lazy val warpOptions: GDALWarpOptions = {
+    val baseSpatialReference = {
+      val baseDataset = fromBaseWarpList
+      val result = new SpatialReference(baseDataset.GetProjection)
+      baseDataset.delete()
+      result
+    }
     val targetSpatialReference: SpatialReference = {
       val spatialReference = new SpatialReference()
       spatialReference.ImportFromProj4(targetCRS.toProj4String)
@@ -31,28 +35,23 @@ case class GDALReprojectRasterSource(
       }
     }
 
-    val warpOptions =
-      GDALWarpOptions(
-        resampleMethod = options.method.some,
-        errorThreshold = options.errorThreshold.some,
-        cellSize       = cellSize,
-        alignTargetPixels = true,
-        sourceCRS      = baseSpatialReference.some,
-        targetCRS      = targetSpatialReference.some
-      )
+    val res = GDALWarpOptions(
+      resampleMethod = options.method.some,
+      errorThreshold = options.errorThreshold.some,
+      cellSize = cellSize,
+      alignTargetPixels = true,
+      sourceCRS = baseSpatialReference.some,
+      targetCRS = targetSpatialReference.some
+    )
 
-    val dataset = gdal.Warp("", Array(baseDataset), warpOptions.toWarpOptions)
-    // baseDataset.delete
-    dataset
+    res
   }
 
+  override lazy val warpList: List[GDALWarpOptions] = baseWarpList :+ warpOptions
+
   override def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
-    new GDALReprojectRasterSource(uri, targetCRS, options) {
-      override def baseDataset: Dataset = self.dataset
-    }
+    try GDALReprojectRasterSource(uri, targetCRS, options, warpList) finally this.close
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
-    new GDALResampleRasterSource(uri, resampleGrid, method) {
-      override def baseDataset: Dataset = self.dataset
-    }
+    try GDALResampleRasterSource(uri, resampleGrid, method, warpList) finally this.close
 }
