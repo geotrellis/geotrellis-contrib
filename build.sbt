@@ -70,7 +70,7 @@ lazy val vlm = project
     Test / fork := true,
     Test / parallelExecution := false,
     Test / testOptions += Tests.Argument("-oDF"),
-    javaOptions ++= Seq("-Xms1024m", "-Xmx6144m", "-Djava.library.path=/usr/local/lib")
+    javaOptions ++= Seq("-Djava.library.path=/usr/local/lib")
   )
 
 lazy val benchmark = (project in file("benchmark"))

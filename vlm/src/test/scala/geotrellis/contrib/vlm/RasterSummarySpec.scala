@@ -9,6 +9,7 @@ import geotrellis.spark.testkit._
 import geotrellis.spark.tiling._
 import geotrellis.vector.Extent
 
+import spire.syntax.cfor._
 import org.apache.spark.rdd._
 import org.scalatest._
 
@@ -222,10 +223,11 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     val targetCRS = WebMercator
     val method = Bilinear
     val layout = LayoutDefinition(GridExtent(Extent(-2.0037508342789244E7, -2.0037508342789244E7, 2.0037508342789244E7, 2.0037508342789244E7), 9.554628535647032, 9.554628535647032), 256)
+    val expectedRe = GridExtent(Extent(-8769150.640916323, 4257706.177727702, -8750633.77081424, 4274455.441550692),9.554628535646703,9.554628535647199)
 
-    (1 to 10).foreach { _ =>
+    cfor(0)(_ < 11, _ + 1) { _ =>
       val reference = GDALRasterSource(inputPath).reproject(targetCRS, method).tileToLayout(layout, method)
-      reference.source.rasterExtent shouldBe GridExtent(Extent(-8769150.640916323, 4257706.177727702, -8750633.77081424, 4274455.441550692),9.554628535646703,9.554628535647199)
+      reference.source.rasterExtent should be (expectedRe)
       reference.close
     }
   }
