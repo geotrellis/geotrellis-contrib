@@ -11,18 +11,19 @@ import org.gdal.gdal.{Dataset, gdal}
 import org.gdal.osr.SpatialReference
 
 trait GDALBaseRasterSource extends RasterSource {
+  // options from previous transformation steps
   val baseWarpList: List[GDALWarpOptions]
-  lazy val warpList: List[GDALWarpOptions] = Nil
+  // current transformation options
+  val warpOptions: GDALWarpOptions
+  // the list of transformation options including the current one
+  lazy val warpList: List[GDALWarpOptions] = baseWarpList :+ warpOptions
 
-  private def fromWarpOptionsList(list: List[GDALWarpOptions]): Dataset = {
-    list.foldLeft(GDAL.open(uri)) { (baseDataset, warpOptions) =>
-      try gdal.Warp("", Array(baseDataset), warpOptions.toWarpOptions) finally baseDataset.delete
-    }
-  }
+  // generate a vrt to before the current options application
+  def fromBaseWarpList = GDAL.fromGDALWarpOptions(uri, baseWarpList)
+  // generate  a vrt with the curretn options application
+  def fromWarpList = GDAL.fromGDALWarpOptions(uri, warpList)
 
-  def fromBaseWarpList = fromWarpOptionsList(baseWarpList)
-  def fromWarpList = fromWarpOptionsList(warpList)
-
+  // current dataset
   @transient lazy val dataset: Dataset = fromWarpList
 
   protected lazy val geoTransform: Array[Double] = dataset.GetGeoTransform
@@ -104,10 +105,10 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
-    try GDALReprojectRasterSource(uri, targetCRS, options) finally this.close
+    closed(GDALReprojectRasterSource(uri, targetCRS, options))
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
-    try GDALResampleRasterSource(uri, resampleGrid, method) finally this.close
+    closed(GDALResampleRasterSource(uri, resampleGrid, method))
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
@@ -126,4 +127,6 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   override def close = dataset.delete()
+
+  protected def closed[T](obj: => T): T = try obj finally this.close
 }

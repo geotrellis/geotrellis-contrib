@@ -29,7 +29,6 @@ case class GDALWarpOptions(
     BigDecimal(d).setScale(digits, BigDecimal.RoundingMode.HALF_UP).toDouble
 
   def toWarpOptionsList: List[String] = {
-    List("-overwrite") :::
     outputFormat.toList.flatMap { of => List("-of", of) } :::
     resampleMethod.toList.flatMap { method => List("-r", s"${GDAL.deriveResampleMethodString(method)}") } :::
     errorThreshold.toList.flatMap { et => List("-et", s"${et}") } :::

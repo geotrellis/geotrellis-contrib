@@ -47,11 +47,10 @@ case class GDALReprojectRasterSource(
     res
   }
 
-  override lazy val warpList: List[GDALWarpOptions] = baseWarpList :+ warpOptions
-
   override def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
-    try GDALReprojectRasterSource(uri, targetCRS, options, warpList) finally this.close
+    closed(GDALReprojectRasterSource(uri, targetCRS, options, warpList))
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
-    try GDALResampleRasterSource(uri, resampleGrid, method, warpList) finally this.close
+    closed(GDALResampleRasterSource(uri, resampleGrid, method, warpList))
+
 }

@@ -3,8 +3,7 @@ package geotrellis.contrib.vlm.gdal
 import geotrellis.raster._
 import geotrellis.raster.resample._
 
-import org.gdal.gdal.gdal
-import org.gdal.gdal.Dataset
+import org.gdal.gdal.{Dataset, WarpOptions, gdal}
 import org.gdal.gdalconst.gdalconstConstants
 
 import java.net.URI
@@ -101,9 +100,16 @@ object GDAL {
 
   def openPath(path: String): Dataset = {
     val ds = gdal.Open(path, gdalconstConstants.GA_ReadOnly)
-    if(ds == null) {
-      throw GDALException.lastError()
-    }
+    if(ds == null) throw GDALException.lastError()
     ds
   }
+
+  def warp(dest: String, baseDatasets: Array[Dataset], warpOptions: WarpOptions): Dataset =
+    try gdal.Warp(dest, baseDatasets, warpOptions) finally baseDatasets.foreach(_.delete)
+
+  def warp(dest: String, baseDataset: Dataset, warpOptions: GDALWarpOptions): Dataset =
+    warp(dest, Array(baseDataset), warpOptions.toWarpOptions)
+
+  def fromGDALWarpOptions(uri: String, list: List[GDALWarpOptions]): Dataset =
+    list.foldLeft(open(uri)) { warp("", _, _) }
 }
