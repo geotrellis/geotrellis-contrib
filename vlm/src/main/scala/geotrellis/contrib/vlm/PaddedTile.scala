@@ -24,7 +24,8 @@ case class PaddedTile(chunk: Tile, colOffset: Int, rowOffset: Int, cols: Int, ro
     colMin = colOffset,
     rowMin = rowOffset,
     colMax = colOffset + chunk.cols - 1,
-    rowMax = rowOffset + chunk.rows - 1)
+    rowMax = rowOffset + chunk.rows - 1
+  )
 
   require(colOffset >= 0 && rowOffset >= 0 && colOffset < cols && rowOffset < rows,
     s"chunk offset out of bounds: $colOffset, $rowOffset")

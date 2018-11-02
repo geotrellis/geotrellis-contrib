@@ -10,7 +10,7 @@ import org.apache.avro.generic._
 
 import scala.collection.JavaConverters._
 
-trait Implicits {
+trait Implicits extends Serializable {
   implicit def paddedTileCodec: AvroRecordCodec[PaddedTile] = new AvroRecordCodec[PaddedTile] {
     def schema = SchemaBuilder
       .record("PaddedTile").namespace("geotrellis.contrib.vlm")
@@ -77,7 +77,7 @@ trait Implicits {
       val bands = rec.get("bands")
         .asInstanceOf[java.util.Collection[GenericRecord]]
         .asScala // notice that Avro does not have native support for Short primitive
-        .map(tileUnionCodec.decode)
+        .map(extendedTileUnionCodec.decode)
         .toArray
 
       ArrayMultibandTile(bands)
