@@ -37,7 +37,6 @@ case class GDALResampleRasterSource(
           val ymin: Double = geoTransform(3) + geoTransform(5) * rows
           val xmax: Double = geoTransform(0) + geoTransform(1) * cols
           val ymax: Double = geoTransform(3)
-          baseDataset.delete()
 
           RasterExtent(Extent(xmin, ymin, xmax, ymax), cols, rows)
         }
@@ -54,8 +53,8 @@ case class GDALResampleRasterSource(
   }
 
   override def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
-    closed(GDALReprojectRasterSource(uri, targetCRS, options, warpList))
+    GDALReprojectRasterSource(uri, targetCRS, options, warpList)
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
-    closed(GDALResampleRasterSource(uri, resampleGrid, method, warpList))
+    GDALResampleRasterSource(uri, resampleGrid, method, warpList)
 }

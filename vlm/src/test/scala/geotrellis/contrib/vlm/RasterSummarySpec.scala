@@ -202,9 +202,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
       rasterRefRdd // group by keys and distribute raster references using SpatialPartitioner
         .groupByKey(SpatialPartitioner(summary.estimatePartitionsNumber))
         .mapValues { iter => MultibandTile {
-          val list = iter.toList
-          // fix it, should be a better API / better JNI references management
-          try list.flatMap { rr => rr.raster.toSeq.flatMap(_.tile.bands) } finally list.foreach(_.close)
+          iter.flatMap { rr => rr.raster.toSeq.flatMap(_.tile.bands) }
         } } // read rasters
 
     val (metadata, zoom) = summary.toTileLayerMetadata(layoutLevel)
@@ -216,6 +214,8 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     res.length shouldBe 72
 
     contextRDD.stitch.tile.band(0).renderPng().write("/tmp/raster-source-contextrdd-gdal.png")
+
+    GDAL.cacheCleanUp
   }
 
   it("Should cleanup GDAL Datasets by the end of the loop (10 iterations)") {
@@ -238,7 +238,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
       acols shouldBe ecols
       arows shouldBe erows
 
-      reference.close
+      GDAL.cacheCleanUp
     }
   }
 }

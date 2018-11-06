@@ -18,7 +18,6 @@ case class GDALReprojectRasterSource(
     val baseSpatialReference = {
       val baseDataset = fromBaseWarpList
       val result = new SpatialReference(baseDataset.GetProjection)
-      baseDataset.delete()
       result
     }
     val targetSpatialReference: SpatialReference = {
@@ -48,8 +47,8 @@ case class GDALReprojectRasterSource(
   }
 
   override def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
-    closed(GDALReprojectRasterSource(uri, targetCRS, options, warpList))
+    GDALReprojectRasterSource(uri, targetCRS, options, warpList)
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
-    closed(GDALResampleRasterSource(uri, resampleGrid, method, warpList))
+    GDALResampleRasterSource(uri, resampleGrid, method, warpList)
 }

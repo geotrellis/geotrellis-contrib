@@ -1,20 +1,23 @@
 package geotrellis.contrib.vlm.gdal
 
+import com.github.blemale.scaffeine.{Cache, Scaffeine}
 import geotrellis.raster._
 import geotrellis.raster.resample._
-
 import org.gdal.gdal.{Dataset, WarpOptions, gdal}
 import org.gdal.gdalconst.gdalconstConstants
+import cats.syntax.foldable._
+import cats.instances.list._
+import cats.instances.either._
 
 import java.net.URI
 
 // All of the logic in this file was taken from:
 // https://github.com/geotrellis/geotrellis-gdal/blob/master/gdal/src/main/scala/geotrellis/gdal/Gdal.scala
 
-private[gdal] class GDALException(code: Int, msg: String)
+private [gdal] class GDALException(code: Int, msg: String)
   extends RuntimeException(s"GDAL ERROR $code: $msg")
 
-private[gdal] object GDALException {
+private [gdal] object GDALException {
   def lastError(): GDALException =
     new GDALException(gdal.GetLastErrorNo, gdal.GetLastErrorMsg)
 }
@@ -98,18 +101,65 @@ object GDAL {
     else
       openPath(VSIPath(path).vsiPath)
 
+  @transient lazy val cache: Cache[String, GDALDataset] =
+    Scaffeine()
+      .maximumSize(1000)
+      .removalListener[String, GDALDataset] { case (_, dataset, _) =>
+        println(s"removalListener: ${dataset}")
+        if(dataset != null) dataset.close
+      }
+      .weakValues()
+      .build[String, GDALDataset]
+
+  /** We may want to force invalidate caches, in case we don't trust GC too much */
+  def cacheCleanUp: Unit = cache.invalidateAll()
+
   def openPath(path: String): Dataset = {
-    val ds = gdal.Open(path, gdalconstConstants.GA_ReadOnly)
+    lazy val getDS = GDALDataset(gdal.Open(path, gdalconstConstants.GA_ReadOnly))
+    val ds = cache.getIfPresent(path).getOrElse {
+      println("could not open Dataset, creating new one")
+      cache.put(path, getDS)
+      getDS
+    }.underlying
     if(ds == null) throw GDALException.lastError()
     ds
   }
 
-  def warp(dest: String, baseDatasets: Array[Dataset], warpOptions: WarpOptions): Dataset =
-    try gdal.Warp(dest, baseDatasets, warpOptions) finally baseDatasets.foreach(_.delete)
+  def warp(dest: String, baseDatasets: Array[Dataset], warpOptions: GDALWarpOptions): Dataset = {
+    lazy val getDS = GDALDataset(gdal.Warp(dest, baseDatasets, warpOptions.toWarpOptions))
+    val ds = cache.getIfPresent(warpOptions.name).getOrElse {
+      println("could not open WARPDataset, creating new one")
+      cache.put(warpOptions.name, getDS)
+      getDS
+    }.underlying
+    if(ds == null) throw GDALException.lastError()
+    ds
+  }
 
   def warp(dest: String, baseDataset: Dataset, warpOptions: GDALWarpOptions): Dataset =
-    warp(dest, Array(baseDataset), warpOptions.toWarpOptions)
+    warp(dest, Array(baseDataset), warpOptions)
 
-  def fromGDALWarpOptions(uri: String, list: List[GDALWarpOptions]): Dataset =
-    list.foldLeft(open(uri)) { warp("", _, _) }
+  def fromGDALWarpOptions(uri: String, list: List[GDALWarpOptions]): Dataset = {
+    // if we want to perform warp operations
+    if (list.nonEmpty) {
+      // let's find the latest cached dataset, once we'll find smth let's stop
+      val Left(Some(dataset)) = list.zipWithIndex.reverse.foldLeftM(Option.empty[Dataset]) { case (acc, (options, idx)) =>
+        acc match {
+          // successful dataset retrive, in case for some reason there is smth non empty
+          case ds @ Some(_) =>  Left(ds)
+
+          // we haven't read anything
+          case None =>
+            if (idx == 0) {
+              Left(Option(list.foldLeft(open(uri)) { warp("", _, _) }))
+            } else {
+              val result = cache.getIfPresent(options.name).map { c => list.drop(idx).foldLeft(c.underlying) { warp("", _, _) } }
+              if (result.isEmpty) Right(result)
+              else Left(result)
+            }
+        }
+      }
+      dataset
+    } else open(uri) // just open a GDAL dataset
+  }
 }

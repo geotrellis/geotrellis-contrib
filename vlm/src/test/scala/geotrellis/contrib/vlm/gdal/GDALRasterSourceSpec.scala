@@ -139,8 +139,7 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
           }
         }
 
-        resampledSource.close
-        layoutSource.close
+        GDAL.cacheCleanUp
       }
     }
   }

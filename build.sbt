@@ -72,6 +72,13 @@ lazy val vlm = project
     Test / testOptions += Tests.Argument("-oDF"),
     javaOptions ++= Seq("-Djava.library.path=/usr/local/lib")
   )
+  .settings(
+    initialCommands in console :=
+      """
+        |import geotrellis.contrib.vlm._
+        |import geotrellis.contrib.vlm.gdal._
+      """.stripMargin
+  )
 
 lazy val benchmark = (project in file("benchmark"))
   .settings(commonSettings: _*)

@@ -97,10 +97,10 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
-    closed(GDALReprojectRasterSource(uri, targetCRS, options))
+    GDALReprojectRasterSource(uri, targetCRS, options)
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
-    closed(GDALResampleRasterSource(uri, resampleGrid, method))
+    GDALResampleRasterSource(uri, resampleGrid, method)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
@@ -120,5 +120,8 @@ trait GDALBaseRasterSource extends RasterSource {
 
   override def close = dataset.delete()
 
-  protected def closed[T](obj: => T): T = try obj finally this.close
+  /*override def finalize(): Unit = {
+    if(dataset != null) close
+    super.finalize()
+  }*/
 }
