@@ -10,6 +10,9 @@ import org.gdal.gdalconst.gdalconstConstants
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+import java.net.URI
+
+
 class GDALReader(val dataset: Dataset) {
   protected val bandCount: Int = dataset.getRasterCount()
 
@@ -177,5 +180,6 @@ class GDALReader(val dataset: Dataset) {
 
 object GDALReader {
   def apply(dataset: Dataset) = new GDALReader(dataset)
+  def apply(uri: URI) = new GDALReader(GDAL.open(uri))
   def apply(path: String) = new GDALReader(GDAL.open(path))
 }
