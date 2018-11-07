@@ -116,5 +116,21 @@ class URIFormatterSpec extends FunSpec with Matchers {
 
       URIFormatter(uri) should be (expectedPath)
     }
+
+    it("should format - zip+file uri") {
+      val path = "/tmp/some/data/data.zip!file_1.tif"
+      val uri = s"zip+file://$path"
+      val expectedPath = "/vsizip//tmp/some/data/data.zip/file_1.tif"
+
+      URIFormatter(uri) should be (expectedPath)
+    }
+
+    it("should format - gzip+s3 uri") {
+      val path = "some/bucket/data/data.gzip!file_1.tif"
+      val uri = s"zip+s3://$path"
+      val expectedPath = "/vsigzip//vsis3/some/bucket/data/data.gzip/file_1.tif"
+
+      URIFormatter(uri) should be (expectedPath)
+    }
   }
 }
