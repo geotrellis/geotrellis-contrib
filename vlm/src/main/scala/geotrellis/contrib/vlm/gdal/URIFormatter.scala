@@ -63,7 +63,7 @@ object URIFormatter {
     val formattedPath: String =
       uri.getScheme match {
         case (FTP | HTTP | HTTPS) =>
-          s"/vsicurl/${uri.toString}"
+          s"/vsicurl/$path"
         case S3 =>
           s"/vsis3/${uri.getAuthority}${uri.getPath}"
         case GS =>
