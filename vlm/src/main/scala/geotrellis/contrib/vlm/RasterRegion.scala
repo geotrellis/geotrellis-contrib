@@ -32,7 +32,19 @@ case class RasterRegion(
   require(bounds.intersects(source.gridBounds), s"The given bounds: $bounds must intersect the given source: $source")
 
   @transient lazy val raster: Option[Raster[MultibandTile]] =
-    source.read(bounds)
+    for {
+      intersection <- source.gridBounds.intersection(bounds)
+      raster <- source.read(intersection)
+    } yield {
+      if (raster.tile.cols == cols && raster.tile.rows == rows)
+        raster
+      else {
+        val colOffset = math.abs(bounds.colMin - intersection.colMin)
+        val rowOffset = math.abs(bounds.rowMin - intersection.rowMin)
+
+        raster.mapTile { _.mapBands { (_, band) => PaddedTile(band, colOffset, rowOffset, cols, rows) } }
+      }
+    }
 
   def cols: Int = bounds.width
   def rows: Int = bounds.height
