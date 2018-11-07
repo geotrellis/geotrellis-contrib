@@ -93,7 +93,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
 
     // Create RDD of references, references contain information how to read rasters
-    val rasterRefRdd: RDD[(SpatialKey, RasterSourceRegion)] = tiledLayoutSource.flatMap(_.keyedRasterSourceRegions())
+    val rasterRefRdd: RDD[(SpatialKey, RasterRegion)] = tiledLayoutSource.flatMap(_.keyedRasterRegions())
     val tileRDD: RDD[(SpatialKey, MultibandTile)] =
       rasterRefRdd // group by keys and distribute raster references using SpatialPartitioner
         .groupByKey(SpatialPartitioner(summary.estimatePartitionsNumber))
@@ -198,7 +198,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
 
     // Create RDD of references, references contain information how to read rasters
-    val rasterRefRdd: RDD[(SpatialKey, RasterSourceRegion)] = tiledLayoutSource.flatMap(_.keyedRasterSourceRegions())
+    val rasterRefRdd: RDD[(SpatialKey, RasterRegion)] = tiledLayoutSource.flatMap(_.keyedRasterRegions())
     val tileRDD: RDD[(SpatialKey, MultibandTile)] =
       rasterRefRdd // group by keys and distribute raster references using SpatialPartitioner
         .groupByKey(SpatialPartitioner(summary.estimatePartitionsNumber))

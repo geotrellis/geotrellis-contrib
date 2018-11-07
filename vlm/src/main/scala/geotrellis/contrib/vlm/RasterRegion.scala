@@ -25,7 +25,7 @@ import geotrellis.raster._
   * @param source raster source that can be used to read this region.
   * @param bounds pixel bounds relative to the source, maybe not be fully contained by the source bounds.
   */
-case class RasterSourceRegion(
+case class RasterRegion(
   source: RasterSource,
   bounds: GridBounds
 ) extends CellGrid with Serializable {
