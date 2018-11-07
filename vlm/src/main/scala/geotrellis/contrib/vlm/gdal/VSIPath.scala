@@ -37,7 +37,7 @@ object Schemes {
 }
 
 
-object URIFormatter {
+object VSIPath {
   import Schemes._
 
   def apply(path: String): String =
@@ -87,7 +87,7 @@ object URIFormatter {
     }
 
     val (leadingScheme, secondScheme) =
-      if (scheme.contains("+")) {
+      if (scheme != null && scheme.contains("+")) {
         // If the Scheme contains a "+" then we'll be reading a
         // single file from a compressed source on some backend.
 
