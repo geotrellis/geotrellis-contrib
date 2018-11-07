@@ -130,7 +130,7 @@ class VSIPathSpec extends FunSpec with Matchers {
       val uri = s"zip+s3://$path"
       val expectedPath = "/vsigzip//vsis3/some/bucket/data/data.gzip/file_1.tif"
 
-      VSIPath(uri) shoulD be (expectedPath)
+      VSIPath(uri) should be (expectedPath)
     }
   }
 }
