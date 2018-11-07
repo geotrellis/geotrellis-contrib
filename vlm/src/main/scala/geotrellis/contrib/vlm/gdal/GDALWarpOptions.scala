@@ -1,12 +1,13 @@
 package geotrellis.contrib.vlm.gdal
 
+import java.util.Base64
+
 import geotrellis.raster.CellSize
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.proj4.CRS
 import geotrellis.vector.Extent
-
 import cats.implicits._
-import org.gdal.gdal.WarpOptions
+import org.gdal.gdal.{Dataset, WarpOptions}
 
 import scala.collection.JavaConverters._
 
@@ -23,7 +24,7 @@ case class GDALWarpOptions(
   te: Option[(Extent, CRS)] = None,
   ovr: Option[String] = Some("AUTO")
 ) {
-  def name: String = toWarpOptionsList.map(_.toLowerCase).mkString("_")
+  lazy val name: String = toWarpOptionsList.map(_.toLowerCase).mkString("_")
 
   def toWarpOptionsList: List[String] = {
     outputFormat.toList.flatMap { of => List("-of", of) } :::

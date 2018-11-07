@@ -3,11 +3,14 @@ package geotrellis.contrib.vlm.gdal
 import com.github.blemale.scaffeine.{Cache, Scaffeine}
 import geotrellis.raster._
 import geotrellis.raster.resample._
-import org.gdal.gdal.{Dataset, WarpOptions, gdal}
-import org.gdal.gdalconst.gdalconstConstants
+import geotrellis.util.LazyLogging
+
 import cats.syntax.foldable._
+import cats.syntax.option._
 import cats.instances.list._
 import cats.instances.either._
+import org.gdal.gdal.{Dataset, gdal}
+import org.gdal.gdalconst.gdalconstConstants
 
 import java.net.URI
 
@@ -22,7 +25,7 @@ private [gdal] object GDALException {
     new GDALException(gdal.GetLastErrorNo, gdal.GetLastErrorMsg)
 }
 
-object GDAL {
+object GDAL extends LazyLogging {
   gdal.AllRegister()
 
   def deriveGTCellType(datatype: GDALDataType, noDataValue: Option[Double] = None, typeSizeInBits: Option[Int] = None): CellType =
@@ -105,7 +108,7 @@ object GDAL {
     Scaffeine()
       .maximumSize(1000)
       .removalListener[String, GDALDataset] { case (_, dataset, _) =>
-        println(s"removalListener: ${dataset}")
+        logger.info(s"removalListener: ${dataset}")
         if(dataset != null) dataset.close
       }
       .weakValues()
@@ -116,8 +119,8 @@ object GDAL {
 
   def openPath(path: String): Dataset = {
     lazy val getDS = GDALDataset(gdal.Open(path, gdalconstConstants.GA_ReadOnly))
-    val ds = cache.getIfPresent(path).getOrElse {
-      println("could not open Dataset, creating new one")
+    val ds = cache.getIfPresent(path.base64).getOrElse {
+      logger.info(s"could not open Dataset, creating new one: ${path}")
       cache.put(path, getDS)
       getDS
     }.underlying
@@ -125,40 +128,47 @@ object GDAL {
     ds
   }
 
-  def warp(dest: String, baseDatasets: Array[Dataset], warpOptions: GDALWarpOptions): Dataset = {
+  // parentWarpOptions is a tuple of a path to the initial dataset and a list of previous transformations
+  // it is required to calculate a proper cache key
+  def warp(dest: String, baseDatasets: Array[Dataset], warpOptions: GDALWarpOptions, parentWarpOptions: Option[(String, List[GDALWarpOptions])]): Dataset = {
     lazy val getDS = GDALDataset(gdal.Warp(dest, baseDatasets, warpOptions.toWarpOptions))
-    val ds = cache.getIfPresent(warpOptions.name).getOrElse {
-      println("could not open WARPDataset, creating new one")
-      cache.put(warpOptions.name, getDS)
+    val key = s"${parentWarpOptions.name}${warpOptions.name}".base64
+    val ds = cache.getIfPresent(key).getOrElse {
+      logger.info(s"could not open WARPDataset, creating new one: ${parentWarpOptions.name}${warpOptions.name}")
+      cache.put(key, getDS)
       getDS
     }.underlying
     if(ds == null) throw GDALException.lastError()
     ds
   }
 
-  def warp(dest: String, baseDataset: Dataset, warpOptions: GDALWarpOptions): Dataset =
-    warp(dest, Array(baseDataset), warpOptions)
+  def warp(dest: String, baseDataset: Dataset, warpOptions: GDALWarpOptions, parentWarpOptions: Option[(String, List[GDALWarpOptions])]): Dataset =
+    warp(dest, Array(baseDataset), warpOptions, parentWarpOptions)
 
   def fromGDALWarpOptions(uri: String, list: List[GDALWarpOptions]): Dataset = {
     // if we want to perform warp operations
     if (list.nonEmpty) {
       // let's find the latest cached dataset, once we'll find smth let's stop
-      val Left(Some(dataset)) = list.zipWithIndex.reverse.foldLeftM(Option.empty[Dataset]) { case (acc, (options, idx)) =>
-        acc match {
-          // successful dataset retrive, in case for some reason there is smth non empty
-          case ds @ Some(_) =>  Left(ds)
+      val Left(Some(dataset)) =
+        list.zipWithIndex.reverse.foldLeftM(Option.empty[Dataset]) { case (acc, (_, idx)) =>
+          acc match {
+            // successful dataset retrive, in case for some reason there is smth non empty
+            case ds @ Some(_) =>  Left(ds)
 
-          // we haven't read anything
-          case None =>
-            if (idx == 0) {
-              Left(Option(list.foldLeft(open(uri)) { warp("", _, _) }))
-            } else {
-              val result = cache.getIfPresent(options.name).map { c => list.drop(idx).foldLeft(c.underlying) { warp("", _, _) } }
-              if (result.isEmpty) Right(result)
-              else Left(result)
-            }
+            // we haven't read anything
+            case None =>
+              if (idx == 0) {
+                Left(Option(list.zipWithIndex.foldLeft(open(uri)) { case (ds, (ops, index)) =>
+                  warp("", ds, ops, (uri, list.take(index)).some)
+                }))
+              } else {
+                val result = cache.getIfPresent((uri, list.take(idx)).name).map { c => list.drop(idx).foldLeft(c.underlying) { warp("", _, _, (uri, list.drop(idx)).some) } }
+                if (result.isEmpty) Right(result)
+                else Left(result)
+              }
+          }
         }
-      }
+
       dataset
     } else open(uri) // just open a GDAL dataset
   }

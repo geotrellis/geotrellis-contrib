@@ -15,13 +15,13 @@ case class RasterSummary(
   extent: Extent,
   cells: Long,
   count: Long
-) {
+) extends LazyLogging {
 
   def estimatePartitionsNumber: Int = {
     import squants.information._
     val bytes = Bytes(cellType.bytes * cells)
     val numPartitions: Int = math.max((bytes / Megabytes(64)).toInt, 1)
-    println(s"Using $numPartitions partitions for ${bytes.toString(Gigabytes)}")
+    logger.info(s"Using $numPartitions partitions for ${bytes.toString(Gigabytes)}")
     numPartitions
   }
 
