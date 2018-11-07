@@ -7,10 +7,34 @@ import org.scalatest._
 
 class URIFormatterSpec extends FunSpec with Matchers {
   describe("Formatting the given uris") {
+    it("should format - http url") {
+      val filePath = "www.radomdata.com/test-files/file-1.tiff"
+      val url = s"http://$filePath"
+      val expectedPath = s"/vsicurl/$url"
+
+      URIFormatter(url) should be (expectedPath)
+    }
+
+    it("should format - ftp url") {
+      val filePath = "/tmp/test-files/file-1.tiff"
+      val url = s"ftp://$filePath"
+      val expectedPath = s"/vsicurl/$url"
+
+      URIFormatter(url) should be (expectedPath)
+    }
+
     it("should format - https url") {
       val filePath = "www.radomdata.com/test-files/file-1.tiff"
       val url = s"https://$filePath"
       val expectedPath = s"/vsicurl/$url"
+
+      URIFormatter(url) should be (expectedPath)
+    }
+
+    it("should format - chained https url") {
+      val filePath = "www.radomdata.com/test-files/files.gzip"
+      val url = s"https://$filePath"
+      val expectedPath = s"/vsigzip//vsicurl/$url"
 
       URIFormatter(url) should be (expectedPath)
     }
@@ -55,6 +79,14 @@ class URIFormatterSpec extends FunSpec with Matchers {
       URIFormatter(uri) should be (expectedPath)
     }
 
+    it("should format - chained hdfs uri") {
+      val filePath = "test-files/nlcd/data/my_data.tgz"
+      val uri = s"hdfs://$filePath"
+      val expectedPath = s"/vsitar//vsihdfs/$uri"
+
+      URIFormatter(uri) should be (expectedPath)
+    }
+
     it("should format - Google Cloud Storage uri") {
       val filePath = "test-files/nlcd/data/tiff-0.tiff"
       val uri = s"gs://$filePath"
@@ -63,9 +95,24 @@ class URIFormatterSpec extends FunSpec with Matchers {
       URIFormatter(uri) should be (expectedPath)
     }
 
+    it("should format - chained Google Cloud Storage uri") {
+      val filePath = "test-files/nlcd/data/data.tar"
+      val uri = s"gs://$filePath"
+      val expectedPath = s"/vsitar//vsigs/$filePath"
+
+      URIFormatter(uri) should be (expectedPath)
+    }
+
     it("should format - Azure uri") {
       val uri = "wasb://test-files@myaccount.blah.core.net/nlcd/data/tiff-0.tiff"
       val expectedPath = "/vsiaz/test-files/nlcd/data/tiff-0.tiff"
+
+      URIFormatter(uri) should be (expectedPath)
+    }
+
+    it("should format - chained Azure uri") {
+      val uri = "wasb://test-files@myaccount.blah.core.net/nlcd/data/info.kmz"
+      val expectedPath = "/vsizip//vsiaz/test-files/nlcd/data/info.kmz"
 
       URIFormatter(uri) should be (expectedPath)
     }
