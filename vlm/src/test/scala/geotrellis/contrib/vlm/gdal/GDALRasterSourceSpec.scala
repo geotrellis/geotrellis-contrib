@@ -33,7 +33,8 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
   val url = Resource.path("img/aspect-tiled.tif")
   val uri = s"file://$url"
 
-  val source: GDALRasterSource = GDALRasterSource(uri)
+  //val source: GDALRasterSource = GDALRasterSource(uri)
+  val source: GDALRasterSource = GDALRasterSource(url)
 
   it("should be able to read upper left corner") {
     val bounds = GridBounds(0, 0, 10, 10)

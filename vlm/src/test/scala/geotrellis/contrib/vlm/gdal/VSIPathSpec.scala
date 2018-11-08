@@ -11,6 +11,18 @@ class VSIPathSpec extends FunSpec with Matchers {
       val filePath = "www.radomdata.com/test-files/file-1.tiff"
       val url = s"http://$filePath"
       val expectedPath = s"/vsicurl/$url"
+      val vsi = VSIPath2(url)
+
+      println(s"This is the first Scheme: ${vsi.firstScheme}")
+      println(s"This is the second Scheme: ${vsi.secondScheme}")
+
+      //VSIPath2(url) should be (expectedPath)
+    }
+    /*
+    it("should format - http url") {
+      val filePath = "www.radomdata.com/test-files/file-1.tiff"
+      val url = s"http://$filePath"
+      val expectedPath = s"/vsicurl/$url"
 
       VSIPath(url) should be (expectedPath)
     }
@@ -132,5 +144,6 @@ class VSIPathSpec extends FunSpec with Matchers {
 
       VSIPath(uri) should be (expectedPath)
     }
+  */
   }
 }

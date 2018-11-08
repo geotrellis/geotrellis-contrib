@@ -94,7 +94,8 @@ object GDAL {
     open(new URI(path))
 
   def open(uri: URI): Dataset = {
-    val ds = gdal.Open(VSIPath(uri), gdalconstConstants.GA_ReadOnly)
+    //val ds = gdal.Open(VSIPath(uri), gdalconstConstants.GA_ReadOnly)
+    val ds = gdal.Open(uri.toString, gdalconstConstants.GA_ReadOnly)
     if(ds == null) {
       throw GDALException.lastError()
     }

@@ -1,5 +1,6 @@
 package geotrellis.contrib.vlm.gdal
 
+import scala.util.matching.Regex
 
 import java.net.URI
 
@@ -37,18 +38,115 @@ object Schemes {
 }
 
 
+/*
+trait VSIPath {
+  val path: String
+
+  protected val isWindows: Boolean =
+    System.getProperty("os.name").toLowerCase == "win"
+
+  lazy val scheme: Option[String] =
+    VSIPath.schemePattern.findFirstIn(path)
+
+  protected lazy val pathPattern: Regex =
+    scheme match {
+      case Some(targetScheme) =>
+        if (!isWindows || targetScheme.toLowerCase.contains(Schemes.FILE))
+          VSIPath.defaultPathPattern
+        else
+          VSIPath.windowsLocalPathPattern
+      case None =>
+    }
+
+
+case class VSIPath(path: String) {
+  import Schemes._
+
+  private final val schemePattern: Regex = """.*?(?=\:)""".r
+  private final val firstSchemePattern: Regex = """[^\+]*""".r
+  private final val secondSchemePattern: Regex = """(?<=\+).*?(?=\:)""".r
+
+  private final val userInfoPattern: Regex = """(?<=\/\/).*?(?=@)""".r
+
+  private final val authorityPattern: Regex = """(?<=\/\/).*?(?=\/)""".r
+
+  private final val defaultPathPattern: Regex = """(?<=(?:(\/){2})).+""".r
+  private final val windowsLocalPathPattern: Regex = """(?<=(?:(\/))).+""".r
+
+  private val isWindows: Boolean =
+    System.getProperty("os.name").toLowerCase == "win"
+
+  lazy val scheme: Option[String] =
+    schemePattern.findFirstIn(path)
+
+  lazy val targetFileExtension: String =
+    path.substring(path.lastIndexOf(".") + 1)
+
+    FILE_TYPE_TO_SCHEME
+      .get(targetPath.substring(targetPath.lastIndexOf(".") + 1)) match {
+      case Some(scheme) => s"/vsi$scheme/"
+      case None => ""
+    }
+
+  lazy val isChained: Boolean =
+    scheme match {
+      case Some(targetScheme) =>
+        targetScheme.contains("+") || FILE_TYPE_TO_SCHEME.contains(targetFileExtension)
+      case _ => false
+    }
+
+  lazy val firstScheme: Option[String] =
+    firstSchemePattern.findFirstIn(path)
+
+  lazy val secondScheme: Option[String] =
+    secondSchemePattern.findFirstIn(path)
+
+  private lazy val firstVSIScheme: String =
+    if (isChained)
+*/
+
+
+
 object VSIPath {
   import Schemes._
 
-  def apply(path: String): String =
-    apply(new URI(path))
+  final val schemePattern: Regex = """.*?(?=\:)""".r
+  final val firstSchemePattern: Regex = """[^\+]*""".r
+  final val secondSchemePattern: Regex = """(?<=\+).*?(?=\:)""".r
 
-  def apply(uri: URI): String = {
-    val path: String = uri.toString
-    val scheme: String = uri.getScheme
+  final val userInfoPattern: Regex = """(?<=\/\/).*?(?=@)""".r
+
+  final val authorityPattern: Regex = """(?<=\/\/).*?(?=\/)""".r
+
+  final val defaultPathPattern: Regex = """(?<=(?:(\/){2})).+""".r
+  final val windowsLocalPathPattern: Regex = """(?<=(?:(\/))).+""".r
+
+  def apply(uri: URI): String = ???
+
+  def apply(path: String): String = {
+    val pathScheme: Option[String] = schemePattern.findFirstIn(path)
+
+    lazy val defaultPath = defaultPathPattern.findFirstIn(path)
+    lazy val windowsPath = windowsLocalPathPattern.findFirstIn(path)
 
     val isWindows: Boolean =
       System.getProperty("os.name").toLowerCase == "win"
+
+    pathScheme match {
+      case Some(scheme) if (scheme.contains("+")) =>
+        for {
+          firstHalf <- firstSchemePattern.findFirstIn(scheme)
+          secondHalf <- secondSchemePattern.findFirstIn(scheme)
+          //targetPath <- defaultPath if (!isWindows || secondHalf != FILE) else windowsPath
+        } yield {
+          ???
+          // Get the scheme for the compressed file type
+          val fileScheme: String = schemeForFileType(firstHalf)
+          ???
+        }
+
+        ???
+    }
 
     def schemeForFileType(targetPath: String): String =
       FILE_TYPE_TO_SCHEME
@@ -57,6 +155,9 @@ object VSIPath {
         case None => ""
       }
 
+    ???
+
+    /*
     def formatPath(targetURI: URI): String = {
       lazy val uriPath = targetURI.getPath
 
@@ -146,5 +247,6 @@ object VSIPath {
         throw new Exception(s"The given URI: $uri must point to a file, but none was found")
 
     leadingScheme + secondScheme
+    */
   }
 }
