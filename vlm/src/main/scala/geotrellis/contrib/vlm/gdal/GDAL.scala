@@ -7,7 +7,6 @@ import org.gdal.gdal.gdal
 import org.gdal.gdal.Dataset
 import org.gdal.gdalconst.gdalconstConstants
 
-import java.net.URI
 
 // All of the logic in this file was taken from:
 // https://github.com/geotrellis/geotrellis-gdal/blob/master/gdal/src/main/scala/geotrellis/gdal/Gdal.scala
