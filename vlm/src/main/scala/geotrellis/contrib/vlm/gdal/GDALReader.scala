@@ -180,6 +180,6 @@ class GDALReader(val dataset: Dataset) {
 
 object GDALReader {
   def apply(dataset: Dataset) = new GDALReader(dataset)
-  def apply(uri: URI) = new GDALReader(GDAL.open(uri))
   def apply(path: String) = new GDALReader(GDAL.open(path))
+  def apply(vsiPath: VSIPath) = new GDALReader(GDAL.open(vsiPath))
 }

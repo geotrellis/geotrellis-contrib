@@ -2,251 +2,211 @@ package geotrellis.contrib.vlm.gdal
 
 import scala.util.matching.Regex
 
-import java.net.URI
+import java.io.File
 
 
-object Schemes {
-  final val FTP = "ftp"
-  final val HTTP = "http"
-  final val HTTPS = "https"
-
-  final val TAR = "tar"
-  final val ZIP = "zip"
-  final val GZIP = "gzip"
-
-  final val FILE = "file"
-
-  final val S3 = "s3"
-
-  final val GS = "gs"
-
-  final val WASB = "wasb"
-  final val WASBS = "wasbs"
-
-  final val HDFS = "hdfs"
-
-  final val FILE_TYPE_TO_SCHEME =
-    Map(
-      TAR -> TAR,
-      "tgz" -> TAR,
-      ZIP -> ZIP,
-      "kmz" -> ZIP,
-      "ods" -> ZIP,
-      "xlsx" -> ZIP,
-      GZIP -> GZIP
-    )
-}
-
-
-/*
-trait VSIPath {
-  val path: String
-
-  protected val isWindows: Boolean =
-    System.getProperty("os.name").toLowerCase == "win"
-
-  lazy val scheme: Option[String] =
-    VSIPath.schemePattern.findFirstIn(path)
-
-  protected lazy val pathPattern: Regex =
-    scheme match {
-      case Some(targetScheme) =>
-        if (!isWindows || targetScheme.toLowerCase.contains(Schemes.FILE))
-          VSIPath.defaultPathPattern
-        else
-          VSIPath.windowsLocalPathPattern
-      case None =>
-    }
-
-
-case class VSIPath(path: String) {
+case class VSIPath(
+  path: String,
+  compressedFileDelimiter: String = "!"
+) {
   import Schemes._
+  import Patterns._
 
-  private final val schemePattern: Regex = """.*?(?=\:)""".r
-  private final val firstSchemePattern: Regex = """[^\+]*""".r
-  private final val secondSchemePattern: Regex = """(?<=\+).*?(?=\:)""".r
+  private lazy val isLocal: Boolean =
+    schemeString.contains(FILE) || schemeString == ""
 
-  private final val userInfoPattern: Regex = """(?<=\/\/).*?(?=@)""".r
-
-  private final val authorityPattern: Regex = """(?<=\/\/).*?(?=\/)""".r
-
-  private final val defaultPathPattern: Regex = """(?<=(?:(\/){2})).+""".r
-  private final val windowsLocalPathPattern: Regex = """(?<=(?:(\/))).+""".r
-
-  private val isWindows: Boolean =
-    System.getProperty("os.name").toLowerCase == "win"
+  // Trying to read something locally on Windows matters
+  // because of how file paths on Windows are formatted.
+  // Therefore, we need to handle them differently.
+  private lazy val onLocalWindows: Boolean =
+    System.getProperty("os.name").toLowerCase == "win" && isLocal
 
   lazy val scheme: Option[String] =
-    schemePattern.findFirstIn(path)
+    SCHEME_PATTERN.findFirstIn(path)
 
-  lazy val targetFileExtension: String =
-    path.substring(path.lastIndexOf(".") + 1)
-
-    FILE_TYPE_TO_SCHEME
-      .get(targetPath.substring(targetPath.lastIndexOf(".") + 1)) match {
-      case Some(scheme) => s"/vsi$scheme/"
+  private lazy val schemeString: String =
+    scheme match {
+      case Some(targetScheme) => targetScheme.toLowerCase
       case None => ""
     }
 
-  lazy val isChained: Boolean =
-    scheme match {
-      case Some(targetScheme) =>
-        targetScheme.contains("+") || FILE_TYPE_TO_SCHEME.contains(targetFileExtension)
-      case _ => false
-    }
+  // The given path can contain 0, 1, or 2 different schemes. Any one of these
+  // can be chained together with other handlers. Thus, we must find out what
+  // our first and second scheme is in order to properly format the path.
+  //
+  // The firstScheme is only used when there is a chained operation, and it
+  // always points to the handler needed to read the target file
+  // (ie. vsizip, vsitar, etc).
+  //
+  // The secondScheme points the to the handler needed to access the target
+  // backend (ie. vsis3, vsihdfs, etc). The only time there isn't a
+  // secondScheme is when the user is reading from the local file system.
+  lazy val (firstScheme, secondScheme): (Option[String], Option[String]) =
 
-  lazy val firstScheme: Option[String] =
-    firstSchemePattern.findFirstIn(path)
+    // Schemes that contain "+" point to a file that's either compressed or
+    // within a compressed file itself.
+    if (schemeString.contains("+")) {
+      val (firstScheme, unformattedSecondScheme): (String, String) =
+        schemeString.splitAt(schemeString.lastIndexOf("+"))
 
-  lazy val secondScheme: Option[String] =
-    secondSchemePattern.findFirstIn(path)
+      // "+" is the first character of the unformattedSecondScheme string,
+      // so we take everything after it.
+      val secondScheme = unformattedSecondScheme.substring(1)
+
+      (Some(firstScheme), Some(secondScheme))
+
+    // The scheme does not contain "+", but it still points some kind
+    // of compressed data. In the case where we're reading data from
+    // a local file system, we can drop the scheme for that backend
+    // as it's not neeeded to read the file.
+    } else if (targetsCompressedDirectory) {
+
+      // The data just points to a compressed file and not data within
+      // it.
+      if (!targetsCompressedFile) {
+        val extensionIndex = targetFileName.lastIndexOf(".") + 1
+        val extension = targetFileName.substring(extensionIndex)
+
+        (
+          FILE_TYPE_TO_SCHEME.get(extension),
+          if (isLocal) None else Some(schemeString)
+        )
+
+      // The path points to data within a compressed file that needs
+      // to be read.
+      } else {
+        val compressionName = targetFileName.split(compressedFileDelimiter).head
+
+        val extensionIndex = compressionName.lastIndexOf(".") + 1
+        val extension = compressionName.substring(extensionIndex)
+
+        (
+          FILE_TYPE_TO_SCHEME.get(extension),
+          if (isLocal) None else Some(schemeString)
+        )
+      }
+
+    // We're not reading any compressed data
+    } else
+      (None, if (isLocal) None else Some(schemeString))
 
   private lazy val firstVSIScheme: String =
-    if (isChained)
-*/
-
-
-
-object VSIPath {
-  import Schemes._
-
-  final val schemePattern: Regex = """.*?(?=\:)""".r
-  final val firstSchemePattern: Regex = """[^\+]*""".r
-  final val secondSchemePattern: Regex = """(?<=\+).*?(?=\:)""".r
-
-  final val userInfoPattern: Regex = """(?<=\/\/).*?(?=@)""".r
-
-  final val authorityPattern: Regex = """(?<=\/\/).*?(?=\/)""".r
-
-  final val defaultPathPattern: Regex = """(?<=(?:(\/){2})).+""".r
-  final val windowsLocalPathPattern: Regex = """(?<=(?:(\/))).+""".r
-
-  def apply(uri: URI): String = ???
-
-  def apply(path: String): String = {
-    val pathScheme: Option[String] = schemePattern.findFirstIn(path)
-
-    lazy val defaultPath = defaultPathPattern.findFirstIn(path)
-    lazy val windowsPath = windowsLocalPathPattern.findFirstIn(path)
-
-    val isWindows: Boolean =
-      System.getProperty("os.name").toLowerCase == "win"
-
-    pathScheme match {
-      case Some(scheme) if (scheme.contains("+")) =>
-        for {
-          firstHalf <- firstSchemePattern.findFirstIn(scheme)
-          secondHalf <- secondSchemePattern.findFirstIn(scheme)
-          //targetPath <- defaultPath if (!isWindows || secondHalf != FILE) else windowsPath
-        } yield {
-          ???
-          // Get the scheme for the compressed file type
-          val fileScheme: String = schemeForFileType(firstHalf)
-          ???
-        }
-
-        ???
+    firstScheme.flatMap { FILE_TYPE_TO_SCHEME.get } match {
+      case Some(firstHalf) => s"/vsi$firstHalf/"
+      case None => ""
     }
 
-    def schemeForFileType(targetPath: String): String =
-      FILE_TYPE_TO_SCHEME
-        .get(targetPath.substring(targetPath.lastIndexOf(".") + 1)) match {
-        case Some(scheme) => s"/vsi$scheme/"
+  private lazy val secondVSIScheme: String = {
+    val secondSchemeString: String =
+      secondScheme match {
+        case Some(scheme) => scheme
         case None => ""
       }
 
-    ???
+    secondSchemeString match {
+      case (FTP | HTTP | HTTPS) =>
+        if (targetsCompressedFile)
+          s"/vsicurl/$secondSchemeString://$formattedPathString"
+        else
+          s"/vsicurl/$path"
+      case S3 =>
+        s"/vsis3/$formattedPathString"
+      case GS =>
+        s"/vsigs/$formattedPathString"
+      case (WASB | WASBS) =>
+        val azurePath = {
+          val authoritySize = authorityString.size
+          val substring = formattedPathString.substring(authorityString.size)
 
-    /*
-    def formatPath(targetURI: URI): String = {
-      lazy val uriPath = targetURI.getPath
+          if (substring.startsWith("/")) substring.drop(1) else substring
+        }
 
-      targetURI.getScheme match {
-        case (FTP | HTTP | HTTPS) =>
-          s"/vsicurl/${targetURI.toString}"
-        case S3 =>
-          s"/vsis3/${targetURI.getAuthority}$uriPath"
-        case GS =>
-          s"/vsigs/${targetURI.getAuthority}$uriPath"
-        case (WASB | WASBS) =>
-          val azurePath =
-            if (uriPath.startsWith("/")) uriPath.drop(1) else uriPath
+        s"/vsiaz/$userInfoString/$azurePath"
+      case HDFS =>
+        if (targetsCompressedFile)
+          s"/vsihdfs/$formattedPathString"
+        else
+          s"/vsihdfs/$path"
+      case FILE =>
+        formattedPathString
+      case _ =>
+        // If no scheme is found, assume the uri is
+        // a relative path to a file
+        formattedPathString
+    }
+  }
 
-          s"/vsiaz/${targetURI.getUserInfo}/$azurePath"
-        case HDFS =>
-          s"/vsihdfs/${targetURI.toString}"
-        case FILE =>
-          if (isWindows)
-            targetURI.toString.split("file:/").tail.head
-          else
-            targetURI.toString.split("file://").tail.head
-        case _ =>
-          // If no scheme is found, assume the uri is
-          // a relative path to a file
-          uriPath
-      }
+  lazy val vsiPath:String = firstVSIScheme + secondVSIScheme
+
+  lazy val authority: Option[String] =
+    AUTHORITY_PATTERN.findFirstIn(path)
+
+  lazy private val authorityString: String =
+    authority match {
+      case Some(authority) => authority
+      case None => ""
     }
 
-    val (leadingScheme, secondScheme) =
-      if (scheme != null && scheme.contains("+")) {
-        // If the Scheme contains a "+" then we'll be reading a
-        // single file from a compressed source on some backend.
+  lazy val userInfo: Option[String] =
+    USER_INFO_PATTERN.findFirstIn(path)
 
-        // The first scheme is the type of compression the source has
-        // zip, gzip, tar, etc.
-        // The second scheme is the backend where the source is located
-        val (firstScheme, unformattedSecondScheme): (String, String) =
-          scheme.splitAt(scheme.indexOf("+"))
+  lazy private val userInfoString: String =
+    userInfo match {
+      case Some(info) => info
+      case None => ""
+    }
 
-        // We need to take the tail because "+" is still apart of the
-        // scheme
-        val secondScheme = unformattedSecondScheme.tail
+  lazy val targetPath: Option[String] =
+    scheme match {
+      case Some(_) =>
+        if (onLocalWindows)
+          WINDOWS_LOCAL_PATH_PATTERN.findFirstIn(path)
+        else
+          DEFAULT_PATH_PATTERN.findFirstIn(path)
+      case None =>
+        Some(path)
+    }
 
-        // On Windows, the local file system Scheme is followed by
-        // ":/" (+2) as opposed to "://" (+3) which is used on other
-        // types of machines.
-        val pathWithoutScheme: String =
-          if (isWindows && scheme == FILE)
-            path.substring(scheme.size + 2)
-          else
-            path.substring(scheme.size + 3)
+  private lazy val targetPathString: String =
+    targetPath match {
+      case Some(pathString) => pathString
+      case None => throw new Exception(s"Could not determine the paths for: $path")
+    }
 
-        // The target file is seperated from its source in the URI with
-        // an "!". Therefore, we must find and replace it with the
-        // appropriate symbol.
-        val exclamationIndex: Int = pathWithoutScheme.lastIndexOf("!")
+  private lazy val formattedPathString: String =
+    if (!targetsCompressedFile)
+      targetPathString
+    else {
+      val formattedFileName =
+        if (onLocalWindows)
+          targetFileName.replace(compressedFileDelimiter, """\\""")
+        else
+          targetFileName.replace(compressedFileDelimiter, "/")
 
-        val firstHalf: String = pathWithoutScheme.substring(0, exclamationIndex)
-        val secondHalf: String = pathWithoutScheme.substring(exclamationIndex + 1)
+      val pathWithoutFileName =
+        targetPathString.substring(0, targetPathString.size - formattedFileName.size)
 
-        // If we're not trying to read a local file on a Windows machine,
-        // then we use this path.
-        lazy val defaultFormattedPath: String = secondScheme + "://" + firstHalf + "/" + secondHalf
+      pathWithoutFileName + formattedFileName
+    }
 
-        val formattedPath: String =
-          if (isWindows && secondScheme == FILE)
-            secondScheme + ":/" + firstHalf + "\\" + secondHalf
-          else
-            defaultFormattedPath
-
-        // Get the scheme for the compressed file type
-        val fileScheme: String = schemeForFileType(firstHalf)
-
-        // The scheme the scheme that points to the file on the given backend
-        val followingScheme: String = formatPath(new URI(formattedPath))
-
-        (fileScheme, followingScheme)
-
-      } else if (path.contains("."))
-        // This URI could potentially contain chained Schemes, so we should check
-        // to make sure.
-        (schemeForFileType(path), formatPath(uri))
-
+  lazy val targetFileName: String = {
+    val filePath =
+      if (onLocalWindows)
+        // File isn't able to find the name of the
+        // target file if '\' are in the path, so we
+        // need to replace them with '/'.
+        targetPathString.replaceAll("""\\""", "/")
       else
-        // The URI is not pointing to a file, so throw an error.
-        throw new Exception(s"The given URI: $uri must point to a file, but none was found")
+        targetPathString
 
-    leadingScheme + secondScheme
-    */
+    new File(filePath).getName
   }
+
+  private lazy val targetsCompressedDirectory: Boolean =
+    COMPRESSED_FILE_TYPES
+      .map { extension => targetFileName.contains(extension) }
+      .reduce { _ || _ }
+
+  private lazy val targetsCompressedFile: Boolean =
+    targetFileName.contains(compressedFileDelimiter)
 }
