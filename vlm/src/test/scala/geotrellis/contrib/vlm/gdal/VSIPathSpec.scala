@@ -12,45 +12,40 @@ class VSIPathSpec extends FunSpec with Matchers {
         val filePath = "www.radomdata.com/test-files/file-1.tiff"
         val url = s"http://$filePath"
         val expectedPath = s"/vsicurl/$url"
-        val vsi = VSIPath2(url)
 
-        VSIPath2(url).vsiPath should be (expectedPath)
+        VSIPath(url).vsiPath should be (expectedPath)
       }
 
       it("http that points to gzip url") {
         val filePath = "www.radomdata.com/test-files/data.gzip"
         val url = s"http://$filePath"
         val expectedPath = s"/vsigzip//vsicurl/$url"
-        val vsi = VSIPath2(url)
 
-        VSIPath2(url).vsiPath should be (expectedPath)
+        VSIPath(url).vsiPath should be (expectedPath)
       }
 
       it("http that points to gzip with ! url") {
         val filePath = "www.radomdata.com/test-files/data.gzip"
         val url = s"http://$filePath!$fileName"
         val expectedPath = s"/vsigzip//vsicurl/http://$filePath/$fileName"
-        val vsi = VSIPath2(url)
 
-        VSIPath2(url).vsiPath should be (expectedPath)
+        VSIPath(url).vsiPath should be (expectedPath)
       }
 
       it("zip+http url") {
         val filePath = "www.radomdata.com/test-files/data.zip"
         val url = s"zip+http://$filePath"
         val expectedPath = s"/vsizip//vsicurl/$url"
-        val vsi = VSIPath2(url)
 
-        VSIPath2(url).vsiPath should be (expectedPath)
+        VSIPath(url).vsiPath should be (expectedPath)
       }
 
       it("zip+http with ! url") {
         val filePath = "www.radomdata.com/test-files/data.zip"
         val url = s"zip+http://$filePath!$fileName"
         val expectedPath = s"/vsizip//vsicurl/http://$filePath/$fileName"
-        val vsi = VSIPath2(url)
 
-        VSIPath2(url).vsiPath should be (expectedPath)
+        VSIPath(url).vsiPath should be (expectedPath)
       }
     }
 
@@ -60,7 +55,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"file://$filePath"
         val expectedPath = filePath
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("file that points to zip uri") {
@@ -68,7 +63,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"file://$filePath"
         val expectedPath = s"/vsizip/$filePath"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("file that points to zip with ! uri") {
@@ -76,7 +71,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"file://$filePath!$fileName"
         val expectedPath = s"/vsizip/$filePath/$fileName"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("zip+file uri") {
@@ -84,7 +79,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"zip+file://$path"
         val expectedPath = "/vsizip//tmp/some/data/data.zip"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("zip+file with ! uri") {
@@ -92,7 +87,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"zip+file://$path!$fileName"
         val expectedPath = s"/vsizip/$path/$fileName"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
     }
 
@@ -102,7 +97,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"s3://$filePath"
         val expectedPath = s"/vsis3/$filePath"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("s3 that points to gzip uri") {
@@ -110,7 +105,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"s3://$filePath"
         val expectedPath = s"/vsigzip//vsis3/$filePath"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("s3 that points to gzip with uri") {
@@ -118,7 +113,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"s3://$filePath!$fileName"
         val expectedPath = s"/vsigzip//vsis3/$filePath/$fileName"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("gzip+s3 uri") {
@@ -126,7 +121,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"gzip+s3://$path"
         val expectedPath = s"/vsigzip//vsis3/$path"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("gzip+s3 uri with !") {
@@ -134,7 +129,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"gzip+s3://$path!$fileName"
         val expectedPath = s"/vsigzip//vsis3/$path/$fileName"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
     }
 
@@ -144,7 +139,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"hdfs://$filePath"
         val expectedPath = s"/vsihdfs/$uri"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("hdfs that points to tgz uri") {
@@ -152,7 +147,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"hdfs://$filePath"
         val expectedPath = s"/vsitar//vsihdfs/$uri"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("hdfs that points to tgz with ! uri") {
@@ -160,7 +155,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"hdfs://$filePath!$fileName"
         val expectedPath = s"/vsitar//vsihdfs/$filePath/$fileName"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("zip+hdfs uri") {
@@ -168,7 +163,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"zip+hdfs://$filePath"
         val expectedPath = s"/vsizip//vsihdfs/$uri"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("zip+hdfs with ! uri") {
@@ -176,7 +171,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"zip+hdfs://$filePath!$fileName"
         val expectedPath = s"/vsizip//vsihdfs/$filePath/$fileName"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
     }
 
@@ -186,7 +181,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"gs://$filePath"
         val expectedPath = s"/vsigs/$filePath"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("Google Cloud Storage that points to tar uri") {
@@ -194,7 +189,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"gs://$filePath"
         val expectedPath = s"/vsitar//vsigs/$filePath"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("Google Cloud Storage that points to tar with ! uri") {
@@ -202,7 +197,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"gs://$filePath!$fileName"
         val expectedPath = s"/vsitar//vsigs/$filePath/$fileName"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("tar+gs uri") {
@@ -210,7 +205,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"tar+gs://$filePath"
         val expectedPath = s"/vsitar//vsigs/$filePath"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("tar+gs with ! uri") {
@@ -218,7 +213,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"tar+gs://$filePath!$fileName"
         val expectedPath = s"/vsitar//vsigs/$filePath/$fileName"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
     }
 
@@ -227,28 +222,28 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = "wasb://test-files@myaccount.blah.core.net/nlcd/data/tiff-0.tiff"
         val expectedPath = "/vsiaz/test-files/nlcd/data/tiff-0.tiff"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("Azure that points to kmz uri") {
         val uri = "wasb://test-files@myaccount.blah.core.net/nlcd/data/info.kmz"
         val expectedPath = "/vsizip//vsiaz/test-files/nlcd/data/info.kmz"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("Azure that points to kmz with ! uri") {
         val uri = s"wasb://test-files@myaccount.blah.core.net/nlcd/data/info.kmz!$fileName"
         val expectedPath = s"/vsizip//vsiaz/test-files/nlcd/data/info.kmz/$fileName"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("wasb+zip uri") {
         val uri = "zip+wasb://test-files@myaccount.blah.core.net/nlcd/data/info.zip"
         val expectedPath = "/vsizip//vsiaz/test-files/nlcd/data/info.zip"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("wasb+zip with ! uri") {
@@ -256,7 +251,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"$path!$fileName"
         val expectedPath = s"/vsizip//vsiaz/test-files/nlcd/data/info.zip/$fileName"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
     }
 
@@ -266,7 +261,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = filePath
         val expectedPath = filePath
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("relative path that points to zip uri") {
@@ -274,7 +269,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = filePath
         val expectedPath = s"/vsizip/$filePath"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
 
       it("relative path that points to zip with ! uri") {
@@ -282,7 +277,7 @@ class VSIPathSpec extends FunSpec with Matchers {
         val uri = s"$filePath!$fileName"
         val expectedPath = s"/vsizip/$filePath/$fileName"
 
-        VSIPath2(uri).vsiPath should be (expectedPath)
+        VSIPath(uri).vsiPath should be (expectedPath)
       }
     }
   }
@@ -293,7 +288,7 @@ class VSIPathSpec extends FunSpec with Matchers {
       val uri = s"s3://$filePath"
       val expectedPath = s"/vsis3/$filePath"
 
-      VSIPath2(uri).vsiPath should be (expectedPath)
+      VSIPath(uri).vsiPath should be (expectedPath)
     }
 
     it("should parse a targeted compressed file with a differenct delimiter") {
@@ -301,7 +296,7 @@ class VSIPathSpec extends FunSpec with Matchers {
       val uri = s"s3://$filePath/$fileName"
       val expectedPath = s"/vsis3/$filePath/$fileName"
 
-      VSIPath2(uri, "/").vsiPath should be (expectedPath)
+      VSIPath(uri, "/").vsiPath should be (expectedPath)
     }
   }
 }
