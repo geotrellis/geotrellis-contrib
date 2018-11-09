@@ -1,14 +1,12 @@
 package geotrellis.contrib.vlm.gdal
 
-import java.net.URI
-
 import org.scalatest._
 
 
 class VSIPathSpec extends FunSpec with Matchers {
-  describe("Formatting the given uris") {
-    val fileName = "file-1.tiff"
+  val fileName = "file-1.tiff"
 
+  describe("Formatting the given uris") {
     describe("http") {
       it("http url") {
         val filePath = "www.radomdata.com/test-files/file-1.tiff"
@@ -260,6 +258,50 @@ class VSIPathSpec extends FunSpec with Matchers {
 
         VSIPath2(uri).vsiPath should be (expectedPath)
       }
+    }
+
+    describe("relative path") {
+      it("relative path uri") {
+        val filePath = "../../test-files/file-1.tiff"
+        val uri = filePath
+        val expectedPath = filePath
+
+        VSIPath2(uri).vsiPath should be (expectedPath)
+      }
+
+      it("relative path that points to zip uri") {
+        val filePath = "../../test-files/data.zip"
+        val uri = filePath
+        val expectedPath = s"/vsizip/$filePath"
+
+        VSIPath2(uri).vsiPath should be (expectedPath)
+      }
+
+      it("relative path that points to zip with ! uri") {
+        val filePath = "../../test-files/data.zip"
+        val uri = s"$filePath!$fileName"
+        val expectedPath = s"/vsizip/$filePath/$fileName"
+
+        VSIPath2(uri).vsiPath should be (expectedPath)
+      }
+    }
+  }
+
+  describe("Formatting the given uris - edge cases") {
+    it("should parse a path with uncommon characters") {
+      val filePath = """data/jake__user--data!@#$%^&*()`~{}[]\|=+,?';<>;/files/my-data.tif"""
+      val uri = s"s3://$filePath"
+      val expectedPath = s"/vsis3/$filePath"
+
+      VSIPath2(uri).vsiPath should be (expectedPath)
+    }
+
+    it("should parse a targeted compressed file with a differenct delimiter") {
+      val filePath = "data/my-data/data!.zip"
+      val uri = s"s3://$filePath/$fileName"
+      val expectedPath = s"/vsis3/$filePath/$fileName"
+
+      VSIPath2(uri, "/").vsiPath should be (expectedPath)
     }
   }
 }
