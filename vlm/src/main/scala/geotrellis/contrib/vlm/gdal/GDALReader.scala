@@ -10,9 +10,6 @@ import org.gdal.gdalconst.gdalconstConstants
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-import java.net.URI
-
-
 class GDALReader(val dataset: Dataset) {
   protected val bandCount: Int = dataset.getRasterCount()
 
