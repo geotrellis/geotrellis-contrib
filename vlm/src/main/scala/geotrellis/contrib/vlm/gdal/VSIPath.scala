@@ -12,23 +12,38 @@ case class VSIPath(
   import Schemes._
   import Patterns._
 
-  private lazy val isLocal: Boolean =
-    schemeString.contains(FILE) || schemeString == ""
-
-  // Trying to read something locally on Windows matters
-  // because of how file paths on Windows are formatted.
-  // Therefore, we need to handle them differently.
-  private lazy val onLocalWindows: Boolean =
-    System.getProperty("os.name").toLowerCase == "win" && isLocal
-
-  lazy val scheme: Option[String] =
+  val scheme: Option[String] =
     SCHEME_PATTERN.findFirstIn(path)
 
-  private lazy val schemeString: String =
+  val targetPath: Option[String] =
     scheme match {
-      case Some(targetScheme) => targetScheme.toLowerCase
-      case None => ""
+      case Some(_) =>
+        if (onLocalWindows)
+          WINDOWS_LOCAL_PATH_PATTERN.findFirstIn(path)
+        else
+          DEFAULT_PATH_PATTERN.findFirstIn(path)
+      case None =>
+        Some(path)
     }
+
+  val targetFileName: String = {
+    val filePath =
+      if (onLocalWindows)
+        // File isn't able to find the name of the
+        // target file if '\' are in the path, so we
+        // need to replace them with '/'.
+        targetPathString.replaceAll("""\\""", "/")
+      else
+        targetPathString
+
+    new File(filePath).getName
+  }
+
+  val authority: Option[String] =
+    AUTHORITY_PATTERN.findFirstIn(path)
+
+  val userInfo: Option[String] =
+    USER_INFO_PATTERN.findFirstIn(path)
 
   // The given path can contain 0, 1, or 2 different schemes. Any one of these
   // can be chained together with other handlers. Thus, we must find out what
@@ -41,7 +56,7 @@ case class VSIPath(
   // The secondScheme points the to the handler needed to access the target
   // backend (ie. vsis3, vsihdfs, etc). The only time there isn't a
   // secondScheme is when the user is reading from the local file system.
-  lazy val (firstScheme, secondScheme): (Option[String], Option[String]) =
+  val (firstScheme, secondScheme): (Option[String], Option[String]) =
 
     // Schemes that contain "+" point to a file that's either compressed or
     // within a compressed file itself.
@@ -86,13 +101,55 @@ case class VSIPath(
     } else
       (None, if (isLocal) None else Some(schemeString))
 
-  private lazy val firstVSIScheme: String =
+  val vsiPath:String = firstVSIScheme + secondVSIScheme
+
+  private def schemeString: String =
+    scheme match {
+      case Some(targetScheme) => targetScheme.toLowerCase
+      case None => ""
+    }
+
+  private def authorityString: String =
+    authority match {
+      case Some(authority) => authority
+      case None => ""
+    }
+
+  private def userInfoString: String =
+    userInfo match {
+      case Some(info) => info
+      case None => ""
+    }
+
+  private def targetPathString: String =
+    targetPath match {
+      case Some(pathString) => pathString
+      case None => throw new Exception(s"Could not determine the paths for: $path")
+    }
+
+  private def formattedPathString: String =
+    if (!targetsCompressedFile)
+      targetPathString
+    else {
+      val formattedFileName =
+        if (onLocalWindows)
+          targetFileName.replace(compressedFileDelimiter, """\\""")
+        else
+          targetFileName.replace(compressedFileDelimiter, "/")
+
+      val pathWithoutFileName =
+        targetPathString.substring(0, targetPathString.size - formattedFileName.size)
+
+      pathWithoutFileName + formattedFileName
+    }
+
+  private def firstVSIScheme: String =
     firstScheme.flatMap { FILE_TYPE_TO_SCHEME.get } match {
       case Some(firstHalf) => s"/vsi$firstHalf/"
       case None => ""
     }
 
-  private lazy val secondVSIScheme: String = {
+  private def secondVSIScheme: String = {
     val secondSchemeString: String =
       secondScheme match {
         case Some(scheme) => scheme
@@ -132,77 +189,20 @@ case class VSIPath(
     }
   }
 
-  lazy val vsiPath:String = firstVSIScheme + secondVSIScheme
-
-  lazy val authority: Option[String] =
-    AUTHORITY_PATTERN.findFirstIn(path)
-
-  lazy private val authorityString: String =
-    authority match {
-      case Some(authority) => authority
-      case None => ""
-    }
-
-  lazy val userInfo: Option[String] =
-    USER_INFO_PATTERN.findFirstIn(path)
-
-  lazy private val userInfoString: String =
-    userInfo match {
-      case Some(info) => info
-      case None => ""
-    }
-
-  lazy val targetPath: Option[String] =
-    scheme match {
-      case Some(_) =>
-        if (onLocalWindows)
-          WINDOWS_LOCAL_PATH_PATTERN.findFirstIn(path)
-        else
-          DEFAULT_PATH_PATTERN.findFirstIn(path)
-      case None =>
-        Some(path)
-    }
-
-  private lazy val targetPathString: String =
-    targetPath match {
-      case Some(pathString) => pathString
-      case None => throw new Exception(s"Could not determine the paths for: $path")
-    }
-
-  private lazy val formattedPathString: String =
-    if (!targetsCompressedFile)
-      targetPathString
-    else {
-      val formattedFileName =
-        if (onLocalWindows)
-          targetFileName.replace(compressedFileDelimiter, """\\""")
-        else
-          targetFileName.replace(compressedFileDelimiter, "/")
-
-      val pathWithoutFileName =
-        targetPathString.substring(0, targetPathString.size - formattedFileName.size)
-
-      pathWithoutFileName + formattedFileName
-    }
-
-  lazy val targetFileName: String = {
-    val filePath =
-      if (onLocalWindows)
-        // File isn't able to find the name of the
-        // target file if '\' are in the path, so we
-        // need to replace them with '/'.
-        targetPathString.replaceAll("""\\""", "/")
-      else
-        targetPathString
-
-    new File(filePath).getName
-  }
-
-  private lazy val targetsCompressedDirectory: Boolean =
+  private def targetsCompressedDirectory: Boolean =
     COMPRESSED_FILE_TYPES
       .map { extension => targetFileName.contains(extension) }
       .reduce { _ || _ }
 
-  private lazy val targetsCompressedFile: Boolean =
+  private def targetsCompressedFile: Boolean =
     targetFileName.contains(compressedFileDelimiter)
+
+  private def isLocal: Boolean =
+    schemeString.contains(FILE) || schemeString == ""
+
+  // Trying to read something locally on Windows matters
+  // because of how file paths on Windows are formatted.
+  // Therefore, we need to handle them differently.
+  private def onLocalWindows: Boolean =
+    System.getProperty("os.name").toLowerCase == "win" && isLocal
 }
