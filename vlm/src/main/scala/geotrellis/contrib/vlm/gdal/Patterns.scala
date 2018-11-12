@@ -11,7 +11,6 @@ object Patterns {
   final val SCHEME_PATTERN: Regex = """.*?(?=\:)""".r
   final val FIRST_SCHEME_PATTERN: Regex = """[^\+]*""".r
   final val SECOND_SCHEME_PATTERN: Regex = """(?<=\+).*?(?=\:)""".r
-  //final val SECOND_SCHEME_PATTERN: Regex = """(?<=\+).+""".r
 
   final val USER_INFO_PATTERN: Regex = """(?<=\/\/).*?(?=@)""".r
 
