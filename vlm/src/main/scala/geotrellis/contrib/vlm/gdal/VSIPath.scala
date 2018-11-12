@@ -46,14 +46,10 @@ case class VSIPath(
     // Schemes that contain "+" point to a file that's either compressed or
     // within a compressed file itself.
     if (schemeString.contains("+")) {
-      val (firstScheme, unformattedSecondScheme): (String, String) =
-        schemeString.splitAt(schemeString.lastIndexOf("+"))
+      val firstScheme = FIRST_SCHEME_PATTERN.findFirstIn(schemeString)
+      val secondScheme = SECOND_SCHEME_PATTERN.findFirstIn(path)
 
-      // "+" is the first character of the unformattedSecondScheme string,
-      // so we take everything after it.
-      val secondScheme = unformattedSecondScheme.substring(1)
-
-      (Some(firstScheme), Some(secondScheme))
+      (firstScheme, secondScheme)
 
     // The scheme does not contain "+", but it still points some kind
     // of compressed data. In the case where we're reading data from
