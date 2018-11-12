@@ -12,12 +12,6 @@ case class VSIPath(
   import Schemes._
   import Patterns._
 
-  // Trying to read something locally on Windows matters
-  // because of how file paths on Windows are formatted.
-  // Therefore, we need to handle them differently.
-  private def onLocalWindows: Boolean =
-    System.getProperty("os.name").toLowerCase == "win" && isLocal
-
   val scheme: Option[String] =
     SCHEME_PATTERN.findFirstIn(path)
 
@@ -29,6 +23,12 @@ case class VSIPath(
 
   private val isLocal: Boolean =
     schemeString.contains(FILE) || schemeString == ""
+
+  // Trying to read something locally on Windows matters
+  // because of how file paths on Windows are formatted.
+  // Therefore, we need to handle them differently.
+  private val onLocalWindows: Boolean =
+    System.getProperty("os.name").toLowerCase == "win" && isLocal
 
   val targetPath: Option[String] =
     scheme match {
