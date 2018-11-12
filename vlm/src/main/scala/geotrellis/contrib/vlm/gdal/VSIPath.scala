@@ -1,19 +1,21 @@
 package geotrellis.contrib.vlm.gdal
 
-import scala.util.matching.Regex
-
 import java.io.File
 
 
+/*
+ * Parses and formats the given URI into a format that GDAL can read.
+ * The [[vsiPath]] value contains this formatted string.
+ */
 case class VSIPath(
-  path: String,
+  uri: String,
   compressedFileDelimiter: String = "!"
 ) {
   import Schemes._
   import Patterns._
 
   val scheme: Option[String] =
-    SCHEME_PATTERN.findFirstIn(path)
+    SCHEME_PATTERN.findFirstIn(uri)
 
   private val schemeString: String =
     scheme match {
@@ -34,17 +36,17 @@ case class VSIPath(
     scheme match {
       case Some(_) =>
         if (onLocalWindows)
-          WINDOWS_LOCAL_PATH_PATTERN.findFirstIn(path)
+          WINDOWS_LOCAL_PATH_PATTERN.findFirstIn(uri)
         else
-          DEFAULT_PATH_PATTERN.findFirstIn(path)
+          DEFAULT_PATH_PATTERN.findFirstIn(uri)
       case None =>
-        Some(path)
+        Some(uri)
     }
 
   private val targetPathString: String =
     targetPath match {
       case Some(pathString) => pathString
-      case None => throw new Exception(s"Could not determine the paths for: $path")
+      case None => throw new Exception(s"Could not determine the paths for: $uri")
     }
 
   val targetFileName: String = {
@@ -69,7 +71,7 @@ case class VSIPath(
     targetFileName.contains(compressedFileDelimiter)
 
   val authority: Option[String] =
-    AUTHORITY_PATTERN.findFirstIn(path)
+    AUTHORITY_PATTERN.findFirstIn(uri)
 
   private val authorityString: String =
     authority match {
@@ -78,7 +80,7 @@ case class VSIPath(
     }
 
   val userInfo: Option[String] =
-    USER_INFO_PATTERN.findFirstIn(path)
+    USER_INFO_PATTERN.findFirstIn(uri)
 
   private val userInfoString: String =
     userInfo match {
@@ -119,7 +121,7 @@ case class VSIPath(
     // within a compressed file itself.
     if (schemeString.contains("+")) {
       val firstScheme = FIRST_SCHEME_PATTERN.findFirstIn(schemeString)
-      val secondScheme = SECOND_SCHEME_PATTERN.findFirstIn(path)
+      val secondScheme = SECOND_SCHEME_PATTERN.findFirstIn(uri)
 
       (firstScheme, secondScheme)
 
@@ -176,7 +178,7 @@ case class VSIPath(
         if (targetsCompressedFile)
           s"/vsicurl/$secondSchemeString://$formattedPathString"
         else
-          s"/vsicurl/$path"
+          s"/vsicurl/$uri"
       case S3 =>
         s"/vsis3/$formattedPathString"
       case GS =>
@@ -194,7 +196,7 @@ case class VSIPath(
         if (targetsCompressedFile)
           s"/vsihdfs/$formattedPathString"
         else
-          s"/vsihdfs/$path"
+          s"/vsihdfs/$uri"
       case FILE =>
         formattedPathString
       case _ =>
