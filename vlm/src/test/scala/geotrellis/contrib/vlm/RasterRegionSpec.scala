@@ -11,7 +11,7 @@ import org.apache.spark.rdd._
 import org.scalatest._
 import Inspectors._
 
-class RasterRefSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
+class RasterRegionSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
   it("reads RDD of raster refs") {
     // we're going to read these and re-build gradient.tif
 
@@ -30,8 +30,8 @@ class RasterRefSpec extends FunSpec with TestEnvironment with BetterRasterMatche
     }
     val crs = LatLng
 
-    When("Generating RDD of RasterRefs")
-    val rdd: RDD[(SpatialKey, RasterRef)] with Metadata[TileLayerMetadata[SpatialKey]] = {
+    When("Generating RDD of RasterRegions")
+    val rdd: RDD[(SpatialKey, RasterRegion)] with Metadata[TileLayerMetadata[SpatialKey]] = {
       val srcRdd = sc.parallelize(paths, paths.size).map { uri => new GeoTiffRasterSource(uri) }
       srcRdd.cache()
 
@@ -50,7 +50,7 @@ class RasterRefSpec extends FunSpec with TestEnvironment with BetterRasterMatche
       val refRdd = srcRdd.flatMap { src =>
         // too easy? whats missing
         val tileSource = new LayoutTileSource(src, layout)
-        tileSource.keys.toIterator.map { key => (key, tileSource.rasterRef(key)) }
+        tileSource.keys.toIterator.map { key => (key, tileSource.rasterRegionForKey(key)) }
       }
 
       // TADA! Jobs done.
@@ -61,10 +61,10 @@ class RasterRefSpec extends FunSpec with TestEnvironment with BetterRasterMatche
       // - run aup on EMR, figure out how to set AWS secret keys?
     }
 
-    Then("get a RasterRef for each region of each file")
+    Then("get a RasterRegion for each region of each file")
     rdd.count shouldBe (8*8*3) // three 256x256 files split into 32x32 windows
 
-    Then("convert each RasterRef to a tile")
+    Then("convert each RasterRegion to a tile")
     val realRdd: MultibandTileLayerRDD[SpatialKey] =
       rdd.withContext(_.flatMap{ case (key, ref) =>
         for {

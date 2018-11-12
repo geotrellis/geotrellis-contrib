@@ -168,23 +168,6 @@ trait RasterSource extends CellGrid with Closeable with Serializable {
       LayoutTileSource(resampleToGrid(layout, resampleMethod), layout)
 
     def close = { }
-
-    def readRef(ref: RasterRef): Option[Raster[MultibandTile]] = {
-      for {
-        bounds <- ref.bounds.intersection(this)
-        raster <- read(bounds)
-      } yield {
-        if (raster.tile.cols == ref.cols && raster.tile.rows == ref.cols) {
-          raster
-        } else { // we didn't get all the pixels we wanted, pad them out
-          // ref bounds are relative to this source
-          // offsets to be padded are relative to bounds that were requested
-          val colOffset = math.abs(ref.bounds.colMin - bounds.colMin)
-          val rowOffset = math.abs(ref.bounds.rowMin - bounds.rowMin)
-          raster.mapTile(_.mapBands { (_, band) => PaddedTile(band, colOffset, rowOffset, ref.cols, ref.rows) })
-        }
-      }
-   }
 }
 
 object RasterSource {

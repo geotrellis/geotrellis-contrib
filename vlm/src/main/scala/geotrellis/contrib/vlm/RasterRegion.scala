@@ -20,16 +20,31 @@ import geotrellis.vector.{Extent, ProjectedExtent}
 import geotrellis.raster._
 
 /** Reference to a pixel region in a [[RasterSource]] that may be read at a later time.
+  * @note It is required that the [[RasterSource]] intersects with the given [[GridBounds]].
   *
-  * @param source raster source that can be used to read this ref
+  * @param source raster source that can be used to read this region.
   * @param bounds pixel bounds relative to the source, maybe not be fully contained by the source bounds.
   */
-case class RasterRef(
+case class RasterRegion(
   source: RasterSource,
   bounds: GridBounds
 ) extends CellGrid with Serializable {
+  require(bounds.intersects(source.gridBounds), s"The given bounds: $bounds must intersect the given source: $source")
+
   @transient lazy val raster: Option[Raster[MultibandTile]] =
-    source.readRef(this)
+    for {
+      intersection <- source.gridBounds.intersection(bounds)
+      raster <- source.read(intersection)
+    } yield {
+      if (raster.tile.cols == cols && raster.tile.rows == rows)
+        raster
+      else {
+        val colOffset = math.abs(bounds.colMin - intersection.colMin)
+        val rowOffset = math.abs(bounds.rowMin - intersection.rowMin)
+
+        raster.mapTile { _.mapBands { (_, band) => PaddedTile(band, colOffset, rowOffset, cols, rows) } }
+      }
+    }
 
   def cols: Int = bounds.width
   def rows: Int = bounds.height

@@ -32,8 +32,8 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
   def sourceColOffset: Long = ((source.extent.xmin - layout.extent.xmin) / layout.cellwidth).toLong
   def sourceRowOffset: Long = ((layout.extent.ymax - source.extent.ymax) / layout.cellheight).toLong
 
-  /** Generate RasterRef for key */
-  def rasterRef(key: SpatialKey): RasterRef = {
+  /** Generate RasterRegion for this key */
+  def rasterRegionForKey(key: SpatialKey): RasterRegion = {
     val col = key.col.toLong
     val row = key.row.toLong
     val sourcePixelBounds = GridBounds(
@@ -41,7 +41,7 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
       rowMin = (row * layout.tileRows - sourceRowOffset).toInt,
       colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset).toInt,
       rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset).toInt)
-    RasterRef(source, sourcePixelBounds)
+    RasterRegion(source, sourcePixelBounds)
   }
 
   /** Read tile according to key.
@@ -121,8 +121,9 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
     }
   }
 
-  def toRasterRefs: Iterator[(SpatialKey, RasterRef)] =
-    keys().toIterator.map(key => (key, rasterRef(key)))
+  /** All intersecting RasterRegions with their respective keys */
+  def keyedRasterRegions(): Iterator[(SpatialKey, RasterRegion)] =
+    keys().toIterator.map(key => (key, rasterRegionForKey(key)))
 }
 
 object LayoutTileSource {
