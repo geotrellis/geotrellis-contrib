@@ -7,6 +7,8 @@ import org.gdal.gdal.gdal
 import org.gdal.gdal.Dataset
 import org.gdal.gdalconst.gdalconstConstants
 
+import java.net.URI
+
 // All of the logic in this file was taken from:
 // https://github.com/geotrellis/geotrellis-gdal/blob/master/gdal/src/main/scala/geotrellis/gdal/Gdal.scala
 
@@ -88,7 +90,16 @@ object GDAL {
       case _ => throw new Exception(s"Could not find equivalent GDALResampleMethod for: $method")
     }
 
-  def open(path: String): Dataset = {
+  def openURI(uri: URI): Dataset =
+    openPath(VSIPath(uri.toString).vsiPath)
+
+  def open(path: String): Dataset =
+    if (VSIPath.isVSIFormatted(path))
+      openPath(path)
+    else
+      openPath(VSIPath(path).vsiPath)
+
+  def openPath(path: String): Dataset = {
     val ds = gdal.Open(path, gdalconstConstants.GA_ReadOnly)
     if(ds == null) {
       throw GDALException.lastError()
