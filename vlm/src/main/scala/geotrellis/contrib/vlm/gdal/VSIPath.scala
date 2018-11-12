@@ -208,3 +208,11 @@ case class VSIPath(
 
   val vsiPath:String = firstVSIScheme + secondVSIScheme
 }
+
+object VSIPath {
+  def isVSIFormatted(target: String): Boolean =
+    Patterns.VSI_PATTERN.findFirstIn(target) match {
+      case Some(_) => true
+      case None => false
+    }
+}
