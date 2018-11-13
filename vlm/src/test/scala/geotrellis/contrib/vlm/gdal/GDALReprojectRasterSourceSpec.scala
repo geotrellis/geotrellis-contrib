@@ -94,8 +94,6 @@ class GDALReprojectRasterSourceSpec extends FunSpec with RasterMatchers with Bet
           }
         }
       }
-
-      GDAL.cacheCleanUp
     }
 
     it("should reproject using NearestNeighbor") {

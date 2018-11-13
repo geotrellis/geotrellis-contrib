@@ -156,8 +156,6 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         val reprojectedSource = rasterSourceRDD.reproject(targetCRS, layout)._2
 
         assertRDDLayersEqual(reprojectedExpectedRDD, reprojectedSource, true)
-
-        GDAL.cacheCleanUp
       }
 
       it("should reproduce tileToLayout followed by reproject GDAL") {
@@ -170,8 +168,6 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         val reprojectedSourceRDD: MultibandTileLayerRDD[SpatialKey] = RasterSourceRDD(reprojectedRasterSource, layout)
 
         assertRDDLayersEqual(reprojectedExpectedRDDGDAL, reprojectedSourceRDD, true)
-
-        GDAL.cacheCleanUp
       }
     }
   }

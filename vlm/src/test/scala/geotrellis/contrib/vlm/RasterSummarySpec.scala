@@ -1,5 +1,7 @@
 package geotrellis.contrib.vlm
 
+import java.lang.management.ManagementFactory
+
 import geotrellis.contrib.vlm.gdal._
 import geotrellis.proj4._
 import geotrellis.raster._
@@ -8,7 +10,6 @@ import geotrellis.spark._
 import geotrellis.spark.testkit._
 import geotrellis.spark.tiling._
 import geotrellis.vector.Extent
-
 import spire.syntax.cfor._
 import org.apache.spark.rdd._
 import org.scalatest._
@@ -214,8 +215,6 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     res.length shouldBe 72
 
     contextRDD.stitch.tile.band(0).renderPng().write("/tmp/raster-source-contextrdd-gdal.png")
-
-    GDAL.cacheCleanUp
   }
 
   it("Should cleanup GDAL Datasets by the end of the loop (10 iterations)") {
@@ -237,8 +236,6 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
       ach shouldBe ech +- 1e-5
       acols shouldBe ecols
       arows shouldBe erows
-
-      GDAL.cacheCleanUp
     }
   }
 }

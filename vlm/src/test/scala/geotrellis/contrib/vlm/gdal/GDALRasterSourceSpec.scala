@@ -138,8 +138,6 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
             assertRastersEqual(actualTile, expectedTile)
           }
         }
-
-        GDAL.cacheCleanUp
       }
     }
   }
