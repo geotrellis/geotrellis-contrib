@@ -20,7 +20,7 @@ import geotrellis.proj4.CRS
 import geotrellis.vector.{Extent, ProjectedExtent}
 import geotrellis.raster._
 
-import java.io.Closeable
+import java.lang.AutoCloseable
 
 /** Reference to a pixel region in a [[RasterSource]] that may be read at a later time.
   * @note It is required that the [[RasterSource]] intersects with the given [[GridBounds]].
@@ -31,7 +31,7 @@ import java.io.Closeable
 case class RasterRegion(
   source: RasterSource,
   bounds: GridBounds
-) extends CellGrid with Closeable with Serializable {
+) extends CellGrid with AutoCloseable with Serializable {
   require(bounds.intersects(source.gridBounds), s"The given bounds: $bounds must intersect the given source: $source")
   @transient lazy val raster: Option[Raster[MultibandTile]] =
     for {
