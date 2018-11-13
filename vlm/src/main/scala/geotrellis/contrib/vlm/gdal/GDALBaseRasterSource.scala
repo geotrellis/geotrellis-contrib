@@ -66,7 +66,7 @@ trait GDALBaseRasterSource extends RasterSource {
       val typeSizeInBits = gdal.GetDataTypeSize(bufferType)
       (nd, bufferType, Some(typeSizeInBits))
     }
-    GDAL.deriveGTCellType(bufferType, noDataValue, typeSizeInBits)
+    GDALUtils.dataTypeToCellType(bufferType, noDataValue, typeSizeInBits)
   }
 
   lazy val rasterExtent: RasterExtent = {

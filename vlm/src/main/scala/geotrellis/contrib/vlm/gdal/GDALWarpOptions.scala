@@ -16,14 +16,12 @@
 
 package geotrellis.contrib.vlm.gdal
 
-import java.util.Base64
-
-import geotrellis.raster.CellSize
-import geotrellis.raster.resample.ResampleMethod
+import geotrellis.raster._
+import geotrellis.raster.resample._
 import geotrellis.proj4.CRS
 import geotrellis.vector.Extent
 import cats.implicits._
-import org.gdal.gdal.{Dataset, WarpOptions}
+import org.gdal.gdal.WarpOptions
 
 import scala.collection.JavaConverters._
 
@@ -44,7 +42,7 @@ case class GDALWarpOptions(
 
   def toWarpOptionsList: List[String] = {
     outputFormat.toList.flatMap { of => List("-of", of) } :::
-    resampleMethod.toList.flatMap { method => List("-r", s"${GDAL.deriveResampleMethodString(method)}") } :::
+    resampleMethod.toList.flatMap { method => List("-r", s"${GDALUtils.deriveResampleMethodString(method)}") } :::
     errorThreshold.toList.flatMap { et => List("-et", s"${et}") } :::
     cellSize.toList.flatMap { cz =>
       // the -tap parameter can only be set if -tr is set as well
