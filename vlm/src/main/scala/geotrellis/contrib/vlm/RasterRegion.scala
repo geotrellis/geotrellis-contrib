@@ -29,7 +29,7 @@ import geotrellis.raster._
 case class RasterRegion(
   source: RasterSource,
   bounds: GridBounds
-) extends CellGrid with AutoCloseable with Serializable {
+) extends CellGrid with Serializable {
   require(bounds.intersects(source.gridBounds), s"The given bounds: $bounds must intersect the given source: $source")
   @transient lazy val raster: Option[Raster[MultibandTile]] =
     for {
@@ -53,5 +53,4 @@ case class RasterRegion(
   def cellType: CellType = source.cellType
   def rasterExtent: RasterExtent = RasterExtent(extent, cols, rows)
   def projectedExtent: ProjectedExtent = ProjectedExtent(extent, crs)
-  def close = source.close
 }

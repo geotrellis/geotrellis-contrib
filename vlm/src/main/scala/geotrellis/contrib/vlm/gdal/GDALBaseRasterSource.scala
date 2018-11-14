@@ -135,9 +135,4 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   override def close = dataset.delete()
-
-  /*override def finalize(): Unit = {
-    if(dataset != null) close
-    super.finalize()
-  }*/
 }
