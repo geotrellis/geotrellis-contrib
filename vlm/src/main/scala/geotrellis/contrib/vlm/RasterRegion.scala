@@ -20,8 +20,6 @@ import geotrellis.proj4.CRS
 import geotrellis.vector.{Extent, ProjectedExtent}
 import geotrellis.raster._
 
-import java.lang.AutoCloseable
-
 /** Reference to a pixel region in a [[RasterSource]] that may be read at a later time.
   * @note It is required that the [[RasterSource]] intersects with the given [[GridBounds]].
   *

@@ -24,8 +24,6 @@ import geotrellis.proj4._
 import geotrellis.spark.tiling.LayoutDefinition
 import geotrellis.util.GetComponent
 
-import java.lang.AutoCloseable
-
 /**
   * Single threaded instance of a reader that is able to read windows from larger raster.
   * Some initilization step is expected to provide metadata about source raster

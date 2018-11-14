@@ -1,5 +1,6 @@
 package geotrellis.contrib.vlm
 
+import geotrellis.contrib.vlm.geotiff._
 import geotrellis.contrib.vlm.gdal._
 import geotrellis.proj4._
 import geotrellis.raster._

@@ -20,8 +20,6 @@ import geotrellis.raster._
 import geotrellis.spark.tiling._
 import geotrellis.spark.SpatialKey
 
-import java.lang.AutoCloseable
-
 /** Reads tiles by key from a [[RasterSource]] as keyed by a [[LayoutDefinition]]
   * @note It is required that the [[RasterSource]] is pixel aligned with the [[LayoutDefinition]]
   *
