@@ -24,8 +24,6 @@ import geotrellis.proj4._
 import geotrellis.spark.tiling.LayoutDefinition
 import geotrellis.util.GetComponent
 
-import java.io.Closeable
-
 /**
   * Single threaded instance of a reader that is able to read windows from larger raster.
   * Some initilization step is expected to provide metadata about source raster
@@ -42,7 +40,7 @@ import java.io.Closeable
   * @groupdesc reproject Functions to resample raster data in target projection.
   * @groupprio reproject 2
   */
-trait RasterSource extends CellGrid with Closeable with Serializable {
+trait RasterSource extends CellGrid with AutoCloseable with Serializable {
     def uri: String
     def crs: CRS
     def bandCount: Int

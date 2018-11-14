@@ -18,7 +18,7 @@ package geotrellis.contrib.vlm
 
 import geotrellis.raster._
 import geotrellis.spark.tiling._
-import geotrellis.spark.{SpatialKey}
+import geotrellis.spark.SpatialKey
 
 /** Reads tiles by key from a [[RasterSource]] as keyed by a [[LayoutDefinition]]
   * @note It is required that the [[RasterSource]] is pixel aligned with the [[LayoutDefinition]]
@@ -26,7 +26,7 @@ import geotrellis.spark.{SpatialKey}
   * @param source raster source that can be queried by bounding box
   * @param layout definition of a tile grid over the pixel grid
   */
-class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
+class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) extends AutoCloseable {
   LayoutTileSource.requireGridAligned(source.rasterExtent, layout)
 
   def sourceColOffset: Long = ((source.extent.xmin - layout.extent.xmin) / layout.cellwidth).toLong
@@ -124,6 +124,8 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
   /** All intersecting RasterRegions with their respective keys */
   def keyedRasterRegions(): Iterator[(SpatialKey, RasterRegion)] =
     keys().toIterator.map(key => (key, rasterRegionForKey(key)))
+
+  def close = source.close()
 }
 
 object LayoutTileSource {

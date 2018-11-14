@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm.gdal
+package geotrellis.contrib.vlm
 
-case class GDALRasterSource(uri: String) extends GDALBaseRasterSource {
-  val baseWarpList: List[GDALWarpOptions] = Nil
-  lazy val warpOptions: GDALWarpOptions = GDALWarpOptions()
-}
+package object avro extends Implicits

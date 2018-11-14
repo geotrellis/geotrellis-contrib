@@ -42,6 +42,9 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
       s"""$bounds contains $key""")
   }
 
+  def assertTilesEqual(actual: Tile, expected: Tile): Unit =
+    assertTilesEqual(MultibandTile(actual), MultibandTile(expected))
+
   def assertTilesEqual(actual: MultibandTile, expected: MultibandTile): Unit = {
     actual should have (
       cellType (expected.cellType),

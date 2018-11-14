@@ -138,9 +138,6 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
             assertRastersEqual(actualTile, expectedTile)
           }
         }
-
-        resampledSource.close
-        layoutSource.source.close
       }
     }
   }

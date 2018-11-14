@@ -1,13 +1,27 @@
+/*
+ * Copyright 2018 Azavea
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package geotrellis.contrib.vlm.gdal
 
-import geotrellis.raster.CellSize
-import geotrellis.raster.resample.ResampleMethod
+import geotrellis.raster._
+import geotrellis.raster.resample._
 import geotrellis.proj4.CRS
 import geotrellis.vector.Extent
-
 import cats.implicits._
 import org.gdal.gdal.WarpOptions
-import org.gdal.osr.SpatialReference
 
 import scala.collection.JavaConverters._
 
@@ -19,18 +33,16 @@ case class GDALWarpOptions(
   cellSize: Option[CellSize] = None,
   alignTargetPixels: Boolean = true,
   dimensions: Option[(Int, Int)] = None,
-  sourceCRS: Option[SpatialReference] = None,
-  targetCRS: Option[SpatialReference] = None,
+  sourceCRS: Option[CRS] = None,
+  targetCRS: Option[CRS] = None,
   te: Option[(Extent, CRS)] = None,
   ovr: Option[String] = Some("AUTO")
 ) {
-
-  def roundUp(d: Double, digits: Int = 7): Double =
-    BigDecimal(d).setScale(digits, BigDecimal.RoundingMode.HALF_UP).toDouble
+  lazy val name: String = toWarpOptionsList.map(_.toLowerCase).mkString("_")
 
   def toWarpOptionsList: List[String] = {
     outputFormat.toList.flatMap { of => List("-of", of) } :::
-    resampleMethod.toList.flatMap { method => List("-r", s"${GDAL.deriveResampleMethodString(method)}") } :::
+    resampleMethod.toList.flatMap { method => List("-r", s"${GDALUtils.deriveResampleMethodString(method)}") } :::
     errorThreshold.toList.flatMap { et => List("-et", s"${et}") } :::
     cellSize.toList.flatMap { cz =>
       // the -tap parameter can only be set if -tr is set as well
@@ -39,7 +51,7 @@ case class GDALWarpOptions(
     } :::
     dimensions.toList.flatMap { case (c, r) => List("-ts", s"$c", s"$r") } :::
     (sourceCRS, targetCRS).mapN { (source, target) =>
-      if(source != target) List("-s_srs", source.ExportToProj4, "-t_srs", target.ExportToProj4)
+      if(source != target) List("-s_srs", source.toProj4String, "-t_srs", target.toProj4String)
       else Nil
     }.toList.flatten ::: ovr.toList.flatMap { o => List("-ovr", o) } :::
     te.toList.flatMap { case (ext, crs) =>

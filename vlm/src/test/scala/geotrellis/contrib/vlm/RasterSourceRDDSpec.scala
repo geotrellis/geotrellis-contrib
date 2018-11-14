@@ -16,6 +16,7 @@
 
 package geotrellis.contrib.vlm
 
+import geotrellis.contrib.vlm.geotiff._
 import geotrellis.contrib.vlm.gdal._
 import geotrellis.raster._
 import geotrellis.proj4._
@@ -29,7 +30,7 @@ import Inspectors._
 
 import java.io.File
 
-class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRasterMatchers {
+class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with BeforeAndAfterAll {
   val filePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
   val uri = s"file://$filePath"
   val rasterSource = new GeoTiffRasterSource(uri)
@@ -146,14 +147,12 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
     describe("GDALRasterSource") {
       val expectedFilePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-near-merc-rdd.tif"
-      val reprojectedExpectedRDDGDAL: MultibandTileLayerRDD[SpatialKey] =
-        RasterSourceRDD(GDALRasterSource(expectedFilePath), layout)
 
-      val rasterSource = GDALRasterSource(filePath)
       it("should reproduce tileToLayout") {
+        val rasterSource = GDALRasterSource(filePath)
+
         // This should be the same as result of .tileToLayout(md.layout)
         val rasterSourceRDD: MultibandTileLayerRDD[SpatialKey] = RasterSourceRDD(rasterSource, md.layout)
-
         // Complete the reprojection
         val reprojectedSource = rasterSourceRDD.reproject(targetCRS, layout)._2
 
@@ -161,9 +160,13 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
       }
 
       it("should reproduce tileToLayout followed by reproject GDAL") {
+        val expectedRasterSource = GDALRasterSource(expectedFilePath)
+        val reprojectedExpectedRDDGDAL: MultibandTileLayerRDD[SpatialKey] = RasterSourceRDD(expectedRasterSource, layout)
+        val rasterSource = GDALRasterSource(filePath)
+        val reprojectedRasterSource = rasterSource.reprojectToGrid(targetCRS, layout)
+
         // This should be the same as .tileToLayout(md.layout).reproject(crs, layout)
-        val reprojectedSourceRDD: MultibandTileLayerRDD[SpatialKey] =
-          RasterSourceRDD(rasterSource.reprojectToGrid(targetCRS, layout), layout)
+        val reprojectedSourceRDD: MultibandTileLayerRDD[SpatialKey] = RasterSourceRDD(reprojectedRasterSource, layout)
 
         assertRDDLayersEqual(reprojectedExpectedRDDGDAL, reprojectedSourceRDD, true)
       }

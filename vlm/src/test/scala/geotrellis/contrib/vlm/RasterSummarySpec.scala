@@ -1,6 +1,7 @@
 package geotrellis.contrib.vlm
 
-import geotrellis.contrib.vlm.gdal.GDALRasterSource
+import geotrellis.contrib.vlm.geotiff._
+import geotrellis.contrib.vlm.gdal._
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.resample.Bilinear
@@ -9,7 +10,9 @@ import geotrellis.spark.testkit._
 import geotrellis.spark.tiling._
 import geotrellis.vector.Extent
 
+import spire.syntax.cfor._
 import org.apache.spark.rdd._
+
 import org.scalatest._
 
 class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
@@ -74,7 +77,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     }
   }
 
-  it("should create ContextRDD from RDD of RasterSources") {
+  it("should create ContextRDD from RDD of GeoTiffRasterSources") {
     val inputPath = Resource.path("img/aspect-tiled.tif")
     val files = inputPath :: Nil
     val targetCRS = WebMercator
@@ -175,11 +178,8 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     }
   }
 
-  // TODO: fix JNI management here
-  // this test works as expected, though crashes with a core dump exception
-  // works slower than a GeoTiff version, there is an interesting discussion here: https://github.com/OpenDroneMap/OpenDroneMap/issues/778
-  // also mb we should pass a resampled RasterExtent like we did in a GeoTiff case
-  ignore("should create ContextRDD from RDD of RasterSources GDAL") {
+  // TODO: better API to close resources, it is x2 slower than GeoTiffRasterSources
+  it("should create ContextRDD from RDD of GDALRasterSources") {
     val inputPath = Resource.path("img/aspect-tiled.tif")
     val files = inputPath :: Nil
     val targetCRS = WebMercator
@@ -195,6 +195,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     // collect raster summary
     val summary = RasterSummary.fromRDD(sourceRDD)
     val layoutLevel @ LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
+
     val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
 
     // Create RDD of references, references contain information how to read rasters
@@ -202,14 +203,40 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     val tileRDD: RDD[(SpatialKey, MultibandTile)] =
       rasterRefRdd // group by keys and distribute raster references using SpatialPartitioner
         .groupByKey(SpatialPartitioner(summary.estimatePartitionsNumber))
-        .mapValues { iter => MultibandTile(iter.flatMap(_.raster.toSeq.flatMap(_.tile.bands))) } // read rasters
+        .mapValues { iter => MultibandTile {
+          iter.flatMap { rr => rr.raster.toSeq.flatMap(_.tile.bands) }
+        } } // read rasters
 
     val (metadata, zoom) = summary.toTileLayerMetadata(layoutLevel)
     val contextRDD: MultibandTileLayerRDD[SpatialKey] = ContextRDD(tileRDD, metadata)
 
-    contextRDD.count() shouldBe rasterRefRdd.count()
-    contextRDD.count() shouldBe 72
+    val res = contextRDD.collect()
+    res.foreach { case (_, v) => v.dimensions shouldBe layout.tileLayout.tileDimensions }
+    res.length shouldBe rasterRefRdd.count()
+    res.length shouldBe 72
 
     contextRDD.stitch.tile.band(0).renderPng().write("/tmp/raster-source-contextrdd-gdal.png")
+  }
+
+  it("Should cleanup GDAL Datasets by the end of the loop (10 iterations)") {
+    val inputPath = Resource.path("img/aspect-tiled.tif")
+    val targetCRS = WebMercator
+    val method = Bilinear
+    val layout = LayoutDefinition(GridExtent(Extent(-2.0037508342789244E7, -2.0037508342789244E7, 2.0037508342789244E7, 2.0037508342789244E7), 9.554628535647032, 9.554628535647032), 256)
+    val RasterExtent(Extent(exmin, eymin, exmax, eymax), ecw, ech, ecols, erows) = GridExtent(Extent(-8769150.640916323, 4257706.177727701, -8750633.77081424, 4274455.441550691),9.554628535646703,9.554628535647199).toRasterExtent
+
+    cfor(0)(_ < 11, _ + 1) { _ =>
+      val reference = GDALRasterSource(inputPath).reproject(targetCRS, method).tileToLayout(layout, method)
+      val RasterExtent(Extent(axmin, aymin, axmax, aymax), acw, ach, acols, arows) = reference.source.rasterExtent
+
+      axmin shouldBe exmin +- 1e-5
+      aymin shouldBe eymin +- 1e-5
+      axmax shouldBe exmax +- 1e-5
+      aymax shouldBe eymax +- 1e-5
+      acw shouldBe ecw +- 1e-5
+      ach shouldBe ech +- 1e-5
+      acols shouldBe ecols
+      arows shouldBe erows
+    }
   }
 }

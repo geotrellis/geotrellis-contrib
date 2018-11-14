@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm.gdal
+package geotrellis.contrib.vlm.gdal.config
 
-case class GDALRasterSource(uri: String) extends GDALBaseRasterSource {
-  val baseWarpList: List[GDALWarpOptions] = Nil
-  lazy val warpOptions: GDALWarpOptions = GDALWarpOptions()
+import pureconfig.{CamelCase, ConfigFieldMapping, ProductHint}
+
+trait PureConfigSettings {
+  implicit def hint[T]: ProductHint[T] = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
 }
