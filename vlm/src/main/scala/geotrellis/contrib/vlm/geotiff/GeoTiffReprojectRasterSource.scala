@@ -49,47 +49,47 @@ class GeoTiffReprojectRasterSource(
   def cellType: CellType = tiff.cellType
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
-    val it = readBounds(List(bounds), bands)
-    if (it.hasNext) Some(it.next) else None
+    read(rasterExtent.gridBoundsFor(extent), bands)
   }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val it = readBounds(List(bounds), bands)
-    if (it.hasNext) Some(it.next) else None
+    val targetRE = rasterExtent.rasterExtentFor(bounds)
+    val extent = targetRE.extent
+    val region = ProjectedExtent(tiff.extent, tiff.crs).reprojectAsPolygon(crs, 0.001)
+    println(s"Chunk has target $targetRE")
+
+    val CellSize(dx, dy) = tiff.cellSize
+    val bufferSize = 1 + (options.method match {
+      case NearestNeighbor => 0
+      case Bilinear => 1
+      case CubicConvolution => 3
+      case CubicSpline => 3
+      case Lanczos => 3
+      case _ => 1 // Handles aggregate resample methods?
+    })
+
+    val bufferedPreimage = extent.reproject(backTransform).expandBy(dx*bufferSize, dy*bufferSize)
+    val requestRE = tiff.rasterExtent.createAlignedRasterExtent(bufferedPreimage)
+    val requestGB = tiff.rasterExtent.gridBoundsFor(requestRE.extent)
+
+    val sourceRaster = Raster(tiff.tile.asInstanceOf[GeoTiffMultibandTile].crop(requestGB, bands.toArray), tiff.rasterExtent.extentFor(requestGB))
+    val rrp = implicitly[RasterRegionReproject[MultibandTile]]
+    if (requestRE.extent intersects baseRasterExtent.extent) {
+      val result = rrp.regionReproject(sourceRaster, tiff.crs, crs, targetRE, region, options.method)
+      println(s"Responding with $result [${result.dimensions}]")
+      Some(result)
+    } else {
+      None
+    }
+
   }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = true))
-    readBounds(bounds, bands)
+    extents.toList.flatMap(read(_, bands)).iterator
   }
 
   override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    val intersectingWindows = { for {
-      queryPixelBounds <- bounds
-      targetPixelBounds <- queryPixelBounds.intersection(this)
-    } yield {
-      val targetRasterExtent = RasterExtent(rasterExtent.extentFor(targetPixelBounds, clamp = true), targetPixelBounds.width, targetPixelBounds.height)
-      val sourceExtent = targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope
-      val sourcePixelBounds = tiff.rasterExtent.gridBoundsFor(sourceExtent, clamp = true)
-      (sourcePixelBounds, targetRasterExtent)
-    }}.toMap
-
-    val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
-    geoTiffTile.crop(intersectingWindows.keys.toSeq, bands.toArray).map { case (sourcePixelBounds, tile) =>
-      val targetRasterExtent = intersectingWindows(sourcePixelBounds)
-      val sourceRaster = Raster(tile, baseRasterExtent.extentFor(sourcePixelBounds, clamp = true))
-      val rr = implicitly[RasterRegionReproject[MultibandTile]]
-      rr.regionReproject(
-        sourceRaster,
-        baseCRS,
-        crs,
-        targetRasterExtent,
-        targetRasterExtent.extent.toPolygon,
-        options.method,
-        options.errorThreshold
-      )
-    }
+    bounds.toList.flatMap(read(_, bands)).iterator
   }
 
   def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
