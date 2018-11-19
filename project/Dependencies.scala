@@ -17,7 +17,7 @@
 import sbt._
 
 object Version {
-  val geotrellis  = "2.1.0"
+  val geotrellis  = "3.0.0-SNAPSHOT"
   val scala       = "2.11.12"
   val hadoop      = "2.8.0"
   val spark       = "2.3.1"

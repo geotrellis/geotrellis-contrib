@@ -71,6 +71,20 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
     }
   }
 
+  def assertRastersEqual(actual: Raster[MultibandTile], expected: Raster[MultibandTile], threshold: Double): Unit = {
+    actual.extent shouldBe expected.extent
+
+    actual.tile should have (
+      cellType (expected.cellType),
+      dimensions (expected.dimensions),
+      bandCount (expected.tile.bandCount)
+    )
+
+    withAsciiDiffClue(actual.tile, expected.tile){
+      assertEqual(actual.tile, expected.tile, threshold)
+    }
+  }
+
   /** Renders scaled diff tiles as a clue */
   def withAsciiDiffClue[T](
     actual: MultibandTile,

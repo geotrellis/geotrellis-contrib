@@ -18,7 +18,6 @@ package geotrellis.contrib.vlm.gdal
 
 import geotrellis.raster._
 import geotrellis.raster.resample._
-import geotrellis.util.LazyLogging
 import geotrellis.contrib.vlm.cache.LazyCache
 import geotrellis.contrib.vlm.gdal.config.GDALCacheConfig
 
@@ -28,6 +27,7 @@ import cats.instances.list._
 import cats.instances.either._
 import org.gdal.gdal.{Dataset, gdal}
 import org.gdal.gdalconst.gdalconstConstants
+import com.typesafe.scalalogging.LazyLogging
 
 import java.net.URI
 

@@ -22,7 +22,9 @@ import geotrellis.spark._
 import geotrellis.spark.tiling.{LayoutDefinition, LayoutLevel, LayoutScheme}
 import geotrellis.util._
 import geotrellis.vector.{Extent, ProjectedExtent}
+
 import org.apache.spark.rdd.RDD
+import com.typesafe.scalalogging.LazyLogging
 
 case class RasterSummary(
   crs: CRS,
