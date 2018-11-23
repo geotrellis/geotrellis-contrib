@@ -36,6 +36,7 @@ case class GDALWarpOptions(
   sourceCRS: Option[CRS] = None,
   targetCRS: Option[CRS] = None,
   te: Option[(Extent, CRS)] = None,
+  srcNoData: Option[Double] = None,
   ovr: Option[String] = Some("AUTO")
 ) {
   lazy val name: String = toWarpOptionsList.map(_.toLowerCase).mkString("_")
@@ -48,8 +49,7 @@ case class GDALWarpOptions(
       // the -tap parameter can only be set if -tr is set as well
       val tr = List("-tr", s"${cz.width}", s"${cz.height}")
       if (alignTargetPixels) "-tap" +: tr else tr
-    } :::
-    dimensions.toList.flatMap { case (c, r) => List("-ts", s"$c", s"$r") } :::
+    } ::: dimensions.toList.flatMap { case (c, r) => List("-ts", s"$c", s"$r") } :::
     (sourceCRS, targetCRS).mapN { (source, target) =>
       if(source != target) List("-s_srs", source.toProj4String, "-t_srs", target.toProj4String)
       else Nil
@@ -59,7 +59,7 @@ case class GDALWarpOptions(
         "-te", s"${ext.xmin}", s"${ext.ymin}", s"${ext.xmax}", s"${ext.ymax}",
         "-te_srs", s"${crs.toProj4String}"
       )
-    }
+    } ::: srcNoData.toList.flatMap { nd => List("-srcnodata", s"${nd}") }
   }
 
   def toWarpOptions: WarpOptions =

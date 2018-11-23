@@ -55,7 +55,9 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
         colMin = (col * layout.tileCols - sourceColOffset).toInt,
         rowMin = (row * layout.tileRows - sourceRowOffset).toInt,
         colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset).toInt,
-        rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset).toInt)
+        rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset).toInt
+    )
+
     for {
       bounds <- sourcePixelBounds.intersection(source)
       raster <- source.read(bounds)
