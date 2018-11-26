@@ -54,6 +54,15 @@ trait GDALBaseRasterSource extends RasterSource {
 
   private lazy val reader: GDALReader = GDALReader(dataset)
 
+  // noDataValue from the previous step
+  lazy val noDataValue: Option[Double] = {
+    val baseBand = fromBaseWarpList.GetRasterBand(1)
+
+    val arr = Array.ofDim[java.lang.Double](1)
+    baseBand.GetNoDataValue(arr)
+    arr.headOption.flatMap(Option(_)).map(_.doubleValue())
+  }
+
   lazy val cellType: CellType = {
     val (noDataValue, bufferType, typeSizeInBits) = {
       val baseBand = dataset.GetRasterBand(1)

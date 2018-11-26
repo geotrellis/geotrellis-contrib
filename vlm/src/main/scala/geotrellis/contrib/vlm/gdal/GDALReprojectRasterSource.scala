@@ -56,7 +56,8 @@ case class GDALReprojectRasterSource(
       cellSize = cellSize,
       alignTargetPixels = true,
       sourceCRS = baseSpatialReference.toCRS.some,
-      targetCRS = targetSpatialReference.toCRS.some
+      targetCRS = targetSpatialReference.toCRS.some,
+      srcNoData = noDataValue
     )
 
     res

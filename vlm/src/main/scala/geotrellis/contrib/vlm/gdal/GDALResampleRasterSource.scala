@@ -61,7 +61,8 @@ case class GDALResampleRasterSource(
         GDALWarpOptions(
           cellSize = targetRasterExtent.cellSize.some,
           alignTargetPixels = false,
-          resampleMethod = method.some
+          resampleMethod = method.some,
+          srcNoData = noDataValue
         )
     }
 
