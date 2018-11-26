@@ -43,13 +43,15 @@ class GDALReader(val dataset: Dataset) {
   /**
     * TODO: benchmark this function, probably in case of reading all bands
     * we can optimize it by reading all the bytes as a single buffer into memory
+    *
+    * Should be synchronized! GDAL itself is parallelized.
     */
   def read(
     gridBounds: GridBounds = GridBounds(0, 0, dataset.getRasterXSize - 1, dataset.getRasterYSize - 1),
     bufXSize: Option[Int] = None,
     bufYSize: Option[Int] = None,
     bands: Seq[Int] = 0 until bandCount
-  ): MultibandTile = {
+  ): MultibandTile = AnyRef.synchronized {
     // NOTE: Bands are not 0-base indexed, so we must add 1// NOTE: Bands are not 0-base indexed, so we must add 1
     val baseBand = dataset.GetRasterBand(1)
 
