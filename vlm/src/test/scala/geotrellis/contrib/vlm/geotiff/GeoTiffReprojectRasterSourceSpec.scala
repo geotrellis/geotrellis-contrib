@@ -72,7 +72,7 @@ class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with
           actual.rasterExtent.cellheight should be (expected.rasterExtent.cellheight +- 0.00001)
 
           withGeoTiffClue(actual, expected, LatLng)  {
-            assertRastersEqual(actual, expected)
+            assertRastersEqual(actual, expected, 0.2)
           }
         }
       }
