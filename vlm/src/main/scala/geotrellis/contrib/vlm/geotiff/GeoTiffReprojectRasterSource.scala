@@ -48,41 +48,49 @@ class GeoTiffReprojectRasterSource(
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = tiff.cellType
 
-  def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+  def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] =
     read(rasterExtent.gridBoundsFor(extent), bands)
-  }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val targetRE = rasterExtent.rasterExtentFor(bounds)
-    val extent = targetRE.extent
-    val region = ProjectedExtent(tiff.extent, tiff.crs).reprojectAsPolygon(crs, 0.001) // should not this error be configurable?
-
-    val CellSize(dx, dy) = tiff.cellSize
-    val bufferSize = 1 + (options.method match {
-      case NearestNeighbor => 0
-      case Bilinear => 1
-      case CubicConvolution => 3
-      case CubicSpline => 3
-      case Lanczos => 3
-      case _ => 1 // Handles aggregate resample methods?
-    })
-
-    val bufferedPreimage = extent.reproject(backTransform).expandBy(dx*bufferSize, dy*bufferSize)
-    val requestRE = tiff.rasterExtent.createAlignedRasterExtent(bufferedPreimage)
-    val requestGB = tiff.rasterExtent.gridBoundsFor(requestRE.extent)
-
-    val sourceRaster = Raster(tiff.tile.asInstanceOf[GeoTiffMultibandTile].crop(requestGB, bands.toArray), tiff.rasterExtent.extentFor(requestGB))
-    requestRE.extent.intersection(baseRasterExtent.extent).map { _ =>
-      implicitly[RasterRegionReproject[MultibandTile]].regionReproject(sourceRaster, tiff.crs, crs, targetRE, region, options.method)
-    }
+    val it = readBounds(List(bounds), bands)
+    if (it.hasNext) Some(it.next) else None
   }
 
-  override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
+  override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
     extents.toList.flatMap(read(_, bands)).iterator
-  }
 
   override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    bounds.toList.flatMap(read(_, bands)).iterator
+   val intersectingWindows =
+     bounds.flatMap(_.intersection(this)).map { targetPixelBounds =>
+       val targetRE = rasterExtent.rasterExtentFor(targetPixelBounds)
+       val extent = targetRE.extent
+       val region = ProjectedExtent(tiff.extent, tiff.crs).reprojectAsPolygon(crs, 0.001) // should not this error be configurable?
+
+       val CellSize(dx, dy) = tiff.cellSize
+       val bufferSize = 1 + (options.method match {
+         case NearestNeighbor => 0
+         case Bilinear => 1
+         case CubicConvolution => 3
+         case CubicSpline => 3
+         case Lanczos => 3
+         case _ => 1 // Handles aggregate resample methods?
+       })
+
+       val bufferedPreimage = extent.reproject(backTransform).expandBy(dx * bufferSize, dy * bufferSize)
+       val requestRE = tiff.rasterExtent.createAlignedRasterExtent(bufferedPreimage)
+       val requestGB = tiff.rasterExtent.gridBoundsFor(requestRE.extent)
+       (requestGB, (targetRE, requestRE, region))
+     }.toMap
+
+    val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
+    geoTiffTile.crop(intersectingWindows.keys.toSeq, bands.toArray).flatMap { case (requestGB, tile) =>
+      val (targetRE, requestRE, region) = intersectingWindows(requestGB)
+
+      requestRE.extent.intersection(baseRasterExtent.extent).map { _ =>
+        val sourceRaster = Raster(tile, tiff.rasterExtent.extentFor(requestGB))
+        implicitly[RasterRegionReproject[MultibandTile]].regionReproject(sourceRaster, tiff.crs, crs, targetRE, region, options.method)
+      }
+    }
   }
 
   def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
