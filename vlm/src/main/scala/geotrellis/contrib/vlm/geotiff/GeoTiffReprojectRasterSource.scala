@@ -55,8 +55,7 @@ class GeoTiffReprojectRasterSource(
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val targetRE = rasterExtent.rasterExtentFor(bounds)
     val extent = targetRE.extent
-    val region = ProjectedExtent(tiff.extent, tiff.crs).reprojectAsPolygon(crs, 0.001)
-    println(s"Chunk has target $targetRE")
+    val region = ProjectedExtent(tiff.extent, tiff.crs).reprojectAsPolygon(crs, 0.001) // should not this error be configurable?
 
     val CellSize(dx, dy) = tiff.cellSize
     val bufferSize = 1 + (options.method match {
@@ -73,15 +72,9 @@ class GeoTiffReprojectRasterSource(
     val requestGB = tiff.rasterExtent.gridBoundsFor(requestRE.extent)
 
     val sourceRaster = Raster(tiff.tile.asInstanceOf[GeoTiffMultibandTile].crop(requestGB, bands.toArray), tiff.rasterExtent.extentFor(requestGB))
-    val rrp = implicitly[RasterRegionReproject[MultibandTile]]
-    if (requestRE.extent intersects baseRasterExtent.extent) {
-      val result = rrp.regionReproject(sourceRaster, tiff.crs, crs, targetRE, region, options.method)
-      println(s"Responding with $result [${result.dimensions}]")
-      Some(result)
-    } else {
-      None
+    requestRE.extent.intersection(baseRasterExtent.extent).map { _ =>
+      implicitly[RasterRegionReproject[MultibandTile]].regionReproject(sourceRaster, tiff.crs, crs, targetRE, region, options.method)
     }
-
   }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
