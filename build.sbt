@@ -5,6 +5,7 @@ scalaVersion in ThisBuild := Version.scala
 
 lazy val commonSettings = Seq(
   scalaVersion := Version.scala,
+  crossScalaVersions := Version.crossScala,
   licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.html")),
   homepage := Some(url(Info.url)),
   scmInfo := Some(ScmInfo(
