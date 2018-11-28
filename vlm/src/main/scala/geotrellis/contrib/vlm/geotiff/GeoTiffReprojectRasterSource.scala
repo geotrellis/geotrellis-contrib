@@ -30,7 +30,7 @@ class GeoTiffReprojectRasterSource(
   val crs: CRS,
   val options: Reproject.Options = Reproject.Options.DEFAULT
 ) extends RasterSource { self =>
-  @transient protected lazy val tiff: MultibandGeoTiff =
+  @transient lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 
   protected lazy val baseCRS = tiff.crs
