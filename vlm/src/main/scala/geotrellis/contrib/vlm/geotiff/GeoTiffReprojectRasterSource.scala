@@ -20,7 +20,7 @@ import geotrellis.contrib.vlm._
 import geotrellis.vector._
 import geotrellis.raster._
 import geotrellis.raster.reproject._
-import geotrellis.raster.resample.ResampleMethod
+import geotrellis.raster.resample._
 import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.{MultibandGeoTiff, GeoTiffMultibandTile}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
@@ -30,7 +30,7 @@ class GeoTiffReprojectRasterSource(
   val crs: CRS,
   val options: Reproject.Options = Reproject.Options.DEFAULT
 ) extends RasterSource { self =>
-  @transient protected lazy val tiff: MultibandGeoTiff =
+  @transient lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 
   protected lazy val baseCRS = tiff.crs
@@ -70,7 +70,7 @@ class GeoTiffReprojectRasterSource(
       targetPixelBounds <- queryPixelBounds.intersection(this)
     } yield {
       val targetRasterExtent = RasterExtent(rasterExtent.extentFor(targetPixelBounds, clamp = true), targetPixelBounds.width, targetPixelBounds.height)
-      val sourceExtent = ReprojectRasterExtent.reprojectExtent(targetRasterExtent, backTransform)
+      val sourceExtent = targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope
       val sourcePixelBounds = tiff.rasterExtent.gridBoundsFor(sourceExtent, clamp = true)
       (sourcePixelBounds, targetRasterExtent)
     }}.toMap

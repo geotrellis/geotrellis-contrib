@@ -17,11 +17,11 @@
 package geotrellis.contrib.vlm.gdal.config
 
 import geotrellis.contrib.vlm.gdal.GDAL
-import geotrellis.util.LazyLogging
 import geotrellis.contrib.vlm.cache.LazyCache
 
 import com.github.blemale.scaffeine.Scaffeine
 import org.gdal.gdal.Dataset
+import com.typesafe.scalalogging.LazyLogging
 
 case class GDALCacheConfig(
   maximumSize: Option[Long] = None,

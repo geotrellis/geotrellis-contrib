@@ -30,7 +30,7 @@ class GeoTiffResampleRasterSource(
   val resampleGrid: ResampleGrid,
   val method: ResampleMethod = NearestNeighbor
 ) extends RasterSource { self =>
-  @transient protected lazy val tiff: MultibandGeoTiff =
+  @transient lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 
   def crs: CRS = tiff.crs
