@@ -27,11 +27,35 @@ import org.gdal.gdal.{Dataset, gdal}
 import org.gdal.osr.SpatialReference
 
 trait GDALBaseRasterSource extends RasterSource {
-  // options from previous transformation steps
+  /** Aligns the coordinates of the extent of the output file to the values of the target resolution,
+    * such that the aligned extent includes the minimum extent.
+    *
+    * In terms of GeoTrellis it's very similar to [[GridExtent]].createAlignedGridExtent:
+    *
+    * newMinX = floor(envelop.minX / xRes) * xRes
+    * newMaxX = ceil(envelop.maxX / xRes) * xRes
+    * newMinY = floor(envelop.minY / yRes) * yRes
+    * newMaxY = ceil(envelop.maxY / yRes) * yRes
+    *
+    * if (xRes == 0) || (yRes == 0) than GDAL calculates it using the extent and the cellSize
+    * xRes = (maxX - minX) / cellSize.width
+    * yRes = (maxY - minY) / cellSize.height
+    *
+    * If -tap parameter is NOT set, GDAL increases extent by a half of a pixel, to avoid missing points on the border.
+    *
+    * The actual code reference: https://github.com/OSGeo/gdal/blob/v2.3.2/gdal/apps/gdal_rasterize_lib.cpp#L402-L461
+    * The actual part with the -tap logic: https://github.com/OSGeo/gdal/blob/v2.3.2/gdal/apps/gdal_rasterize_lib.cpp#L455-L461
+    *
+    * The initial PR that introduced that feature in GDAL 1.8.0: https://trac.osgeo.org/gdal/attachment/ticket/3772/gdal_tap.patch
+    * A discussion thread related to it: https://lists.osgeo.org/pipermail/gdal-dev/2010-October/thread.html#26209
+    *
+    */
+  val alignTargetPixels: Boolean
+  /** options from previous transformation steps */
   val baseWarpList: List[GDALWarpOptions]
-  // current transformation options
+  /** current transformation options */
   val warpOptions: GDALWarpOptions
-  // the list of transformation options including the current one
+  /** the list of transformation options including the current one */
   lazy val warpList: List[GDALWarpOptions] = baseWarpList :+ warpOptions
 
   // generate a vrt before the current options application
@@ -122,10 +146,10 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, options)
+    GDALReprojectRasterSource(uri, targetCRS, options, alignTargetPixels = alignTargetPixels)
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method)
+    GDALResampleRasterSource(uri, resampleGrid, method, alignTargetPixels = alignTargetPixels)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
