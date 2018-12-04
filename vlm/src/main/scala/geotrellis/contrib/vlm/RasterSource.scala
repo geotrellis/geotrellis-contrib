@@ -137,6 +137,18 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
     /**
       * @group read
       */
+    def read: Option[Raster[MultibandTile]] =
+        read(extent, (0 until bandCount))
+
+    /**
+      * @group read
+      */
+    def read(bands: Seq[Int]): Option[Raster[MultibandTile]] =
+        read(extent, bands)
+
+    /**
+      * @group read
+      */
     def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
         extents.toIterator.flatMap(read(_, bands).toIterator)
 
