@@ -25,11 +25,15 @@ import geotrellis.raster.resample.{ResampleMethod, NearestNeighbor}
 import geotrellis.raster.io.geotiff.{GeoTiff, MultibandGeoTiff, GeoTiffMultibandTile, AutoHigherResolution}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
+import cats.implicits._
+
 class GeoTiffResampleRasterSource(
   val uri: String,
   val resampleGrid: ResampleGrid,
   val method: ResampleMethod = NearestNeighbor
 ) extends RasterSource { self =>
+  def resampleMethod: Option[ResampleMethod] = method.some
+
   @transient lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 

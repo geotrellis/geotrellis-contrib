@@ -30,6 +30,8 @@ case class GDALReprojectRasterSource(
   options: Reproject.Options = Reproject.Options.DEFAULT,
   baseWarpList: List[GDALWarpOptions] = Nil
 ) extends GDALBaseRasterSource {
+  def resampleMethod: Option[ResampleMethod] = options.method.some
+
   lazy val warpOptions: GDALWarpOptions = {
     val baseSpatialReference = {
       val baseDataset = fromBaseWarpList

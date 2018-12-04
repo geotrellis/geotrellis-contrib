@@ -28,6 +28,8 @@ import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 class GeoTiffRasterSource(
   val uri: String
 ) extends RasterSource {
+  def resampleMethod: Option[ResampleMethod] = None
+
   @transient lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 

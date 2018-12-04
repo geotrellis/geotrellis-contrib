@@ -25,11 +25,15 @@ import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.{MultibandGeoTiff, GeoTiffMultibandTile}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
+import cats.implicits._
+
 class GeoTiffReprojectRasterSource(
   val uri: String,
   val crs: CRS,
   val options: Reproject.Options = Reproject.Options.DEFAULT
 ) extends RasterSource { self =>
+  def resampleMethod: Option[ResampleMethod] = options.method.some
+
   @transient lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 
