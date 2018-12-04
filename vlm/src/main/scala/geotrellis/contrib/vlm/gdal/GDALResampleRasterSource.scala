@@ -29,7 +29,8 @@ case class GDALResampleRasterSource(
   uri: String,
   resampleGrid: ResampleGrid,
   method: ResampleMethod = NearestNeighbor,
-  baseWarpList: List[GDALWarpOptions] = Nil
+  baseWarpList: List[GDALWarpOptions] = Nil,
+  alignTargetPixels: Boolean = true
 ) extends GDALBaseRasterSource {
   def resampleMethod: Option[ResampleMethod] = method.some
 
@@ -62,7 +63,7 @@ case class GDALResampleRasterSource(
         val targetRasterExtent = resampleGrid(rasterExtent)
         GDALWarpOptions(
           cellSize = targetRasterExtent.cellSize.some,
-          alignTargetPixels = false,
+          alignTargetPixels = alignTargetPixels,
           resampleMethod = resampleMethod,
           srcNoData = noDataValue
         )
@@ -72,8 +73,8 @@ case class GDALResampleRasterSource(
   }
 
   override def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, options, warpList)
+    GDALReprojectRasterSource(uri, targetCRS, options, warpList, alignTargetPixels)
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, warpList)
+    GDALResampleRasterSource(uri, resampleGrid, method, warpList, alignTargetPixels)
 }

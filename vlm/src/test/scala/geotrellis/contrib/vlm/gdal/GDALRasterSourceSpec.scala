@@ -18,7 +18,6 @@ package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm._
 import geotrellis.raster._
-import geotrellis.raster.io.geotiff.MultibandGeoTiff
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.resample._
 import geotrellis.raster.testkit._
@@ -33,7 +32,9 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
   val url = Resource.path("img/aspect-tiled.tif")
   val uri = s"file://$url"
 
-  val source: GDALRasterSource = GDALRasterSource(uri)
+  // we are going to use this source for resampling into weird resolutions, let's check it
+  // usually we align pixels
+  val source: GDALRasterSource = GDALRasterSource(uri, alignTargetPixels = false)
 
   it("should be able to read upper left corner") {
     val bounds = GridBounds(0, 0, 10, 10)
