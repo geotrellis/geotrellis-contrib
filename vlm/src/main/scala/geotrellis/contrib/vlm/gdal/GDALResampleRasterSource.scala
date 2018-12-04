@@ -31,12 +31,14 @@ case class GDALResampleRasterSource(
   method: ResampleMethod = NearestNeighbor,
   baseWarpList: List[GDALWarpOptions] = Nil
 ) extends GDALBaseRasterSource {
+  def resampleMethod: Option[ResampleMethod] = method.some
+
   lazy val warpOptions: GDALWarpOptions = {
     val res = resampleGrid match {
       case Dimensions(cols, rows) =>
         GDALWarpOptions(
           dimensions = (cols, rows).some,
-          resampleMethod = method.some
+          resampleMethod = resampleMethod
         )
       case _ =>
         lazy val rasterExtent: RasterExtent = {
@@ -61,7 +63,7 @@ case class GDALResampleRasterSource(
         GDALWarpOptions(
           cellSize = targetRasterExtent.cellSize.some,
           alignTargetPixels = false,
-          resampleMethod = method.some,
+          resampleMethod = resampleMethod,
           srcNoData = noDataValue
         )
     }
