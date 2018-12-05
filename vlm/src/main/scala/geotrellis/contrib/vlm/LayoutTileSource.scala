@@ -83,7 +83,7 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
     * If each tile area intersects source partially the non-intersecting pixels will be filled with NODATA.
     * If tile area does not intersect source it will be excluded from result iterator.
     */
-  def readAll(keys: Iterator[SpatialKey]): Iterator[(SpatialKey, MultibandTile)] = {
+  def readAll(keys: Iterator[SpatialKey], bands: Seq[Int]) =
     for {
       key <- keys
       col = key.col.toLong
@@ -94,7 +94,7 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
         colMax = ((col + 1) * layout.tileCols - 1 - sourceColOffset).toInt,
         rowMax = ((row + 1) * layout.tileRows - 1 - sourceRowOffset).toInt)
       bounds <- sourcePixelBounds.intersection(source)
-      raster <- source.read(bounds)
+      raster <- source.read(bounds, bands)
     } yield {
       val tile =
         if (raster.tile.cols == layout.tileCols && raster.tile.rows == layout.tileRows) {
@@ -110,7 +110,9 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
         }
       (key, tile)
     }
-  }
+
+  def readAll(keys: Iterator[SpatialKey]): Iterator[(SpatialKey, MultibandTile)] =
+    readAll(keys, 0 until source.bandCount)
 
   /** Read all available tiles */
   def readAll(): Iterator[(SpatialKey, MultibandTile)] =
