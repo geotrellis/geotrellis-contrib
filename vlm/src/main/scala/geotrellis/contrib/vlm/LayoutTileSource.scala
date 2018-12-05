@@ -44,11 +44,14 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
     RasterRegion(source, sourcePixelBounds)
   }
 
+  def read(key: SpatialKey): Option[MultibandTile] =
+    read(key, 0 until source.bandCount)
+
   /** Read tile according to key.
     * If tile area intersects source partially the non-intersecting pixels will be filled with NODATA.
     * If tile area does not intersect source None will be returned.
     */
-  def read(key: SpatialKey): Option[MultibandTile] = {
+  def read(key: SpatialKey, bands: Seq[Int]): Option[MultibandTile] = {
     val col = key.col.toLong
     val row = key.row.toLong
     val sourcePixelBounds = GridBounds(
@@ -60,7 +63,7 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
 
     for {
       bounds <- sourcePixelBounds.intersection(source)
-      raster <- source.read(bounds)
+      raster <- source.read(bounds, bands)
     } yield {
       if (raster.tile.cols == layout.tileCols && raster.tile.rows == layout.tileRows) {
         raster.tile
