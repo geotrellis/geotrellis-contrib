@@ -30,11 +30,17 @@ class LayoutTileSourceSpec extends FunSpec with RasterMatchers with BetterRaster
   val testFile = Resource.path("img/aspect-tiled.tif")
   val tiff = GeoTiffReader.readMultiband(testFile, streaming = false)
 
+
   val rasterSource = new GeoTiffRasterSource(testFile)
   val scheme = FloatingLayoutScheme(256)
   val layout = scheme.levelFor(rasterSource.extent, rasterSource.cellSize).layout
   val source = new LayoutTileSource(rasterSource, layout)
 
+  val mbTestFile = Resource.path("img/multiband.tif")
+  val mbTiff = GeoTiffReader.readMultiband(mbTestFile, streaming = false)
+  val mbRasterSource = new GeoTiffRasterSource(mbTestFile)
+  val mbLayout = scheme.levelFor(mbRasterSource.extent, mbRasterSource.cellSize).layout
+  val mbSource = new LayoutTileSource(mbRasterSource, mbLayout)
 
   it("should read all the keys") {
     val keys = source.layout
@@ -59,6 +65,34 @@ class LayoutTileSourceSpec extends FunSpec with RasterMatchers with BetterRaster
         withGeoTiffClue(actual, expected, source.source.crs) {
           assertRastersEqual(actual, expected)
         }
+      }
+    }
+  }
+
+  it("should subset bands if requested") {
+    val coord = mbSource.layout
+      .mapTransform
+      .extentToBounds(mbRasterSource.extent)
+      .coordsIter.toList
+      .head
+
+    val key = SpatialKey(coord._1, coord._2)
+    val re = RasterExtent(
+      extent = mbLayout.mapTransform.keyToExtent(key),
+      cellwidth = mbLayout.cellwidth,
+      cellheight = mbLayout.cellheight,
+      cols = mbLayout.tileCols,
+      rows = mbLayout.tileRows)
+
+    withClue(s"$key:") {
+      val tile = mbSource.read(key, Seq(1, 2)).get
+      val actual = Raster(tile, re.extent)
+      val expected = Raster(
+        mbTiff.crop(rasterExtent = re).tile.subsetBands(1, 2),
+        re.extent
+      )
+      withGeoTiffClue(actual, expected, mbSource.source.crs) {
+        assertRastersEqual(actual, expected)
       }
     }
   }
