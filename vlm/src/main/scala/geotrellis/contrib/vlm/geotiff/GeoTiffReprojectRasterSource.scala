@@ -49,6 +49,7 @@ class GeoTiffReprojectRasterSource(
     case None =>
       ReprojectRasterExtent(baseRasterExtent, transform, options)
   }
+  lazy val overviewsRasterExtents: List[RasterExtent] = tiff.overviews.map(_.rasterExtent)
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = tiff.cellType
 

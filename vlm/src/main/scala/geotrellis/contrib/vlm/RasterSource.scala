@@ -48,6 +48,7 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
     def cellType: CellType
     def cellSize = rasterExtent.cellSize
     def rasterExtent: RasterExtent
+    def overviewsRasterExtents: List[RasterExtent]
     def extent: Extent = rasterExtent.extent
     def cols: Int = rasterExtent.cols
     def rows: Int = rasterExtent.rows
