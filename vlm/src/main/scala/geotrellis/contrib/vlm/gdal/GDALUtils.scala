@@ -17,6 +17,7 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.raster._
+import geotrellis.raster.io.geotiff._
 import geotrellis.raster.resample._
 
 object GDALUtils {
@@ -74,4 +75,10 @@ object GDALUtils {
       case TypeCInt16 | TypeCInt32 | TypeCFloat32 | TypeCFloat64 =>
         throw new UnsupportedOperationException("Complex datatypes are not supported")
     }
+
+  def deriveOverviewStrategyString(strategy: OverviewStrategy): String = strategy match {
+    case Auto(n) => s"AUTO-$n"
+    case AutoHigherResolution => "AUTO"
+    case Base => "NONE"
+  }
 }
