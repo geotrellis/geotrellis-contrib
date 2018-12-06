@@ -34,6 +34,7 @@ class GeoTiffRasterSource(
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 
   lazy val rasterExtent = tiff.rasterExtent
+  lazy val overviewsRasterExtents: List[RasterExtent] = tiff.overviews.map(_.rasterExtent)
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = tiff.cellType
