@@ -28,16 +28,12 @@ import java.nio.ByteOrder
 import java.net.URI
 
 class GDALReader(val dataset: Dataset) {
-  protected val bandCount: Int = dataset.getRasterCount()
+  protected val bandCount: Int = dataset.getRasterCount
 
   protected val noDataValue: Option[Double] = {
     val arr = Array.ofDim[java.lang.Double](1)
     dataset.GetRasterBand(1).GetNoDataValue(arr)
-
-    arr.head match {
-      case null => None
-      case value => Some(value.doubleValue)
-    }
+    arr.headOption.flatMap(Option(_)).map(_.doubleValue())
   }
 
   /**
@@ -195,7 +191,7 @@ class GDALReader(val dataset: Dataset) {
 }
 
 object GDALReader {
-  def apply(dataset: Dataset) = new GDALReader(dataset)
-  def apply(path: String) = new GDALReader(GDAL.open(path))
-  def apply(uri: URI) = new GDALReader(GDAL.openURI(uri))
+  def apply(dataset: Dataset): GDALReader = new GDALReader(dataset)
+  def apply(path: String): GDALReader = new GDALReader(GDAL.open(path))
+  def apply(uri: URI): GDALReader = new GDALReader(GDAL.openURI(uri))
 }

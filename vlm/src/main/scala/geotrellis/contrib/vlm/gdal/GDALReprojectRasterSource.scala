@@ -20,16 +20,17 @@ import geotrellis.proj4._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.contrib.vlm.{RasterSource, ResampleGrid}
 import geotrellis.raster.resample.ResampleMethod
+import geotrellis.raster.io.geotiff.OverviewStrategy
 
-import cats.implicits._
+import cats.syntax.option._
 import org.gdal.osr.SpatialReference
 
 case class GDALReprojectRasterSource(
   uri: String,
   targetCRS: CRS,
   options: Reproject.Options = Reproject.Options.DEFAULT,
-  baseWarpList: List[GDALWarpOptions] = Nil,
-  alignTargetPixels: Boolean = true
+  alignTargetPixels: Boolean = true,
+  baseWarpList: List[GDALWarpOptions] = Nil
 ) extends GDALBaseRasterSource {
   def resampleMethod: Option[ResampleMethod] = options.method.some
 
@@ -67,8 +68,8 @@ case class GDALReprojectRasterSource(
   }
 
   override def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, options, warpList, alignTargetPixels)
+    GDALReprojectRasterSource(uri, targetCRS, options, alignTargetPixels, warpList)
 
-  override def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, warpList, alignTargetPixels)
+  override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, alignTargetPixels, warpList)
 }

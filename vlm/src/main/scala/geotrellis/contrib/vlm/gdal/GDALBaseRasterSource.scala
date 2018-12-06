@@ -19,6 +19,7 @@ package geotrellis.contrib.vlm.gdal
 import geotrellis.contrib.vlm._
 import geotrellis.proj4._
 import geotrellis.raster._
+import geotrellis.raster.io.geotiff.OverviewStrategy
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.vector._
@@ -169,8 +170,8 @@ trait GDALBaseRasterSource extends RasterSource {
   def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
     GDALReprojectRasterSource(uri, targetCRS, options, alignTargetPixels = alignTargetPixels)
 
-  def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, alignTargetPixels = alignTargetPixels)
+  def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, alignTargetPixels = alignTargetPixels)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
