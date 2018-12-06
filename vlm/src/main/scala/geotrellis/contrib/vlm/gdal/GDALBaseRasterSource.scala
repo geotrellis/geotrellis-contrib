@@ -130,6 +130,14 @@ trait GDALBaseRasterSource extends RasterSource {
     RasterExtent(Extent(xmin, ymin, xmax, ymax), cols, rows)
   }
 
+  lazy val overviewsRasterExtents: List[RasterExtent] = {
+    val band = dataset.GetRasterBand(1)
+    (0 until band.GetOverviewCount()).toList.map { idx =>
+      val ovr = band.GetOverview(idx)
+      RasterExtent(extent, CellSize(ovr.GetXSize(), ovr.GetYSize()))
+    }
+  }
+
   override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     val tuples =
       bounds.map { gb =>
