@@ -83,7 +83,7 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
     * If each tile area intersects source partially the non-intersecting pixels will be filled with NODATA.
     * If tile area does not intersect source it will be excluded from result iterator.
     */
-  def readAll(keys: Iterator[SpatialKey], bands: Seq[Int]) =
+  def readAll(keys: Iterator[SpatialKey], bands: Seq[Int]): Iterator[(SpatialKey, MultibandTile)] =
     for {
       key <- keys
       col = key.col.toLong
@@ -119,7 +119,7 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
     readAll(keys.toIterator)
 
   /** Set of keys that can be read from this tile source */
-  def keys(): Set[SpatialKey] = {
+  def keys: Set[SpatialKey] = {
     layout.extent.intersection(source.extent) match {
       case Some(intersection) =>
         layout.mapTransform.keysForGeometry(intersection.toPolygon)
@@ -130,7 +130,7 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
 
   /** All intersecting RasterRegions with their respective keys */
   def keyedRasterRegions(): Iterator[(SpatialKey, RasterRegion)] =
-    keys().toIterator.map(key => (key, rasterRegionForKey(key)))
+    keys.toIterator.map(key => (key, rasterRegionForKey(key)))
 
   def close = source.close()
 }
