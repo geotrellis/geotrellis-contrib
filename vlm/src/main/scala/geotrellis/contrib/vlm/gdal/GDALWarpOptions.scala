@@ -114,7 +114,7 @@ case class GDALWarpOptions(
       resampleMethod orElse that.resampleMethod,
       errorThreshold orElse that.errorThreshold,
       cellSize orElse that.cellSize,
-      alignTargetPixels || that.alignTargetPixels,
+      alignTargetPixels,
       dimensions orElse that.dimensions,
       sourceCRS orElse that.sourceCRS,
       targetCRS orElse that.targetCRS,

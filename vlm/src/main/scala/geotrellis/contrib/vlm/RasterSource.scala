@@ -49,39 +49,43 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
     def cellType: CellType
     def cellSize: CellSize = rasterExtent.cellSize
     def rasterExtent: RasterExtent
-    def overviewsRasterExtents: List[RasterExtent]
+    def cellSizes: List[CellSize]
+    def overviewCellSizes: List[CellSize] = cellSizes match {
+      case Nil | _ :: Nil => Nil
+      case _ :: tail      => tail
+    }
     def extent: Extent = rasterExtent.extent
     def cols: Int = rasterExtent.cols
     def rows: Int = rasterExtent.rows
     def bounds: GridBounds = GridBounds(0, 0, cols - 1, rows - 1)
 
-    /** Reproject to different CRS with explicit sampling options.
+    /** Reproject to different CRS with explicit sampling reprojectOptions.
       * @see [[geotrellis.raster.reproject.Reproject]]
       * @group reproject
       */
-    def reproject(crs: CRS, options: Reproject.Options): RasterSource
+    def reproject(crs: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource
 
     /** Sampling grid is defined over the footprint of the data at default resolution
       * @group reproject
       */
-    def reproject(crs: CRS, method: ResampleMethod = NearestNeighbor): RasterSource =
-        reproject(crs, Reproject.Options(method = method))
+    def reproject(crs: CRS, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
+        reproject(crs, Reproject.Options(method = method), strategy)
 
     /** Sampling grid and resolution is defined by given [[GridExtent]].
       * Resulting extent is the extent of the minimum enclosing pixel region
       *   of the data footprint in the target grid.
       * @group reproject a
       */
-    def reprojectToGrid(crs: CRS, grid: GridExtent, method: ResampleMethod = NearestNeighbor): RasterSource =
-        reproject(crs, Reproject.Options(method = method, parentGridExtent = Some(grid)))
+    def reprojectToGrid(crs: CRS, grid: GridExtent, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
+        reproject(crs, Reproject.Options(method = method, parentGridExtent = Some(grid)), strategy)
 
     /** Sampling grid and resolution is defined by given [[RasterExtent]] region.
       * The extent of the result is also taken from given [[RasterExtent]],
       *   this region may be larger or smaller than the footprint of the data
       * @group reproject
       */
-    def reprojectToRegion(crs: CRS, region: RasterExtent, method: ResampleMethod = NearestNeighbor): RasterSource =
-        reproject(crs, Reproject.Options(method = method, targetRasterExtent = Some(region)))
+    def reprojectToRegion(crs: CRS, region: RasterExtent, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
+        reproject(crs, Reproject.Options(method = method, targetRasterExtent = Some(region)), strategy)
 
 
     def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource

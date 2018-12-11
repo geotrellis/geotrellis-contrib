@@ -20,19 +20,19 @@ import geotrellis.proj4._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.contrib.vlm.{RasterSource, ResampleGrid}
 import geotrellis.raster.resample.ResampleMethod
-import geotrellis.raster.io.geotiff.OverviewStrategy
-
+import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import cats.syntax.option._
 import org.gdal.osr.SpatialReference
 
 case class GDALReprojectRasterSource(
   uri: String,
   targetCRS: CRS,
-  options: Reproject.Options = Reproject.Options.DEFAULT,
-  alignTargetPixels: Boolean = true,
+  reprojectOptions: Reproject.Options = Reproject.Options.DEFAULT,
+  strategy: OverviewStrategy = AutoHigherResolution,
+  options: GDALWarpOptions = GDALWarpOptions(),
   baseWarpList: List[GDALWarpOptions] = Nil
 ) extends GDALBaseRasterSource {
-  def resampleMethod: Option[ResampleMethod] = options.method.some
+  def resampleMethod: Option[ResampleMethod] = reprojectOptions.method.some
 
   lazy val warpOptions: GDALWarpOptions = {
     val baseSpatialReference = {
@@ -46,30 +46,28 @@ case class GDALReprojectRasterSource(
       spatialReference
     }
 
-    val cellSize = options.targetRasterExtent.map(_.cellSize) match {
+    val cellSize = reprojectOptions.targetRasterExtent.map(_.cellSize) match {
       case sz if sz.nonEmpty => sz
-      case _ => options.targetCellSize match {
+      case _ => reprojectOptions.targetCellSize match {
         case sz if sz.nonEmpty => sz
-        case _ => options.parentGridExtent.map(_.toRasterExtent().cellSize)
+        case _ => reprojectOptions.parentGridExtent.map(_.toRasterExtent().cellSize)
       }
     }
 
-    val res = GDALWarpOptions(
-      resampleMethod = options.method.some,
-      errorThreshold = options.errorThreshold.some,
+    options combine GDALWarpOptions(
+      resampleMethod = reprojectOptions.method.some,
+      errorThreshold = reprojectOptions.errorThreshold.some,
       cellSize = cellSize,
-      alignTargetPixels = alignTargetPixels,
       sourceCRS = baseSpatialReference.toCRS.some,
       targetCRS = targetSpatialReference.toCRS.some,
-      srcNoData = noDataValue
+      srcNoData = noDataValue,
+      ovr = strategy.some
     )
-
-    res
   }
 
-  override def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, options, alignTargetPixels, warpList)
+  override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
+    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, warpList)
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, alignTargetPixels, warpList)
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options, warpList)
 }

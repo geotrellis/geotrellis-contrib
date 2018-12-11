@@ -41,16 +41,16 @@ case class GeoTiffResampleRasterSource(
   def cellType: CellType = tiff.cellType
 
   override lazy val rasterExtent: RasterExtent = resampleGrid(tiff.rasterExtent)
-  lazy val overviewsRasterExtents: List[RasterExtent] = tiff.overviews.map(_.rasterExtent)
+  lazy val cellSizes: List[CellSize] = cellSize +: tiff.overviews.map(_.cellSize)
 
   @transient protected lazy val closestTiffOverview: GeoTiff[MultibandTile] =
     tiff.getClosestOverview(rasterExtent.cellSize, strategy)
 
-  def reproject(targetCRS: CRS, options: Reproject.Options): GeoTiffReprojectRasterSource =
-    new GeoTiffReprojectRasterSource(uri, targetCRS, options) {
-      override lazy val rasterExtent: RasterExtent = options.targetRasterExtent match {
+  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
+    new GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy) {
+      override lazy val rasterExtent: RasterExtent = reprojectOptions.targetRasterExtent match {
         case Some(targetRasterExtent) => targetRasterExtent
-        case None => ReprojectRasterExtent(self.rasterExtent, this.transform, this.options)
+        case None => ReprojectRasterExtent(self.rasterExtent, this.transform, this.reprojectOptions)
       }
     }
 
