@@ -34,7 +34,7 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
 
   // we are going to use this source for resampling into weird resolutions, let's check it
   // usually we align pixels
-  val source: GDALRasterSource = GDALRasterSource(uri, alignTargetPixels = false)
+  val source: GDALRasterSource = GDALRasterSource(uri, GDALWarpOptions(alignTargetPixels = false))
 
   it("should be able to read upper left corner") {
     val bounds = GridBounds(0, 0, 10, 10)

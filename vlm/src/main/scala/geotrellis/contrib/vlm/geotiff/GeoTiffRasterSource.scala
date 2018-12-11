@@ -32,13 +32,13 @@ case class GeoTiffRasterSource(uri: String) extends RasterSource {
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 
   lazy val rasterExtent: RasterExtent = tiff.rasterExtent
-  lazy val overviewsRasterExtents: List[RasterExtent] = tiff.overviews.map(_.rasterExtent)
+  lazy val cellSizes: List[CellSize] = cellSize +: tiff.overviews.map(_.cellSize)
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = tiff.cellType
 
-  def reproject(targetCRS: CRS, options: Reproject.Options): GeoTiffReprojectRasterSource =
-    GeoTiffReprojectRasterSource(uri, targetCRS, options)
+  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
+    GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy)
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
     GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy)
