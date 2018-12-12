@@ -32,7 +32,7 @@ case class GeoTiffRasterSource(uri: String) extends RasterSource {
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 
   lazy val rasterExtent: RasterExtent = tiff.rasterExtent
-  lazy val cellSizes: List[CellSize] = cellSize +: tiff.overviews.map(_.cellSize)
+  lazy val resolutions: List[RasterExtent] = rasterExtent :: tiff.overviews.map(_.rasterExtent)
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = tiff.cellType

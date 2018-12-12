@@ -44,6 +44,8 @@ class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with
 
     def testReprojection(method: ResampleMethod) = {
       val warpRasterSource = rasterSource.reprojectToRegion(LatLng, expectedRasterExtent, method)
+
+      warpRasterSource.resolutions.size shouldBe rasterSource.resolutions.size
       
       val testBounds = GridBounds(0, 0, expectedRasterExtent.cols, expectedRasterExtent.rows).split(64,64).toSeq
 

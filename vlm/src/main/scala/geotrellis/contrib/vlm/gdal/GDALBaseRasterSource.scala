@@ -109,11 +109,11 @@ trait GDALBaseRasterSource extends RasterSource {
     RasterExtent(Extent(xmin, ymin, xmax, ymax), cols, rows)
   }
 
-  lazy val cellSizes: List[CellSize] = {
+  lazy val resolutions: List[RasterExtent] = {
     val band = dataset.GetRasterBand(1)
-    cellSize +: (0 until band.GetOverviewCount()).toList.map { idx =>
+    rasterExtent :: (0 until band.GetOverviewCount()).toList.map { idx =>
       val ovr = band.GetOverview(idx)
-      CellSize(ovr.GetXSize(), ovr.GetYSize())
+      RasterExtent(extent, cols = ovr.GetXSize(), rows = ovr.GetYSize())
     }
   }
 

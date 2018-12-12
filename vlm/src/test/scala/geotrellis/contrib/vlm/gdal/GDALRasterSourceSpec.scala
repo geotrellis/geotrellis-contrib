@@ -76,7 +76,13 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
     val resampledSource =
       source.resample(expected.tile.cols, expected.tile.rows, NearestNeighbor)
 
-    resampledSource should have (dimensions (expected.tile.dimensions))
+    resampledSource should    have (dimensions (expected.tile.dimensions))
+
+    info(s"Source CellSize: ${source.cellSize}")
+    info(s"Target CellSize: ${resampledSource.cellSize}")
+
+    // GDAL will resample overviews by about the same ratio:
+    resampledSource.resolutions shouldNot  be(source.resolutions)
 
     val actual: Raster[MultibandTile] =
       resampledSource.read(GridBounds(0, 0, resampledSource.cols - 1, resampledSource.rows - 1)).get
