@@ -49,8 +49,8 @@ case class GeoTiffReprojectRasterSource(
       ReprojectRasterExtent(baseRasterExtent, transform, reprojectOptions)
   }
 
-  lazy val cellSizes: List[CellSize] =
-    cellSize +: tiff.overviews.map(ovr => ReprojectRasterExtent(ovr.rasterExtent, transform, reprojectOptions).cellSize)
+  lazy val resolutions: List[RasterExtent] =
+    rasterExtent :: tiff.overviews.map(ovr => ReprojectRasterExtent(ovr.rasterExtent, transform))
 
   @transient protected lazy val closestTiffOverview: GeoTiff[MultibandTile] =
     tiff.getClosestOverview(rasterExtent.cellSize, strategy)

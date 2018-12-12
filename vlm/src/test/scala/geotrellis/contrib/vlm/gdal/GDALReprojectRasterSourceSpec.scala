@@ -68,6 +68,8 @@ class GDALReprojectRasterSourceSpec extends FunSpec with RasterMatchers with Bet
       val warpRasterSource = rasterSource.reprojectToRegion(LatLng, expectedRasterExtent, method)
       val testBounds = GridBounds(0, 0, expectedRasterExtent.cols, expectedRasterExtent.rows).split(64,64).toSeq
 
+      warpRasterSource.resolutions.size shouldBe rasterSource.resolutions.size
+
       for (bound <- testBounds) yield {
         withClue(s"Read window ${bound}: ") {
           val targetExtent = expectedRasterExtent.extentFor(bound)
