@@ -28,6 +28,8 @@ import geotrellis.util._
 
 import org.scalatest._
 
+import java.net.MalformedURLException
+
 class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
   val url = Resource.path("img/aspect-tiled.tif")
   val uri = s"file://$url"
@@ -82,6 +84,10 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
     withGeoTiffClue(actual, expected, resampledSource.crs)  {
       assertRastersEqual(actual, expected)
     }
+  }
+
+  it("should fail on creation of the GDALRasterSource on a malformed URI") {
+    an[MalformedURLException] should be thrownBy GDALRasterSource("file:/random/path/here/N49W155.hgt.gz")
   }
 
   describe("should perform a tileToLayout") {
