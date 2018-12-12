@@ -109,6 +109,11 @@ trait GDALBaseRasterSource extends RasterSource {
     RasterExtent(Extent(xmin, ymin, xmax, ymax), cols, rows)
   }
 
+  /** Resolutions of available overviews in GDAL Dataset
+    *
+    * These resolutions could represent actual overview as seen in source file
+    * or overviews of VRT that was created as result of resample operations.
+    */
   lazy val resolutions: List[RasterExtent] = {
     val band = dataset.GetRasterBand(1)
     rasterExtent :: (0 until band.GetOverviewCount()).toList.map { idx =>
