@@ -72,7 +72,7 @@ lazy val vlm = project
     Test / fork := true,
     Test / parallelExecution := false,
     Test / testOptions += Tests.Argument("-oDF"),
-    javaOptions ++= Seq("-Djava.library.path=/usr/local/lib")
+    javaOptions ++= Seq("-Djava.library.path=/usr/local/lib:/usr/local/opt/gdal2/lib")
   )
   .settings(
     initialCommands in console :=
