@@ -29,6 +29,7 @@ object Schemes {
   final val TAR = "tar"
   final val ZIP = "zip"
   final val GZIP = "gzip"
+  final val GZ = "gz"
 
   final val FILE = "file"
 
@@ -57,7 +58,8 @@ object Schemes {
       s".$KMZ",
       s".$ODS",
       s".$XLSX",
-      s".$GZIP"
+      s".$GZIP",
+      s".$GZ"
     )
 
   final val FILE_TYPE_TO_SCHEME =
@@ -68,6 +70,7 @@ object Schemes {
       "kmz" -> ZIP,
       "ods" -> ZIP,
       "xlsx" -> ZIP,
-      GZIP -> GZIP
+      GZIP -> GZIP,
+      GZ -> GZIP
     )
 }

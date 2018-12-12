@@ -32,6 +32,22 @@ class VSIPathSpec extends FunSpec with Matchers {
         VSIPath(url).vsiPath should be (expectedPath)
       }
 
+      it("http that points to gz url") {
+        val filePath = "www.radomdata.com/test-files/data.gz"
+        val url = s"http://$filePath"
+        val expectedPath = s"/vsigzip//vsicurl/$url"
+
+        VSIPath(url).vsiPath should be (expectedPath)
+      }
+
+      it("http that points to gz with ! url") {
+        val filePath = "www.radomdata.com/test-files/data.gz"
+        val url = s"http://$filePath!$fileName"
+        val expectedPath = s"/vsigzip//vsicurl/http://$filePath/$fileName"
+
+        VSIPath(url).vsiPath should be (expectedPath)
+      }
+
       it("zip+http url") {
         val filePath = "www.radomdata.com/test-files/data.zip"
         val url = s"zip+http://$filePath"
@@ -126,6 +142,38 @@ class VSIPathSpec extends FunSpec with Matchers {
 
       it("gzip+s3 uri with !") {
         val path = "some/bucket/data/data.gzip"
+        val uri = s"gzip+s3://$path!$fileName"
+        val expectedPath = s"/vsigzip//vsis3/$path/$fileName"
+
+        VSIPath(uri).vsiPath should be (expectedPath)
+      }
+
+      it("s3 that points to gz uri") {
+        val filePath = "test-files/nlcd/data/data.gz"
+        val uri = s"s3://$filePath"
+        val expectedPath = s"/vsigzip//vsis3/$filePath"
+
+        VSIPath(uri).vsiPath should be (expectedPath)
+      }
+
+      it("s3 that points to gz with uri") {
+        val filePath = "test-files/nlcd/data/data.gz"
+        val uri = s"s3://$filePath!$fileName"
+        val expectedPath = s"/vsigzip//vsis3/$filePath/$fileName"
+
+        VSIPath(uri).vsiPath should be (expectedPath)
+      }
+
+      it("gzip+s3 uri for a .gz ext") {
+        val path = "some/bucket/data/data.gz"
+        val uri = s"gzip+s3://$path"
+        val expectedPath = s"/vsigzip//vsis3/$path"
+
+        VSIPath(uri).vsiPath should be (expectedPath)
+      }
+
+      it("gzip+s3 uri with ! for a .gz ext") {
+        val path = "some/bucket/data/data.gz"
         val uri = s"gzip+s3://$path!$fileName"
         val expectedPath = s"/vsigzip//vsis3/$path/$fileName"
 

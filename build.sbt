@@ -77,6 +77,7 @@ lazy val vlm = project
     initialCommands in console :=
       """
         |import geotrellis.contrib.vlm._
+        |import geotrellis.contrib.vlm.geotiff._
         |import geotrellis.contrib.vlm.gdal._
       """.stripMargin
   )
