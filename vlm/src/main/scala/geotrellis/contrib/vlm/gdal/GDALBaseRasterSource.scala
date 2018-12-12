@@ -26,7 +26,20 @@ import geotrellis.vector._
 import org.gdal.gdal.{Dataset, gdal}
 import org.gdal.osr.SpatialReference
 
+import java.net.MalformedURLException
+
 trait GDALBaseRasterSource extends RasterSource {
+  val vsiPath: String = if (VSIPath.isVSIFormatted(uri)) uri else try {
+    VSIPath(uri).vsiPath
+  } catch {
+    case _: Throwable =>
+      throw new MalformedURLException(
+        s"Invalid URI passed into the GDALRasterSource constructor: ${uri}." +
+          s"Check geotrellis.contrib.vlm.gdal.VSIPath constrains, " +
+          s"or pass VSI formatted String into the GDALRasterSource constructor manually."
+      )
+  }
+
   /** Aligns the coordinates of the extent of the output file to the values of the target resolution,
     * such that the aligned extent includes the minimum extent.
     *
