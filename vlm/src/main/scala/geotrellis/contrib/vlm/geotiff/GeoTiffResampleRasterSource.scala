@@ -41,7 +41,14 @@ case class GeoTiffResampleRasterSource(
   def cellType: CellType = tiff.cellType
 
   override lazy val rasterExtent: RasterExtent = resampleGrid(tiff.rasterExtent)
-  lazy val resolutions: List[RasterExtent] = tiff.rasterExtent :: tiff.overviews.map(_.rasterExtent)
+  lazy val resolutions: List[RasterExtent] = {
+    val ratio = rasterExtent.cellSize.resolution / tiff.rasterExtent.cellSize.resolution
+    rasterExtent :: tiff.overviews.map { ovr =>
+      val re = ovr.rasterExtent
+      val CellSize(cw, ch) = re.cellSize
+      RasterExtent(re.extent, CellSize(cw * ratio, ch * ratio))
+    }
+  }
 
   @transient protected lazy val closestTiffOverview: GeoTiff[MultibandTile] =
     tiff.getClosestOverview(rasterExtent.cellSize, strategy)

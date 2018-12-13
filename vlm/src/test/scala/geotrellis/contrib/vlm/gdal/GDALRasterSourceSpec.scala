@@ -25,13 +25,14 @@ import geotrellis.vector._
 import geotrellis.spark._
 import geotrellis.spark.tiling._
 import geotrellis.util._
-
 import org.scalatest._
-
 import java.net.MalformedURLException
+
+import geotrellis.raster.io.geotiff.AutoHigherResolution
 
 class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
   val url = Resource.path("img/aspect-tiled.tif")
+  println(url)
   val uri = s"file://$url"
 
   // we are going to use this source for resampling into weird resolutions, let's check it
@@ -74,15 +75,20 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
     // resample to 0.9 so we RasterSource picks the base layer and not an overview
 
     val resampledSource =
-      source.resample(expected.tile.cols, expected.tile.rows, NearestNeighbor)
+      source.resample(TargetRegion(expected.rasterExtent), NearestNeighbor, AutoHigherResolution)
 
     resampledSource should    have (dimensions (expected.tile.dimensions))
 
     info(s"Source CellSize: ${source.cellSize}")
     info(s"Target CellSize: ${resampledSource.cellSize}")
 
-    // GDAL will resample overviews by about the same ratio:
-    resampledSource.resolutions shouldNot  be(source.resolutions)
+    // calculated expected resolutions of overviews
+    // it's a rough approximation there as we're not calculating resolutions like GDAL
+    val ratio = resampledSource.cellSize.resolution / source.cellSize.resolution
+    resampledSource.resolutions.zip (source.resolutions.map { re =>
+      val CellSize(cw, ch) = re.cellSize
+      RasterExtent(re.extent, CellSize(cw * ratio, ch * ratio))
+    }).map { case (rea, ree) => rea.cellSize.resolution shouldBe ree.cellSize.resolution +- 3e-1 }
 
     val actual: Raster[MultibandTile] =
       resampledSource.read(GridBounds(0, 0, resampledSource.cols - 1, resampledSource.rows - 1)).get
