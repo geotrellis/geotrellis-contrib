@@ -20,8 +20,8 @@ import geotrellis.raster._
 import geotrellis.raster.resample._
 import geotrellis.proj4.CRS
 import geotrellis.vector.Extent
-
 import cats.implicits._
+import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import org.gdal.gdal.WarpOptions
 
 import scala.collection.JavaConverters._
@@ -79,7 +79,7 @@ case class GDALWarpOptions(
     *        Specify AUTO-n where n is an integer greater or equal to 1, to select an overview level below the AUTO one.
     *        Or specify NONE to force the base resolution to be used (can be useful if overviews have been generated with a low quality resampling method, and the warping is done using a higher quality resampling method).
     */
-  ovr: Option[String] = Some("AUTO")
+  ovr: Option[OverviewStrategy] = Some(AutoHigherResolution)
 ) {
   lazy val name: String = toWarpOptionsList.map(_.toLowerCase).mkString("_")
 
@@ -95,7 +95,7 @@ case class GDALWarpOptions(
     (sourceCRS, targetCRS).mapN { (source, target) =>
       if(source != target) List("-s_srs", source.toProj4String, "-t_srs", target.toProj4String)
       else Nil
-    }.toList.flatten ::: ovr.toList.flatMap { o => List("-ovr", o) } :::
+    }.toList.flatten ::: ovr.toList.flatMap { o => List("-ovr", GDALUtils.deriveOverviewStrategyString(o)) } :::
     te.toList.flatMap { case (ext, crs) =>
       List(
         "-te", s"${ext.xmin}", s"${ext.ymin}", s"${ext.xmax}", s"${ext.ymax}",
@@ -114,7 +114,7 @@ case class GDALWarpOptions(
       resampleMethod orElse that.resampleMethod,
       errorThreshold orElse that.errorThreshold,
       cellSize orElse that.cellSize,
-      alignTargetPixels || that.alignTargetPixels,
+      alignTargetPixels,
       dimensions orElse that.dimensions,
       sourceCRS orElse that.sourceCRS,
       targetCRS orElse that.targetCRS,

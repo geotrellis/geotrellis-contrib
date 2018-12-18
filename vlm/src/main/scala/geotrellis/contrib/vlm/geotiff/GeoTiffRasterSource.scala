@@ -22,27 +22,26 @@ import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
-import geotrellis.raster.io.geotiff.{MultibandGeoTiff, GeoTiffMultibandTile}
+import geotrellis.raster.io.geotiff.{GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
-class GeoTiffRasterSource(
-  val uri: String
-) extends RasterSource {
+case class GeoTiffRasterSource(uri: String) extends RasterSource {
   def resampleMethod: Option[ResampleMethod] = None
 
   @transient lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 
-  lazy val rasterExtent = tiff.rasterExtent
+  lazy val rasterExtent: RasterExtent = tiff.rasterExtent
+  lazy val resolutions: List[RasterExtent] = rasterExtent :: tiff.overviews.map(_.rasterExtent)
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = tiff.cellType
 
-  def reproject(targetCRS: CRS, options: Reproject.Options): GeoTiffReprojectRasterSource =
-    new GeoTiffReprojectRasterSource(uri, targetCRS, options)
+  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
+    GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy)
 
-  def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
-    new GeoTiffResampleRasterSource(uri, resampleGrid, method)
+  def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
+    GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)

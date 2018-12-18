@@ -18,19 +18,21 @@ package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm._
 import geotrellis.raster._
+import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector._
 import geotrellis.proj4.CRS
 import geotrellis.raster.reproject.Reproject
 
-import cats.implicits._
+import cats.syntax.option._
 
 case class GDALResampleRasterSource(
   uri: String,
   resampleGrid: ResampleGrid,
   method: ResampleMethod = NearestNeighbor,
-  baseWarpList: List[GDALWarpOptions] = Nil,
-  alignTargetPixels: Boolean = true
+  strategy: OverviewStrategy = AutoHigherResolution,
+  options: GDALWarpOptions = GDALWarpOptions(),
+  baseWarpList: List[GDALWarpOptions] = Nil
 ) extends GDALBaseRasterSource {
   def resampleMethod: Option[ResampleMethod] = method.some
 
@@ -63,18 +65,18 @@ case class GDALResampleRasterSource(
         val targetRasterExtent = resampleGrid(rasterExtent)
         GDALWarpOptions(
           cellSize = targetRasterExtent.cellSize.some,
-          alignTargetPixels = alignTargetPixels,
           resampleMethod = resampleMethod,
-          srcNoData = noDataValue
+          srcNoData = noDataValue,
+          ovr = strategy.some
         )
     }
 
-    res
+    options combine res
   }
 
-  override def reproject(targetCRS: CRS, options: Reproject.Options): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, options, warpList, alignTargetPixels)
+  override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
+    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, warpList)
 
-  override def resample(resampleGrid: ResampleGrid, method: ResampleMethod): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, warpList, alignTargetPixels)
+  override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options, warpList)
 }

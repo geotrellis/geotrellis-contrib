@@ -41,7 +41,7 @@ case class GDALCacheConfig(
       }
       if (enableDefaultRemovalListener)
         cache.removalListener[String, Dataset] { case (key, dataset, event) =>
-          logger.warn(s"removalListener: $key - ${dataset} event: $event")
+          logger.debug(s"removalListener: $key - ${dataset} event: $event")
           if (dataset != null) dataset.delete
         }
 

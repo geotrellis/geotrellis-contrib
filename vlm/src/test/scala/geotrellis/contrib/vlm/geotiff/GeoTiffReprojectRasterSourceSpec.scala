@@ -33,7 +33,7 @@ class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with
     val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
     val schemeURI = s"file://$uri"
 
-    val rasterSource = new GeoTiffRasterSource(schemeURI)
+    val rasterSource = GeoTiffRasterSource(schemeURI)
     val sourceTiff = GeoTiffReader.readMultiband(uri)
     
     val expectedRasterExtent = {
@@ -44,6 +44,8 @@ class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with
 
     def testReprojection(method: ResampleMethod) = {
       val warpRasterSource = rasterSource.reprojectToRegion(LatLng, expectedRasterExtent, method)
+
+      warpRasterSource.resolutions.size shouldBe rasterSource.resolutions.size
       
       val testBounds = GridBounds(0, 0, expectedRasterExtent.cols, expectedRasterExtent.rows).split(64,64).toSeq
 
