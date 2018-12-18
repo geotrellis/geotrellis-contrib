@@ -45,3 +45,5 @@ nohup.out
 derby.log
 metastore_db/
 *.log
+
+vlm/src/test/resources/data/
