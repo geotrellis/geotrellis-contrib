@@ -75,7 +75,10 @@ class TestCatalogSpec extends FunSpec with CatalogTestEnvironment {
       val actualCellSizes = reader.attributeStore.layerIds.map(layerId => reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId).cellSize).sortBy(_.resolution)
       info(actualCellSizes.toString)
       assert(expectedCellSizes.length == actualCellSizes.length)
-      expectedCellSizes.zip(actualCellSizes).foreach {case(x, y) => assert(x == y)}
+      expectedCellSizes.zip(actualCellSizes).foreach { case(x, y) =>
+        x.height shouldBe y.height +- 1e-10
+        x.width shouldBe y.width +- 1e-10
+      }
     }
     it("preserves projection") {
       val expectedProjections = Set(rs.crs)

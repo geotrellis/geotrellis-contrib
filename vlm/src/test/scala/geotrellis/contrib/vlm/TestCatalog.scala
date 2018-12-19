@@ -56,7 +56,8 @@ object TestCatalog {
 
     val rs = GeoTiffRasterSource(TestCatalog.filePath)
     rs.resolutions.sortBy(_.cellSize.resolution).zipWithIndex.foreach { case (rasterExtent, index) =>
-      val layout = LayoutDefinition(rasterExtent, 256)
+      val layout = LayoutDefinition(rasterExtent, tileSize = 256)
+
       val rdd: MultibandTileLayerRDD[SpatialKey] =
         RasterSourceRDD(List(rs), layout)
           .withContext( tiledd =>
