@@ -17,6 +17,7 @@
 package geotrellis.contrib.vlm
 
 import TestCatalog._
+import geotrellis.contrib.vlm.geotiff._
 
 import org.scalatest.FunSpec
 import geotrellis.spark.io.{ValueReader, CollectionLayerReader}
@@ -54,6 +55,30 @@ class TestCatalogSpec extends FunSpec with CatalogTestEnvironment {
       assertThrows[LayerNotFoundError] {
         CollectionLayerReader(absOutputPath).read[SpatialKey, MultibandTile, TileLayerMetadata[SpatialKey]](LayerId("INVALID", 0))
       }
+    }
+  }
+  describe("test catalog") {
+    val reader = ValueReader(absOutputPath)
+    val rs = GeoTiffRasterSource(TestCatalog.filePath)
+    it("preserves geotiff overviews") {
+      info(reader.attributeStore.layerIds.toString)
+      info(rs.resolutions.toString)
+      assert(reader.attributeStore.layerIds.length == rs.resolutions.length)
+    }
+    it("preserves cell size") {
+      info(reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](LayerId("landsat", 0)).cellSize.toString)
+      // TODO: Make geotrellis.raster.CellSize sortable
+      val expectedCellSizes = rs.resolutions.map(_.cellSize).sortBy(_.resolution)
+      info(expectedCellSizes.toString)
+      val actualCellSizes = reader.attributeStore.layerIds.map(layerId => reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId).cellSize).sortBy(_.resolution)
+      info(actualCellSizes.toString)
+      assert(expectedCellSizes.length == actualCellSizes.length)
+      expectedCellSizes.zip(actualCellSizes).foreach {case(x, y) => assert(x == y)}
+    }
+    it("preserves projection") {
+      val expectedProjections = Set(rs.crs)
+      val actualProjections = reader.attributeStore.layerIds.map(layerId => reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId).crs).toSet
+      expectedProjections.shouldBe(actualProjections)
     }
   }
 
