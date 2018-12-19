@@ -24,8 +24,11 @@ import java.io.File
 trait CatalogTestEnvironment extends TestEnvironment { self: Suite =>
 
   override def beforeAll() = {
-    if (!(new File(TestCatalog.outputPath)).exists) {
+    val file = new File(TestCatalog.outputPath)
+    if (!(file).exists) {
       TestCatalog.create
+    } else {
+      println(s"Test catalog exists at: $file")
     }
   }
 

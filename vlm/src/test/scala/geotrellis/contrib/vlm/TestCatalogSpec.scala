@@ -57,9 +57,11 @@ class TestCatalogSpec extends FunSpec with CatalogTestEnvironment {
       }
     }
   }
+
   describe("test catalog") {
-    val reader = ValueReader(absOutputPath)
-    val rs = GeoTiffRasterSource(TestCatalog.filePath)
+    lazy val reader = ValueReader(absOutputPath)
+    lazy val rs = GeoTiffRasterSource(TestCatalog.filePath)
+
     it("preserves geotiff overviews") {
       info(reader.attributeStore.layerIds.toString)
       info(rs.resolutions.toString)
