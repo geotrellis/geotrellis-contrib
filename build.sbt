@@ -28,6 +28,7 @@ lazy val commonSettings = Seq(
   addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.1" cross CrossVersion.full),
   dependencyUpdatesFilter := moduleFilter(organization = "org.scala-lang"),
   resolvers ++= Seq(
+    Resolver.bintrayRepo("azavea", "geotrellis"),
     "geosolutions" at "http://maven.geo-solutions.it/",
     "locationtech-releases" at "https://repo.locationtech.org/content/groups/releases",
     "locationtech-snapshots" at "https://repo.locationtech.org/content/groups/snapshots",
