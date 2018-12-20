@@ -16,6 +16,7 @@
 
 package geotrellis.contrib.vlm.gdal
 
+import geotrellis.gdal._
 import geotrellis.contrib.vlm._
 import geotrellis.proj4._
 import geotrellis.raster._
@@ -23,9 +24,6 @@ import geotrellis.raster.io.geotiff.OverviewStrategy
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.vector._
-
-import org.gdal.gdal.{Dataset, gdal}
-import org.gdal.osr.SpatialReference
 
 import java.net.MalformedURLException
 
@@ -51,44 +49,31 @@ trait GDALBaseRasterSource extends RasterSource {
   lazy val warpList: List[GDALWarpOptions] = baseWarpList :+ warpOptions
 
   // generate a vrt before the current options application
-  @transient lazy val fromBaseWarpList: Dataset = GDAL.fromGDALWarpOptions(uri, baseWarpList)
+  @transient lazy val fromBaseWarpList: GDALDataset = GDAL.fromGDALWarpOptions(uri, baseWarpList)
   // generate a vrt with the current options application
-  @transient lazy val fromWarpList: Dataset = GDAL.fromGDALWarpOptions(uri, warpList)
+  @transient lazy val fromWarpList: GDALDataset = GDAL.fromGDALWarpOptions(uri, warpList)
 
   // current dataset
-  @transient lazy val dataset: Dataset = fromWarpList
+  @transient lazy val dataset: GDALDataset = fromWarpList
 
-  protected lazy val geoTransform: Array[Double] = dataset.GetGeoTransform
+  protected lazy val geoTransform: Array[Double] = dataset.geoTransform
 
   lazy val bandCount: Int = dataset.getRasterCount
 
-  lazy val crs: CRS =
-    Option(dataset.GetProjectionRef)
-      .filter(_.nonEmpty)
-      .map(new SpatialReference(_).toCRS)
-      .getOrElse(CRS.fromEpsgCode(4326))
+  lazy val crs: CRS = dataset.crs.getOrElse(CRS.fromEpsgCode(4326))
 
   private lazy val reader: GDALReader = GDALReader(dataset)
 
   // noDataValue from the previous step
-  lazy val noDataValue: Option[Double] = {
-    val baseBand = fromBaseWarpList.GetRasterBand(1)
-
-    val arr = Array.ofDim[java.lang.Double](1)
-    baseBand.GetNoDataValue(arr)
-    arr.headOption.flatMap(Option(_)).map(_.doubleValue())
-  }
+  lazy val noDataValue: Option[Double] = fromBaseWarpList.getRasterBand(1).getNoDataValue
 
   lazy val cellType: CellType = {
     val (noDataValue, bufferType, typeSizeInBits) = {
-      val baseBand = dataset.GetRasterBand(1)
+      val baseBand = dataset.getRasterBand(1)
 
-      val arr = Array.ofDim[java.lang.Double](1)
-      baseBand.GetNoDataValue(arr)
-
-      val nd = arr.headOption.flatMap(Option(_)).map(_.doubleValue())
+      val nd = baseBand.getNoDataValue
       val bufferType = baseBand.getDataType
-      val typeSizeInBits = gdal.GetDataTypeSize(bufferType)
+      val typeSizeInBits = sgdal.getDataTypeSize(bufferType)
       (nd, bufferType, Some(typeSizeInBits))
     }
     GDALUtils.dataTypeToCellType(bufferType, noDataValue, typeSizeInBits)
@@ -115,10 +100,10 @@ trait GDALBaseRasterSource extends RasterSource {
     * or overviews of VRT that was created as result of resample operations.
     */
   lazy val resolutions: List[RasterExtent] = {
-    val band = dataset.GetRasterBand(1)
-    rasterExtent :: (0 until band.GetOverviewCount()).toList.map { idx =>
-      val ovr = band.GetOverview(idx)
-      RasterExtent(extent, cols = ovr.GetXSize(), rows = ovr.GetYSize())
+    val band = dataset.getRasterBand(1)
+    rasterExtent :: (0 until band.getOverviewCount).toList.map { idx =>
+      val ovr = band.getOverview(idx)
+      RasterExtent(extent, cols = ovr.getXSize, rows = ovr.getYSize)
     }
   }
 
@@ -172,5 +157,5 @@ trait GDALBaseRasterSource extends RasterSource {
     readBounds(bounds, 0 until bandCount)
   }
 
-  override def close = dataset.delete()
+  override def close = dataset.delete
 }

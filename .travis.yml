@@ -6,7 +6,7 @@ jdk:
   - oraclejdk8
 scala:
   - "2.11.12"
-  - "2.12.7"
+  - "2.12.8"
 before_install:
   - docker pull daunnc/openjdk-gdal:2.3.1
 services:

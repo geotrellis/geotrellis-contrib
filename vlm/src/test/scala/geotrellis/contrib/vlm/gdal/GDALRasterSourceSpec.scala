@@ -17,8 +17,10 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm._
+import geotrellis.gdal._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
+import geotrellis.raster.io.geotiff.AutoHigherResolution
 import geotrellis.raster.resample._
 import geotrellis.raster.testkit._
 import geotrellis.vector._
@@ -26,9 +28,8 @@ import geotrellis.spark._
 import geotrellis.spark.tiling._
 import geotrellis.util._
 import org.scalatest._
-import java.net.MalformedURLException
 
-import geotrellis.raster.io.geotiff.AutoHigherResolution
+import java.net.MalformedURLException
 
 class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
   val url = Resource.path("img/aspect-tiled.tif")

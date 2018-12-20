@@ -16,6 +16,7 @@
 
 package geotrellis.contrib.vlm.gdal
 
+import geotrellis.gdal._
 import geotrellis.raster.resample.ResampleMethod
 
 case class GDALRasterSource(uri: String, options: GDALWarpOptions = GDALWarpOptions()) extends GDALBaseRasterSource {
