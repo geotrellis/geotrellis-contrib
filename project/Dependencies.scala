@@ -17,15 +17,16 @@
 import sbt._
 
 object Version {
-  val geotrellis  = "3.0.0-SNAPSHOT"
-  val scala       = "2.11.12"
-  val crossScala  = Seq(scala, "2.12.7")
-  val hadoop      = "2.8.0"
-  val spark       = "2.4.0"
-  val gdal        = "2.3.0"
+  val geotrellis     = "3.0.0-SNAPSHOT"
+  val geotrellisGdal = "0.14.0-SNAPSHOT"
+  val scala          = "2.11.12"
+  val crossScala     = Seq(scala, "2.12.8")
+  val hadoop         = "2.8.0"
+  val spark          = "2.4.0"
 }
 
 object Dependencies {
+  val geotrellisGdal          = "com.azavea.geotrellis"       %% "geotrellis-gdal"           % Version.geotrellisGdal
   val geotrellisSpark         = "org.locationtech.geotrellis" %% "geotrellis-spark"          % Version.geotrellis
   val geotrellisSparkTestKit  = "org.locationtech.geotrellis" %% "geotrellis-spark-testkit"  % Version.geotrellis
   val geotrellisS3            = "org.locationtech.geotrellis" %% "geotrellis-s3"             % Version.geotrellis
@@ -49,7 +50,6 @@ object Dependencies {
   val sparkCore           = "org.apache.spark"           %% "spark-core"               % Version.spark
   val sparkSQL            = "org.apache.spark"           %% "spark-sql"                % Version.spark
   val hadoopClient        = "org.apache.hadoop"           % "hadoop-client"            % Version.hadoop
-  val gdal                = "org.gdal"                    % "gdal"                     % Version.gdal
 
   val squants = "org.typelevel" %% "squants" % "1.3.0"
 }

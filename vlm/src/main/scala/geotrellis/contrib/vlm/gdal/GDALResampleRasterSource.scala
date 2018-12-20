@@ -17,10 +17,10 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm._
+import geotrellis.gdal._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
-import geotrellis.vector._
 import geotrellis.proj4.CRS
 import geotrellis.raster.reproject.Reproject
 
@@ -44,23 +44,7 @@ case class GDALResampleRasterSource(
           resampleMethod = resampleMethod
         )
       case _ =>
-        lazy val rasterExtent: RasterExtent = {
-          val baseDataset = fromBaseWarpList
-          val colsLong: Long = baseDataset.getRasterXSize
-          val rowsLong: Long = baseDataset.getRasterYSize
-
-          val cols: Int = colsLong.toInt
-          val rows: Int = rowsLong.toInt
-
-          val geoTransform: Array[Double] = baseDataset.GetGeoTransform
-
-          val xmin: Double = geoTransform(0)
-          val ymin: Double = geoTransform(3) + geoTransform(5) * rows
-          val xmax: Double = geoTransform(0) + geoTransform(1) * cols
-          val ymax: Double = geoTransform(3)
-
-          RasterExtent(Extent(xmin, ymin, xmax, ymax), cols, rows)
-        }
+        lazy val rasterExtent: RasterExtent = fromBaseWarpList.rasterExtent
         // raster extent won't be calculated if it's not called in the apply function body explicitly
         val targetRasterExtent = resampleGrid(rasterExtent)
         GDALWarpOptions(

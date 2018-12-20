@@ -57,10 +57,10 @@ lazy val vlm = project
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-vlm",
     libraryDependencies ++= Seq(
+      geotrellisGdal,
       geotrellisSpark,
       geotrellisS3,
       geotrellisUtil,
-      gdal,
       scalactic,
       squants,
       sparkCore % Provided,

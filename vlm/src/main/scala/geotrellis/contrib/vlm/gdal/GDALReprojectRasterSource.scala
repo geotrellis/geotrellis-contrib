@@ -16,11 +16,13 @@
 
 package geotrellis.contrib.vlm.gdal
 
+import geotrellis.gdal._
 import geotrellis.proj4._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.contrib.vlm.{RasterSource, ResampleGrid}
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
+
 import cats.syntax.option._
 import org.gdal.osr.SpatialReference
 
@@ -37,7 +39,7 @@ case class GDALReprojectRasterSource(
   lazy val warpOptions: GDALWarpOptions = {
     val baseSpatialReference = {
       val baseDataset = fromBaseWarpList
-      val result = new SpatialReference(baseDataset.GetProjection)
+      val result = new SpatialReference(baseDataset.getProjection.getOrElse(LatLng.toProj4String))
       result
     }
     val targetSpatialReference: SpatialReference = {

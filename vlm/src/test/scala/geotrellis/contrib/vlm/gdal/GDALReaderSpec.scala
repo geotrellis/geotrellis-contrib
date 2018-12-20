@@ -1,9 +1,10 @@
 package geotrellis.contrib.vlm.gdal
 
+import geotrellis.gdal._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
-
 import geotrellis.raster.testkit._
 import geotrellis.spark.testkit._
+
 import org.scalatest._
 
 import java.io.File
