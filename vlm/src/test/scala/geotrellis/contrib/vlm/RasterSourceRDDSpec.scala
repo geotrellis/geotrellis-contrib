@@ -34,7 +34,7 @@ import java.io.File
 class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with BeforeAndAfterAll {
   val filePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
   val uri = s"file://$filePath"
-  val rasterSource = new GeoTiffRasterSource(uri)
+  val rasterSource = GeoTiffRasterSource(uri)
   val targetCRS = CRS.fromEpsgCode(3857)
   val scheme = ZoomedLayoutScheme(targetCRS)
   val layout = scheme.levelForZoom(13).layout
@@ -69,10 +69,10 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
       forAll(rows) { case (key, tile) =>
         withClue(s"$key") {
-          tile should have (
-            dimensions (256, 256),
-            cellType (rasterSource.cellType),
-            bandCount (rasterSource.bandCount)
+          tile should have(
+            dimensions(256, 256),
+            cellType(rasterSource.cellType),
+            bandCount(rasterSource.bandCount)
           )
         }
       }
@@ -98,7 +98,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
       actual: MultibandTileLayerRDD[SpatialKey],
       matchRasters: Boolean = false
     ): Unit = {
-      val joinedRDD = expected.filter{ case (_, t) => !t.band(0).isNoDataTile }.leftOuterJoin(actual)
+      val joinedRDD = expected.filter { case (_, t) => !t.band(0).isNoDataTile }.leftOuterJoin(actual)
 
       joinedRDD.collect().foreach { case (key, (expected, actualTile)) =>
         actualTile match {
@@ -117,10 +117,10 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
             // withGeoTiffClue(key, layout, actual, expected, targetCRS) {
             withClue(s"$key:") {
-              expected.dimensions should be (actual.dimensions)
-              if(matchRasters) assertTilesEqual(expected, actual)
+              expected.dimensions should be(actual.dimensions)
+              if (matchRasters) assertTilesEqual(expected, actual)
             }
-            // }
+          // }
 
           case None =>
             throw new Exception(s"$key does not exist in the rasterSourceRDD")
