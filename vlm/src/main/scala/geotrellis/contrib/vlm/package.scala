@@ -34,8 +34,8 @@ package object vlm {
 
     val rr =  javaURI.getScheme match {
       case null =>
-        FileRangeReader(Paths.get(javaURI.toString).toFile)      
-      
+        FileRangeReader(Paths.get(javaURI.toString).toFile)
+
       case "file" =>
         FileRangeReader(Paths.get(javaURI).toFile)
 
@@ -47,7 +47,16 @@ package object vlm {
 
       case "s3" =>
         val s3Uri = new AmazonS3URI(java.net.URLDecoder.decode(uri, "UTF-8"))
-        val s3Client = new AmazonS3Client(AmazonS3ClientBuilder.defaultClient())
+        val s3Client = if (Config.s3.allowGlobalRead) {
+          new AmazonS3Client(
+            AmazonS3ClientBuilder
+              .standard()
+              .withForceGlobalBucketAccessEnabled(true)
+              .build()
+          )
+        } else {
+          new AmazonS3Client(AmazonS3ClientBuilder.defaultClient())
+        }
         S3RangeReader(s3Uri.getBucket, s3Uri.getKey, s3Client)
 
       case scheme =>
