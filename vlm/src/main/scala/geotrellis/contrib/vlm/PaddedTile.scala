@@ -245,7 +245,7 @@ case class PaddedTile(chunk: Tile, colOffset: Int, rowOffset: Int, cols: Int, ro
   def mapIntMapper(mapper: IntTileMapper): Tile = {
     val tile = ArrayTile.alloc(cellType, cols, rows)
     chunk.foreach { (col, row, z) =>
-      tile.set(col, row, mapper(col, row, z))
+      tile.set(colOffset + col, rowOffset + row, mapper(col, row, z))
     }
 
     tile
@@ -254,7 +254,7 @@ case class PaddedTile(chunk: Tile, colOffset: Int, rowOffset: Int, cols: Int, ro
   def mapDoubleMapper(mapper: DoubleTileMapper): Tile = {
     val tile = ArrayTile.alloc(cellType, cols, rows)
     chunk.foreachDouble { (col, row, z) =>
-      tile.setDouble(col, row, mapper(col, row, z))
+      tile.setDouble(colOffset + col, rowOffset + row, mapper(col, row, z))
     }
 
     tile
