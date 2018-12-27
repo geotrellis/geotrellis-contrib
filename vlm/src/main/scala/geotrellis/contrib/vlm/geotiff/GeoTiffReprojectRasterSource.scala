@@ -52,8 +52,18 @@ case class GeoTiffReprojectRasterSource(
   lazy val resolutions: List[RasterExtent] =
     rasterExtent :: tiff.overviews.map(ovr => ReprojectRasterExtent(ovr.rasterExtent, transform))
 
-  @transient private[vlm] lazy val closestTiffOverview: GeoTiff[MultibandTile] =
-    tiff.getClosestOverview(rasterExtent.cellSize, strategy)
+  @transient private[vlm] lazy val closestTiffOverview: GeoTiff[MultibandTile] = {
+    if (reprojectOptions.targetRasterExtent.isDefined
+      || reprojectOptions.parentGridExtent.isDefined
+      || reprojectOptions.targetCellSize.isDefined)
+    {
+      // we're asked to match specific target resolution, estimate what resolution we need in source to sample it
+      val estimatedSource = ReprojectRasterExtent(rasterExtent, backTransform)
+      tiff.getClosestOverview(estimatedSource.cellSize, strategy)
+    } else {
+      tiff.getClosestOverview(baseRasterExtent.cellSize, strategy)
+    }
+  }
 
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = tiff.cellType

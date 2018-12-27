@@ -95,22 +95,31 @@ class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with
       // known good start, CellSize(10, 10) is the base resolution of source
       baseReproject.closestTiffOverview.cellSize shouldBe CellSize(10, 10)
 
+      info(s"lcc resolutions: ${rasterSource.resolutions.map(_.cellSize)}")
       val twiceFuzzyLayout = {
         val CellSize(width, height) = baseReproject.cellSize
-        LayoutDefinition(RasterExtent(LatLng.worldExtent, CellSize(width*2, height*2)), tileSize = 256)
+        LayoutDefinition(RasterExtent(LatLng.worldExtent, CellSize(width*2.1, height*2.1)), tileSize = 256)
       }
 
       val twiceFuzzySource = rasterSource.reprojectToGrid(LatLng, twiceFuzzyLayout).asInstanceOf[GeoTiffReprojectRasterSource]
       twiceFuzzySource.closestTiffOverview.cellSize shouldBe CellSize(20,20)
 
-
       val thriceFuzzyLayout = {
         val CellSize(width, height) = baseReproject.cellSize
-        LayoutDefinition(RasterExtent(LatLng.worldExtent, CellSize(width*3, height*3)), tileSize = 256)
+        LayoutDefinition(RasterExtent(LatLng.worldExtent, CellSize(width*3.5, height*3.5)), tileSize = 256)
       }
 
       val thriceFuzzySource = rasterSource.reprojectToGrid(LatLng, thriceFuzzyLayout).asInstanceOf[GeoTiffReprojectRasterSource]
-      thriceFuzzySource.closestTiffOverview.cellSize shouldBe CellSize(30,30)
+      thriceFuzzySource.closestTiffOverview.cellSize shouldBe CellSize(20,20)
+
+      val quatroFuzzyLayout = {
+        val CellSize(width, height) = baseReproject.cellSize
+        LayoutDefinition(RasterExtent(LatLng.worldExtent, CellSize(width*4.1, height*4.1)), tileSize = 256)
+      }
+
+      val quatroTimesFuzzySource = rasterSource.reprojectToGrid(LatLng, quatroFuzzyLayout).asInstanceOf[GeoTiffReprojectRasterSource]
+      quatroTimesFuzzySource.closestTiffOverview.cellSize shouldBe CellSize(40.0,39.94082840236686)
+
     }
   }
 }
