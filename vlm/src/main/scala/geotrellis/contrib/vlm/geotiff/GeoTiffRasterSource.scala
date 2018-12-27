@@ -40,7 +40,7 @@ case class GeoTiffRasterSource(uri: String) extends RasterSource {
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
     GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy)
 
-  def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
+  def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): GeoTiffResampleRasterSource =
     GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
