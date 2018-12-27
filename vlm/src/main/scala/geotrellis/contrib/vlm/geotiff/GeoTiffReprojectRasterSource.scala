@@ -52,7 +52,7 @@ case class GeoTiffReprojectRasterSource(
   lazy val resolutions: List[RasterExtent] =
     rasterExtent :: tiff.overviews.map(ovr => ReprojectRasterExtent(ovr.rasterExtent, transform))
 
-  @transient protected lazy val closestTiffOverview: GeoTiff[MultibandTile] =
+  @transient private[vlm] lazy val closestTiffOverview: GeoTiff[MultibandTile] =
     tiff.getClosestOverview(rasterExtent.cellSize, strategy)
 
   def bandCount: Int = tiff.bandCount

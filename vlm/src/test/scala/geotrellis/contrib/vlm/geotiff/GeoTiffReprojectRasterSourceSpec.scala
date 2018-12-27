@@ -23,10 +23,11 @@ import geotrellis.raster.resample._
 import geotrellis.raster.reproject._
 import geotrellis.proj4._
 import geotrellis.spark.testkit._
-
+import geotrellis.spark.tiling._
 import org.scalatest._
-
 import java.io.File
+
+import geotrellis.spark.tiling.LayoutDefinition
 
 class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
   describe("Reprojecting a RasterSource") {
@@ -86,6 +87,30 @@ class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with
 
     it("should reproject using Bilinear") {
       testReprojection(Bilinear)
+    }
+
+    it("should select correct overview to sample from") {
+      // we choose LatLng to switch scales, the source projection is in meters
+      val baseReproject = rasterSource.reproject(LatLng).asInstanceOf[GeoTiffReprojectRasterSource]
+      // known good start, CellSize(10, 10) is the base resolution of source
+      baseReproject.closestTiffOverview.cellSize shouldBe CellSize(10, 10)
+
+      val twiceFuzzyLayout = {
+        val CellSize(width, height) = baseReproject.cellSize
+        LayoutDefinition(RasterExtent(LatLng.worldExtent, CellSize(width*2, height*2)), tileSize = 256)
+      }
+
+      val twiceFuzzySource = rasterSource.reprojectToGrid(LatLng, twiceFuzzyLayout).asInstanceOf[GeoTiffReprojectRasterSource]
+      twiceFuzzySource.closestTiffOverview.cellSize shouldBe CellSize(20,20)
+
+
+      val thriceFuzzyLayout = {
+        val CellSize(width, height) = baseReproject.cellSize
+        LayoutDefinition(RasterExtent(LatLng.worldExtent, CellSize(width*3, height*3)), tileSize = 256)
+      }
+
+      val thriceFuzzySource = rasterSource.reprojectToGrid(LatLng, thriceFuzzyLayout).asInstanceOf[GeoTiffReprojectRasterSource]
+      thriceFuzzySource.closestTiffOverview.cellSize shouldBe CellSize(30,30)
     }
   }
 }
