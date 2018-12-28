@@ -108,31 +108,14 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    val tuples =
-      bounds.map { gb =>
-        val re = rasterExtent.rasterExtentFor(gb)
-        val boundsClamped = rasterExtent.gridBoundsFor(re.extent, clamp = true)
-        (gb, boundsClamped, re)
+    bounds
+      .toIterator
+      .flatMap { gb => gridBounds.intersection(gb) }
+      .map { gb =>
+        val tile = reader.read(gb, bands = bands)
+        val extent = rasterExtent.extentFor(gb)
+        Raster(tile, extent)
       }
-
-    tuples.map { case (gb, gbc, re) =>
-      val initialTile = reader.read(gb, bands = bands)
-
-      val (gridBounds, tile) =
-        if (initialTile.cols != re.cols || initialTile.rows != re.rows) {
-          val updatedTiles = initialTile.bands.map { band =>
-            // TODO: it can't be larger than the source is, fix it
-            val protoTile = band.prototype(re.cols, re.rows)
-
-            protoTile.update(gb.colMin - gbc.colMin, gb.rowMin - gbc.rowMin, band)
-            protoTile
-          }
-
-          (gb, MultibandTile(updatedTiles))
-        } else (gbc, initialTile)
-
-      Raster(tile, rasterExtent.extentFor(gridBounds))
-    }.toIterator
   }
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
@@ -152,8 +135,7 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   override def readExtents(extents: Traversable[Extent]): Iterator[Raster[MultibandTile]] = {
-    // TODO: clamp = true when we have PaddedTile ?
-    val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = false))
+    val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = true))
     readBounds(bounds, 0 until bandCount)
   }
 
