@@ -77,13 +77,43 @@ case class PaddedTile(chunk: Tile, colOffset: Int, rowOffset: Int, cols: Int, ro
   }
 
   def foreach(f: Int => Unit): Unit = {
-    chunk.foreach(f)
-    cfor(0)(_ < (this.size - chunk.size), _ + 1) { i => f(NODATA) }
+    cfor(0)(_ < rows, _ + 1) { row =>
+      if (row < rowOffset || row > (rowOffset + rows - 1)) {
+        cfor(0)(_ < cols, _ + 1) { _ =>
+          f(NODATA)
+        }
+      } else {
+        cfor(0)(_ < colOffset, _ + 1) { _ =>
+          f(NODATA)
+        }
+        cfor(0)(_ < chunk.cols, _ + 1) { col =>
+          f(chunk.get(col, row - rowOffset))
+        }
+        cfor(colOffset + chunk.cols)(_ < cols, _ + 1) { _ =>
+          f(NODATA)
+        }
+      }
+    }
   }
 
   def foreachDouble(f: Double => Unit): Unit = {
-    chunk.foreachDouble(f)
-    cfor(0)(_ < (this.size - chunk.size), _ + 1) { i => f(Double.NaN) }
+    cfor(0)(_ < rows, _ + 1) { row =>
+      if (row < rowOffset || row > (rowOffset + rows - 1)) {
+        cfor(0)(_ < cols, _ + 1) { _ =>
+          f(Double.NaN)
+        }
+      } else {
+        cfor(0)(_ < colOffset, _ + 1) { _ =>
+          f(Double.NaN)
+        }
+        cfor(0)(_ < chunk.cols, _ + 1) { col =>
+          f(chunk.getDouble(col, row - rowOffset))
+        }
+        cfor(colOffset + chunk.cols)(_ < cols, _ + 1) { _ =>
+          f(Double.NaN)
+        }
+      }
+    }
   }
 
   def mutable(): MutableArrayTile =
@@ -172,13 +202,50 @@ case class PaddedTile(chunk: Tile, colOffset: Int, rowOffset: Int, cols: Int, ro
     tile
   }
 
-  def foreachIntVisitor(visitor: IntTileVisitor): Unit = chunk.foreachIntVisitor(visitor)
-  def foreachDoubleVisitor(visitor: DoubleTileVisitor): Unit = chunk.foreachDoubleVisitor(visitor)
+  def foreachIntVisitor(visitor: IntTileVisitor): Unit = {
+    cfor(0)(_ < rows, _ + 1) { row =>
+      if (row < rowOffset || row > (rowOffset + rows - 1)) {
+        cfor(0)(_ < cols, _ + 1) { col =>
+          visitor(col, row, NODATA)
+        }
+      } else {
+        cfor(0)(_ < colOffset, _ + 1) { col =>
+          visitor(col, row, NODATA)
+        }
+        cfor(0)(_ < chunk.cols, _ + 1) { col =>
+          visitor(col + colOffset, row, chunk.get(col, row - rowOffset))
+        }
+        cfor(colOffset + chunk.cols)(_ < cols, _ + 1) { col =>
+          visitor(col, row, NODATA)
+        }
+      }
+    }
+  }
+
+  def foreachDoubleVisitor(visitor: DoubleTileVisitor): Unit = {
+    cfor(0)(_ < rows, _ + 1) { row =>
+      if (row < rowOffset || row > (rowOffset + rows - 1)) {
+        cfor(0)(_ < cols, _ + 1) { col =>
+          visitor(col, row, Double.NaN)
+        }
+      } else {
+        cfor(0)(_ < colOffset, _ + 1) { col =>
+          visitor(col, row, Double.NaN)
+        }
+        cfor(0)(_ < chunk.cols, _ + 1) { col =>
+          visitor(col + colOffset, row, chunk.getDouble(col, row - rowOffset))
+        }
+        cfor(colOffset + chunk.cols)(_ < cols, _ + 1) { col =>
+          visitor(col, row, Double.NaN)
+        }
+      }
+    }
+  }
 
   def mapIntMapper(mapper: IntTileMapper): Tile = {
     val tile = ArrayTile.alloc(cellType, cols, rows)
     chunk.foreach { (col, row, z) =>
-      tile.set(col, row, mapper(col, row, z))
+      tile.set(colOffset + col, rowOffset + row, mapper(col, row, z))
     }
 
     tile
@@ -187,7 +254,7 @@ case class PaddedTile(chunk: Tile, colOffset: Int, rowOffset: Int, cols: Int, ro
   def mapDoubleMapper(mapper: DoubleTileMapper): Tile = {
     val tile = ArrayTile.alloc(cellType, cols, rows)
     chunk.foreachDouble { (col, row, z) =>
-      tile.setDouble(col, row, mapper(col, row, z))
+      tile.setDouble(colOffset + col, rowOffset + row, mapper(col, row, z))
     }
 
     tile
