@@ -26,6 +26,7 @@ import geotrellis.spark.tiling._
 import geotrellis.spark.testkit._
 import geotrellis.gdal._
 
+import cats.implicits._
 import cats.effect.IO
 import spire.syntax.cfor._
 import org.scalatest._
@@ -38,6 +39,7 @@ import scala.concurrent.ExecutionContext
 
 class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with BeforeAndAfterAll {
   val filePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
+  def filePathByIndex(i: Int): String = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-$i.tif"
   val uri = s"file://$filePath"
   val rasterSource = GeoTiffRasterSource(uri)
   val targetCRS = CRS.fromEpsgCode(3857)
@@ -194,27 +196,11 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         assertRDDLayersEqual(reprojectedExpectedRDDGDAL, reprojectedSourceRDD, true)
       }
 
-      ignore("should not fail on parallelization lolmeh") {
+      it("should not fail on parallelization") {
         println(java.lang.Thread.activeCount())
-
-        // sgdal.setConfigOption("GDAL_SHARED_FILE", "NO")
-        // sgdal.setConfigOption("VRT_SHARED_SOURCE", "0")
-        //sgdal.setConfigOption("GDAL_DISABLE_READDIR_ON_OPEN", "YES")
-        // sgdal.setConfigOption("CPL_DEBUG", "ON")
-        // aspect-tiled are just copies of the same object
-        def filePath(i: Int) = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-$i.tif"
-        // val rasterSource = GDALRasterSource(uri)
-
-        val targetCRS = CRS.fromEpsgCode(3857)
-        val scheme = ZoomedLayoutScheme(targetCRS)
-        val layout = scheme.levelForZoom(13).layout
 
         def reprojRS(i: Int): LayoutTileSource =
-          GDALRasterSource(filePath(i)).reprojectToGrid(targetCRS, layout).tileToLayout(layout)
-
-        def rs(i: Int) = GDALRasterSource(filePath(i))
-
-        import cats.implicits._
+          GDALRasterSource(filePathByIndex(i)).reprojectToGrid(targetCRS, layout).tileToLayout(layout)
 
         val n = 200
         val pool = Executors.newFixedThreadPool(n)
@@ -222,7 +208,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         implicit val cs = IO.contextShift(ec)
         // implicit val cs = IO.contextShift(ExecutionContext.global)
 
-        val result = (1 to 1000).toList.flatMap { _ =>
+        (1 to 1000).toList.flatMap { _ =>
           (0 to 4).flatMap { i =>
             List(IO {
               // println(Thread.currentThread().getName())
@@ -244,70 +230,9 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
               reprojRS(i).source.resolutions
             })
           }
-        }.parSequence /*.map(_.flatten)*/ .void.unsafeRunSync
+        }.parSequence.void.unsafeRunSync
 
-        // println(result)
         println(java.lang.Thread.activeCount())
-      }
-
-      ignore("should not fail on parallelization2") {
-        println(Thread.activeCount())
-
-        sgdal.setConfigOption("GDAL_MAX_DATASET_POOL_SIZE", "1")
-        sgdal.setConfigOption("VRT_SHARED_SOURCE", "0")
-
-        // sgdal.setConfigOption("GDAL_DISABLE_READDIR_ON_OPEN", "YES")
-        // sgdal.setConfigOption("CPL_DEBUG", "ON")
-        def filePath(i: Int) = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-$i.tif"
-        // val rasterSource = GDALRasterSource(uri)
-
-        val targetCRS = CRS.fromEpsgCode(3857)
-        val scheme = ZoomedLayoutScheme(targetCRS)
-        val layout = scheme.levelForZoom(13).layout
-
-        def rd(i: Int): GDALDataset = GDAL.open(filePath(i))
-
-        import cats.implicits._
-
-        val n = 200
-        val pool = Executors.newFixedThreadPool(n)
-        implicit val ec = ExecutionContext.fromExecutor(pool)
-        implicit val cs = IO.contextShift(ec)
-        // implicit val cs = IO.contextShift(ExecutionContext.global)
-
-        val result = (1 to 100).toList.flatMap { _ =>
-          (0 to 4).flatMap { i =>
-            List(IO {
-              // println(Thread.currentThread().getName())
-              // Thread.sleep((Math.random() * 100).toLong)
-              // rs(i).resolutions
-              val ds = rd(i)
-              ds.getRasterCount
-              ds.getRasterBand(1).getNoDataValue
-              ds.getGeoTransform
-              ds.getRasterBand(1).getOverviewCount
-            }, IO {
-              // println(Thread.currentThread().getName())
-              // Thread.sleep((Math.random() * 100).toLong)
-              val ds = rd(i)
-              ds.getRasterCount
-              ds.getRasterBand(1).getNoDataValue
-              ds.getGeoTransform
-              ds.getRasterBand(1).getOverviewCount
-            }, IO {
-              // println(Thread.currentThread().getName())
-              // Thread.sleep((Math.random() * 100).toLong)
-              // rs(i).resolutions
-              val ds = rd(i)
-              ds.getRasterCount
-              ds.getRasterBand(1).getNoDataValue
-              ds.getGeoTransform
-              ds.getRasterBand(1).getOverviewCount
-            })
-          }
-        }.parSequence /*.map(_.flatten)*/ .unsafeRunSync()
-
-        // println(result)
       }
     }
   }

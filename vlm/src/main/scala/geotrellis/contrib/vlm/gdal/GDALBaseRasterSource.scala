@@ -16,8 +16,9 @@
 
 package geotrellis.contrib.vlm.gdal
 
-import geotrellis.gdal._
 import geotrellis.contrib.vlm._
+import geotrellis.gdal._
+import geotrellis.gdal.config.GDALCacheConfig
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.OverviewStrategy
@@ -26,6 +27,8 @@ import geotrellis.raster.resample.ResampleMethod
 import geotrellis.vector._
 
 import java.net.MalformedURLException
+
+import scala.annotation.tailrec
 
 trait GDALBaseRasterSource extends RasterSource {
   val vsiPath: String = if (VSIPath.isVSIFormatted(uri)) uri else try {
@@ -53,8 +56,24 @@ trait GDALBaseRasterSource extends RasterSource {
   // generate a vrt with the current options application
   @transient lazy val fromWarpList: GDALDataset = GDAL.fromGDALWarpOptions(uri, warpList)
 
+  // parent datasets, required to keep them alive and not being collected when the cache is on weak references
+  @transient private lazy val parentDatasets: Array[GDALDataset] = {
+    @tailrec
+    def rec0(d: GDALDataset, acc: Array[GDALDataset]): Array[GDALDataset] = {
+      if(d.parents.isEmpty) acc
+      else rec0(d.parents.head, d.parents ++ acc) // until we don't have multiple parents for the single warp step
+                                                  // parents.head will work for us
+    }
+    rec0(fromWarpList, Array())
+  }
+
+  @transient private lazy val parentDatasetsNumber: Int = parentDatasets.length
+
   // current dataset
-  @transient lazy val dataset: GDALDataset = fromWarpList
+  @transient lazy val dataset: GDALDataset = {
+    if(GDALCacheConfig.valuesType.isWeak) parentDatasetsNumber
+    fromWarpList
+  }
 
   protected lazy val geoTransform: Array[Double] = dataset.geoTransform
 
