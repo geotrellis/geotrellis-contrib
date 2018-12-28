@@ -32,7 +32,8 @@ lazy val commonSettings = Seq(
     "geosolutions" at "http://maven.geo-solutions.it/",
     "locationtech-releases" at "https://repo.locationtech.org/content/groups/releases",
     "locationtech-snapshots" at "https://repo.locationtech.org/content/groups/snapshots",
-    "osgeo" at "http://download.osgeo.org/webdav/geotools/"
+    "osgeo" at "http://download.osgeo.org/webdav/geotools/",
+    "geotrellis-staging" at "https://oss.sonatype.org/service/local/repositories/orglocationtechgeotrellis-1009/content"
   ),
   headerLicense := Some(HeaderLicense.ALv2("2018", "Azavea")),
   bintrayOrganization := Some("azavea"),
