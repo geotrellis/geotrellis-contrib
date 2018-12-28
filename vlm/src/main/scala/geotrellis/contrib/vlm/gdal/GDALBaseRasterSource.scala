@@ -39,22 +39,8 @@ trait GDALBaseRasterSource extends RasterSource {
       )
   }
 
-  /** options to override some values on transformation steps, should be used carefully as these params can change the behaviour significantly */
-  val options: GDALWarpOptions
-  /** options from previous transformation steps */
-  val baseWarpList: List[GDALWarpOptions]
-  /** current transformation options */
-  val warpOptions: GDALWarpOptions
-  /** the list of transformation options including the current one */
-  lazy val warpList: List[GDALWarpOptions] = baseWarpList :+ warpOptions
-
-  // generate a vrt before the current options application
-  @transient lazy val fromBaseWarpList: GDALDataset = GDAL.fromGDALWarpOptions(uri, baseWarpList)
-  // generate a vrt with the current options application
-  @transient lazy val fromWarpList: GDALDataset = GDAL.fromGDALWarpOptions(uri, warpList)
-
   // current dataset
-  @transient lazy val dataset: GDALDataset = fromWarpList
+  @transient def dataset: GDALDataset
 
   protected lazy val geoTransform: Array[Double] = dataset.geoTransform
 
@@ -62,10 +48,7 @@ trait GDALBaseRasterSource extends RasterSource {
 
   lazy val crs: CRS = dataset.crs.getOrElse(CRS.fromEpsgCode(4326))
 
-  private lazy val reader: GDALReader = GDALReader(dataset)
-
-  // noDataValue from the previous step
-  lazy val noDataValue: Option[Double] = fromBaseWarpList.getRasterBand(1).getNoDataValue
+  protected lazy val reader: GDALReader = GDALReader(dataset)
 
   lazy val cellType: CellType = {
     val (noDataValue, bufferType, typeSizeInBits) = {
@@ -118,11 +101,6 @@ trait GDALBaseRasterSource extends RasterSource {
       }
   }
 
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options)
-
-  def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)

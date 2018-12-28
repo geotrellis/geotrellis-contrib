@@ -16,11 +16,21 @@
 
 package geotrellis.contrib.vlm.gdal
 
+import geotrellis.contrib.vlm.{RasterSource, ResampleGrid}
 import geotrellis.gdal._
+import geotrellis.proj4.CRS
+import geotrellis.raster.io.geotiff.OverviewStrategy
+import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
 
-case class GDALRasterSource(uri: String, options: GDALWarpOptions = GDALWarpOptions()) extends GDALBaseRasterSource {
-  val baseWarpList: List[GDALWarpOptions] = Nil
+case class GDALRasterSource(uri: String) extends GDALBaseRasterSource {
+  @transient lazy val dataset: GDALDataset = GDAL.fromGDALWarpOptions(uri, Nil)
+
   def resampleMethod: Option[ResampleMethod] = None
-  lazy val warpOptions: GDALWarpOptions = GDALWarpOptions()
+
+  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
+    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, GDALWarpOptions())
+
+  def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, GDALWarpOptions())
 }

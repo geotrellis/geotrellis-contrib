@@ -33,7 +33,7 @@ case class GDALReprojectRasterSource(
   strategy: OverviewStrategy = AutoHigherResolution,
   options: GDALWarpOptions = GDALWarpOptions(),
   baseWarpList: List[GDALWarpOptions] = Nil
-) extends GDALBaseRasterSource {
+) extends GDALBaseRasterSource with GDALWarping {
   def resampleMethod: Option[ResampleMethod] = reprojectOptions.method.some
 
   lazy val warpOptions: GDALWarpOptions = {
@@ -42,6 +42,7 @@ case class GDALReprojectRasterSource(
       val result = OSRSpatialReference(baseDataset.getProjection.getOrElse(LatLng.toProj4String))
       result
     }
+
     val targetSpatialReference = {
       val spatialReference = OSRSpatialReference()
       spatialReference.importFromProj4(targetCRS.toProj4String)

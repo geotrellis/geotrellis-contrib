@@ -26,6 +26,11 @@ import geotrellis.raster.reproject.Reproject
 
 import cats.syntax.option._
 
+// I can re-implement this using readRaster ... but it would only work for base dataset
+// also, I'm not certain if it would totally replicate the behavior
+// therefore, I should test that I can.
+// what I will save ... is the need to create a second dataset for VRT when I don't need it
+
 case class GDALResampleRasterSource(
   uri: String,
   resampleGrid: ResampleGrid,
@@ -33,7 +38,7 @@ case class GDALResampleRasterSource(
   strategy: OverviewStrategy = AutoHigherResolution,
   options: GDALWarpOptions = GDALWarpOptions(),
   baseWarpList: List[GDALWarpOptions] = Nil
-) extends GDALBaseRasterSource {
+) extends GDALBaseRasterSource with GDALWarping {
   def resampleMethod: Option[ResampleMethod] = method.some
 
   lazy val warpOptions: GDALWarpOptions = {
