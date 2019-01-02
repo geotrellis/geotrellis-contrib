@@ -15,14 +15,20 @@ The `vlm` subproject requires GDAL JNI bindings.
 
 ### Linux 
 
-See the steps list in `Dockerfile.benchmark`.
+See the steps listed in `https://github.com/geotrellis/geotrellis-gdal/blob/master/Dockerfile`.
 
 ### MacOS
 
 Here's one approach, using Homebrew:
 
-1. `brew install osgeo/osgeo4mac/gdal2 --with-java --with-swig-java --with-libkml --with-opencl`
-2. Add `/usr/local/opt/gdal2/lib` to JVM system property `java.library.path`, or add the path to the `DYLD_LIBRARY_PATH` environment variable. 
+1. `brew install osgeo/osgeo4mac/gdal2 --with-swig-java`
+2. The `gdal2` recipe is "keg only", meaning it doesn't add sybolic links in the various `/usr/local/*` directories. 
+   you can either add `/usr/local/opt/gdal2/lib` to your `DYLD_LIBRARY_PATH`, or to `java.library.path`, or manually
+   create symbolic links: 
 
+   ```console
+   (cd /usr/local/lib; for f in /usr/local/opt/gdal2/lib/*.dylib; do ln -s $f; done)
+   
+   ```
 
 
