@@ -42,14 +42,14 @@ import geotrellis.contrib.vlm.geotiff.GeoTiffRasterSource
 
 object TestCatalog {
   val filePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
-  val inputPath = s"file://$filePath"
-  val outputPath = s"${new File("").getAbsolutePath()}/src/test/resources/data/catalog"
+  val multibandOutputPath = s"${new File("").getAbsolutePath()}/src/test/resources/data/catalog"
+  val singlebandOutputPath = s"${new File("").getAbsolutePath()}/src/test/resources/data/single_band_catalog"
 
   def fullPath(path: String) = new java.io.File(path).getAbsolutePath
 
-  def create(implicit sc: SparkContext) = {
+  def createMultiband(implicit sc: SparkContext) = {
     // Create the attributes store that will tell us information about our catalog.
-    val attributeStore = FileAttributeStore(outputPath)
+    val attributeStore = FileAttributeStore(multibandOutputPath)
 
     // Create the writer that we will use to store the tiles in the local catalog.
     val writer = FileLayerWriter(attributeStore)
@@ -63,6 +63,31 @@ object TestCatalog {
           .withContext( tiledd =>
             // the tiles are actually `PaddedTile`, this forces them to be ArrayTile
             tiledd.mapValues { mb: MultibandTile => ArrayMultibandTile(mb.bands.map(_.toArrayTile))}
+          )
+
+      val id = LayerId("landsat", index)
+      writer.write(id, rdd, ZCurveKeyIndexMethod)
+    }
+  }
+
+  def createSingleband(implicit sc: SparkContext) = {
+    // Create the attributes store that will tell us information about our catalog.
+    val attributeStore = FileAttributeStore(singlebandOutputPath)
+
+    // Create the writer that we will use to store the tiles in the local catalog.
+    val writer = FileLayerWriter(attributeStore)
+
+    val rs = GeoTiffRasterSource(TestCatalog.filePath)
+    rs.resolutions.sortBy(_.cellSize.resolution).zipWithIndex.foreach { case (rasterExtent, index) =>
+      val layout = LayoutDefinition(rasterExtent, tileSize = 256)
+
+      val rdd: TileLayerRDD[SpatialKey] =
+        RasterSourceRDD(List(rs), layout)
+          .withContext( tiledd =>
+            tiledd.mapValues {mb: MultibandTile =>
+              ArrayMultibandTile(mb.bands.map(_.toArrayTile))
+                .band(0)  // Get only first band
+            }
           )
 
       val id = LayerId("landsat", index)
