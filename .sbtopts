@@ -1,7 +1,7 @@
--J-Xmx4g
--J-Xms1g
--J-Xss6M
+-J-Xmx2G
+-J-Xms1G
+-J-Xss2M
 -Dfile.encoding=UTF8
 -Djava.awt.headless=true
 -Dsun.io.serialization.extendedDebugInfo=true
--Djava.library.path=/usr/local/lib:/usr/local/opt/gdal2/lib
+-Djava.library.path=/usr/local/lib
