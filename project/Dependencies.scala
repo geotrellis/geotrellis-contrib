@@ -23,6 +23,8 @@ object Version {
   val crossScala     = Seq(scala, "2.12.8")
   val hadoop         = "2.8.0"
   val spark          = "2.4.0"
+
+  def unapplySeq(arg: String): Option[Seq[String]] = Some(arg.split('.').toSeq)
 }
 
 object Dependencies {
