@@ -25,13 +25,11 @@ import geotrellis.spark.io.hadoop._
 import geotrellis.spark.tiling._
 import geotrellis.spark.testkit._
 import geotrellis.gdal._
-
 import cats.implicits._
-import cats.effect.IO
+import cats.effect.{ContextShift, IO}
 import spire.syntax.cfor._
 import org.scalatest._
 import Inspectors._
-
 import java.io.File
 import java.util.concurrent.Executors
 
@@ -196,19 +194,25 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         assertRDDLayersEqual(reprojectedExpectedRDDGDAL, reprojectedSourceRDD, true)
       }
 
-      it("should not fail on parallelization") {
+      def parellSpec(implicit cs: ContextShift[IO]): Unit = {
         println(java.lang.Thread.activeCount())
 
-        def reprojRS(i: Int): LayoutTileSource =
-          GDALRasterSource(filePathByIndex(i)).reprojectToGrid(targetCRS, layout).tileToLayout(layout)
+        /** Do smth usual with the original RasterSource to force VRTs allocation */
+        def reprojRS(i: Int, n: Int = 1000): LayoutTileSource =
+          GDALRasterSource(filePathByIndex(i))
+            .reprojectToGrid(targetCRS, layout)
+            .tileToLayout(layout)
 
-        val n = 200
-        val pool = Executors.newFixedThreadPool(n)
-        implicit val ec = ExecutionContext.fromExecutor(pool)
-        implicit val cs = IO.contextShift(ec)
-        // implicit val cs = IO.contextShift(ExecutionContext.global)
+        /** Simulate possible RF backsplash calls */
+        def dirtyCalls(ds: RasterSource): Unit = {
+          val tds = ds.asInstanceOf[GDALBaseRasterSource].dataset
+          tds.rasterExtent
+          tds.crs
+          tds.cellSize
+          tds.extent
+        }
 
-        (1 to 1000).toList.flatMap { _ =>
+        (1 to n).toList.flatMap { _ =>
           (0 to 4).flatMap { i =>
             List(IO {
               // println(Thread.currentThread().getName())
@@ -216,23 +220,44 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
               val lts = reprojRS(i)
               lts.readAll(lts.keys.take(10).toIterator)
               reprojRS(i).source.resolutions
+
+              dirtyCalls(reprojRS(i).source)
             }, IO {
               // println(Thread.currentThread().getName())
               // Thread.sleep((Math.random() * 100).toLong)
               val lts = reprojRS(i)
               lts.readAll(lts.keys.take(10).toIterator)
               reprojRS(i).source.resolutions
+
+              dirtyCalls(reprojRS(i).source)
             }, IO {
               // println(Thread.currentThread().getName())
               // Thread.sleep((Math.random() * 100).toLong)
               val lts = reprojRS(i)
               lts.readAll(lts.keys.take(10).toIterator)
               reprojRS(i).source.resolutions
+
+              dirtyCalls(reprojRS(i).source)
             })
           }
         }.parSequence.void.unsafeRunSync
 
         println(java.lang.Thread.activeCount())
+      }
+
+      it("should not fail on parallilization with a fixed thread pool") {
+        val n = 200
+        val pool = Executors.newFixedThreadPool(n)
+        val ec = ExecutionContext.fromExecutor(pool)
+        implicit val cs = IO.contextShift(ec)
+
+        parellSpec
+      }
+
+      ignore("should not fail on parallilization with a fork join pool") {
+        implicit val cs = IO.contextShift(ExecutionContext.global)
+        
+        parellSpec
       }
     }
   }
