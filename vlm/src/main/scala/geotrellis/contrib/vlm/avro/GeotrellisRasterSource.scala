@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
+package geotrellis.contrib.vlm.avro
 
 import geotrellis.contrib.vlm._
 import geotrellis.contrib.vlm.geotiff._
@@ -28,6 +28,7 @@ import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.spark.{LayerId, Metadata, SpatialKey, TileLayerMetadata}
 import geotrellis.spark.io._
 import geotrellis.spark.io.avro.codecs._
+import geotrellis.spark.io.avro.codecs.Implicits._
 import geotrellis.raster.{MultibandTile, Tile}
 
 /**

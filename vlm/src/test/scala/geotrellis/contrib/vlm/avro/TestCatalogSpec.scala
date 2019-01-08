@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
+package geotrellis.contrib.vlm.avro
 
 import TestCatalog._
 import geotrellis.contrib.vlm.geotiff._

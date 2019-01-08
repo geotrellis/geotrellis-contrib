@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
+package geotrellis.contrib.vlm.avro
 
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff._
@@ -24,6 +24,8 @@ import geotrellis.raster.reproject._
 import geotrellis.proj4._
 import geotrellis.spark._
 import geotrellis.spark.io._
+import geotrellis.spark.io.avro.codecs._
+import geotrellis.spark.io.avro.codecs.Implicits._
 import geotrellis.spark.io.file._
 import geotrellis.spark.io.hadoop._
 import geotrellis.spark.io.index._
