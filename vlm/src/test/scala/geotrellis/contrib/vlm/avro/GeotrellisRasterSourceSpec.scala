@@ -28,6 +28,7 @@ import geotrellis.spark._
 import geotrellis.spark.io._
 import geotrellis.raster._
 import geotrellis.proj4._
+import geotrellis.contrib.vlm._
 
 import java.io.File
 
@@ -93,4 +94,3 @@ class GeotrellisRasterSourceSpec extends FunSpec with RasterMatchers with Better
     }
   }
 }
-

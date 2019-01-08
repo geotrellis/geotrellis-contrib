@@ -27,8 +27,7 @@ import geotrellis.raster.io.geotiff.{GeoTiffMultibandTile, MultibandGeoTiff, Ove
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.spark.{LayerId, Metadata, SpatialKey, TileLayerMetadata}
 import geotrellis.spark.io._
-import geotrellis.spark.io.avro.codecs._
-import geotrellis.spark.io.avro.codecs.Implicits._
+import geotrellis.contrib.vlm.avro._
 import geotrellis.raster.{MultibandTile, Tile}
 
 /**

@@ -40,7 +40,8 @@ import org.apache.spark.rdd._
 import scala.io.StdIn
 import java.io.File
 
-import geotrellis.contrib.vlm.geotiff.GeoTiffRasterSource
+import geotrellis.contrib.vlm._
+import geotrellis.contrib.vlm.geotiff._
 
 object TestCatalog {
   val filePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
