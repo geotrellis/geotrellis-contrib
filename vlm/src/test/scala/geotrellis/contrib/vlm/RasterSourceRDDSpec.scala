@@ -25,11 +25,14 @@ import geotrellis.spark.io.hadoop._
 import geotrellis.spark.tiling._
 import geotrellis.spark.testkit._
 import geotrellis.gdal._
+import geotrellis.gdal.config._
+
 import cats.implicits._
 import cats.effect.{ContextShift, IO}
 import spire.syntax.cfor._
 import org.scalatest._
 import Inspectors._
+
 import java.io.File
 import java.util.concurrent.Executors
 
@@ -169,6 +172,8 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
     }
 
     describe("GDALRasterSource") {
+      import Utils._
+
       val expectedFilePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-near-merc-rdd.tif"
 
       it("should reproduce tileToLayout") {
@@ -245,7 +250,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         println(java.lang.Thread.activeCount())
       }
 
-      it("should not fail on parallilization with a fixed thread pool") {
+      it("should not fail on parallilization with a fixed thread pool on weak refs") {
         val n = 200
         val pool = Executors.newFixedThreadPool(n)
         val ec = ExecutionContext.fromExecutor(pool)
@@ -254,9 +259,45 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         parellSpec()
       }
 
-      ignore("should not fail on parallilization with a fork join pool") {
+      it("should not fail on parallilization with a fork join pool on weak refs") {
         implicit val cs = IO.contextShift(ExecutionContext.global)
-        
+
+        parellSpec()
+      }
+
+      it("should not fail on parallilization with a fixed thread pool on hard refs") {
+       modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Hard).getCache)
+
+        val n = 200
+        val pool = Executors.newFixedThreadPool(n)
+        val ec = ExecutionContext.fromExecutor(pool)
+        implicit val cs = IO.contextShift(ec)
+
+        parellSpec()
+      }
+
+      it("should not fail on parallilization with a fork join pool on hard refs") {
+        modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Hard).getCache)
+        implicit val cs = IO.contextShift(ExecutionContext.global)
+
+        parellSpec()
+      }
+
+      it("should not fail on parallilization with a fixed thread pool on soft refs") {
+        modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Soft).getCache)
+
+        val n = 200
+        val pool = Executors.newFixedThreadPool(n)
+        val ec = ExecutionContext.fromExecutor(pool)
+        implicit val cs = IO.contextShift(ec)
+
+        parellSpec()
+      }
+
+      it("should not fail on parallilization with a fork join pool on soft refs") {
+        modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Soft).getCache)
+        implicit val cs = IO.contextShift(ExecutionContext.global)
+
         parellSpec()
       }
     }
