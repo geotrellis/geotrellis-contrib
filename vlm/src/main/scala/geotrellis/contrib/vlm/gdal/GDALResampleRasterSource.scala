@@ -25,6 +25,7 @@ import geotrellis.proj4.CRS
 import geotrellis.raster.reproject.Reproject
 
 import cats.syntax.option._
+import org.gdal.gdal.Dataset
 
 case class GDALResampleRasterSource(
   uri: String,
@@ -32,7 +33,8 @@ case class GDALResampleRasterSource(
   method: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
   options: GDALWarpOptions = GDALWarpOptions(),
-  baseWarpList: List[GDALWarpOptions] = Nil
+  baseWarpList: List[GDALWarpOptions] = Nil,
+  @transient parentDatasets: Array[Dataset] = Array()
 ) extends GDALBaseRasterSource {
   def resampleMethod: Option[ResampleMethod] = method.some
 
@@ -59,8 +61,8 @@ case class GDALResampleRasterSource(
   }
 
   override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, warpList)
+    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, warpList).addParentDataset(dataset)
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options, warpList)
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options, warpList).addParentDataset(dataset)
 }
