@@ -199,7 +199,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         assertRDDLayersEqual(reprojectedExpectedRDDGDAL, reprojectedSourceRDD, true)
       }
 
-      def parellSpec(n: Int = 1000)(implicit cs: ContextShift[IO]): Unit = {
+      def parellSpec(n: Int = 1000)(implicit cs: ContextShift[IO]): List[RasterSource] = {
         println(java.lang.Thread.activeCount())
 
         /** Do smth usual with the original RasterSource to force VRTs allocation */
@@ -209,48 +209,56 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
             .tileToLayout(layout)
 
         /** Simulate possible RF backsplash calls */
-        def dirtyCalls(ds: RasterSource): Unit = {
-          val tds = ds.asInstanceOf[GDALBaseRasterSource].dataset
-          tds.rasterExtent
-          tds.crs
-          tds.cellSize
-          tds.extent
+        def dirtyCalls(rs: RasterSource): RasterSource = {
+          val ds = rs.asInstanceOf[GDALBaseRasterSource].dataset
+          ds.rasterExtent
+          ds.crs
+          ds.cellSize
+          ds.extent
+          rs
         }
 
-        (1 to n).toList.flatMap { _ =>
-          (0 to 4).flatMap { i =>
-            List(IO {
-              // println(Thread.currentThread().getName())
-              // Thread.sleep((Math.random() * 100).toLong)
-              val lts = reprojRS(i)
-              lts.readAll(lts.keys.take(10).toIterator)
-              reprojRS(i).source.resolutions
+        // to make it work with weak refs we have to remember all the datasets
+        val res: List[RasterSource] =
+          (1 to n).toList.flatMap { _ =>
+            (0 to 4).flatMap { i =>
+              List(IO {
+                // println(Thread.currentThread().getName())
+                // Thread.sleep((Math.random() * 100).toLong)
+                val lts = reprojRS(i)
+                lts.readAll(lts.keys.take(10).toIterator)
+                reprojRS(i).source.resolutions
 
-              dirtyCalls(reprojRS(i).source)
-            }, IO {
-              // println(Thread.currentThread().getName())
-              // Thread.sleep((Math.random() * 100).toLong)
-              val lts = reprojRS(i)
-              lts.readAll(lts.keys.take(10).toIterator)
-              reprojRS(i).source.resolutions
+                dirtyCalls(reprojRS(i).source)
+              }, IO {
+                // println(Thread.currentThread().getName())
+                // Thread.sleep((Math.random() * 100).toLong)
+                val lts = reprojRS(i)
+                lts.readAll(lts.keys.take(10).toIterator)
+                reprojRS(i).source.resolutions
 
-              dirtyCalls(reprojRS(i).source)
-            }, IO {
-              // println(Thread.currentThread().getName())
-              // Thread.sleep((Math.random() * 100).toLong)
-              val lts = reprojRS(i)
-              lts.readAll(lts.keys.take(10).toIterator)
-              reprojRS(i).source.resolutions
+                dirtyCalls(reprojRS(i).source)
+              }, IO {
+                // println(Thread.currentThread().getName())
+                // Thread.sleep((Math.random() * 100).toLong)
+                val lts = reprojRS(i)
+                lts.readAll(lts.keys.take(10).toIterator)
+                reprojRS(i).source.resolutions
 
-              dirtyCalls(reprojRS(i).source)
-            })
-          }
-        }.parSequence.void.unsafeRunSync
+                dirtyCalls(reprojRS(i).source)
+              })
+            }
+          }.parSequence.unsafeRunSync
 
         println(java.lang.Thread.activeCount())
+        
+        res
       }
 
-      ignore("should not fail on parallelization with a fixed thread pool on weak refs") {
+      /** These tests are not in a single loop to make them more honest,
+        * as weak references are likely not to be collected in a single loop */
+
+      it("should not fail on parallelization with a fixed thread pool on weak refs") {
         val n = 200
         val pool = Executors.newFixedThreadPool(n)
         val ec = ExecutionContext.fromExecutor(pool)
@@ -260,13 +268,13 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
       }
 
       // TODO: this test should not fail
-      ignore("should not fail on parallelization with a fork join pool on weak refs") {
+      it("should not fail on parallelization with a fork join pool on weak refs") {
         implicit val cs = IO.contextShift(ExecutionContext.global)
 
         parellSpec()
       }
 
-      ignore("should not fail on parallelization with a fixed thread pool on hard refs") {
+      it("should not fail on parallelization with a fixed thread pool on hard refs") {
        modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Hard).getCache)
 
         val n = 200
@@ -277,14 +285,14 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         parellSpec()
       }
 
-      ignore("should not fail on parallelization with a fork join pool on hard refs") {
+      it("should not fail on parallelization with a fork join pool on hard refs") {
         modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Hard).getCache)
         implicit val cs = IO.contextShift(ExecutionContext.global)
 
         parellSpec()
       }
 
-      ignore("should not fail on parallelization with a fixed thread pool on soft refs") {
+      it("should not fail on parallelization with a fixed thread pool on soft refs") {
         modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Soft).getCache)
 
         val n = 200
@@ -295,7 +303,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         parellSpec()
       }
 
-      ignore("should not fail on parallelization with a fork join pool on soft refs") {
+      it("should not fail on parallelization with a fork join pool on soft refs") {
         modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Soft).getCache)
         implicit val cs = IO.contextShift(ExecutionContext.global)
 
