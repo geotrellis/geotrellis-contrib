@@ -72,8 +72,6 @@ trait GDALBaseRasterSource extends RasterSource {
   // current dataset
   @transient lazy val dataset: Dataset = GDAL.fromGDALWarpOptions(uri, warpList)
 
-  protected lazy val geoTransform: Array[Double] = dataset.geoTransform
-
   lazy val bandCount: Int = dataset.getRasterCount
 
   lazy val crs: CRS = dataset.crs.getOrElse(CRS.fromEpsgCode(4326))
@@ -95,20 +93,7 @@ trait GDALBaseRasterSource extends RasterSource {
     GDALUtils.dataTypeToCellType(bufferType, noDataValue, typeSizeInBits)
   }
 
-  lazy val rasterExtent: RasterExtent = {
-    val colsLong: Long = dataset.getRasterXSize
-    val rowsLong: Long = dataset.getRasterYSize
-
-    val cols: Int = colsLong.toInt
-    val rows: Int = rowsLong.toInt
-
-    val xmin: Double = geoTransform(0)
-    val ymin: Double = geoTransform(3) + geoTransform(5) * rows
-    val xmax: Double = geoTransform(0) + geoTransform(1) * cols
-    val ymax: Double = geoTransform(3)
-
-    RasterExtent(Extent(xmin, ymin, xmax, ymax), cols, rows)
-  }
+  lazy val rasterExtent: RasterExtent = dataset.rasterExtent
 
   /** Resolutions of available overviews in GDAL Dataset
     *
