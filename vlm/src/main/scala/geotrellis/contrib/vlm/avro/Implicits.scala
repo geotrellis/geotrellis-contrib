@@ -26,12 +26,17 @@ import org.apache.avro.generic._
 
 import scala.collection.JavaConverters._
 
+/**
+  * Implicits in this trait purposefully have the same name as those found in: geotrellis.spark.io.avro.Implicits
+  * In oreder to use these codecs make sure that: import geotrellis.contrib.vlm.avro._
+  * appears after: import geotrellis.spark.io._
+  */
 trait Implicits extends Serializable {
   implicit def paddedTileCodec: AvroRecordCodec[PaddedTile] = new AvroRecordCodec[PaddedTile] {
     def schema = SchemaBuilder
       .record("PaddedTile").namespace("geotrellis.contrib.vlm")
       .fields()
-      .name("chunk").`type`(tileUnionCodec.schema).noDefault()
+      .name("chunk").`type`(geotrellis.spark.io.tileUnionCodec.schema).noDefault()
       .name("colOffset").`type`().intType().noDefault()
       .name("rowOffset").`type`().intType().noDefault()
       .name("cols").`type`().intType().noDefault()
@@ -39,7 +44,7 @@ trait Implicits extends Serializable {
       .endRecord()
 
     def encode(tile: PaddedTile, rec: GenericRecord) = {
-      rec.put("chunk", tileUnionCodec.encode(tile.chunk))
+      rec.put("chunk", geotrellis.spark.io.tileUnionCodec.encode(tile.chunk))
       rec.put("colOffset", tile.colOffset)
       rec.put("rowOffset", tile.rowOffset)
       rec.put("cols", tile.cols)
@@ -47,7 +52,7 @@ trait Implicits extends Serializable {
     }
 
     def decode(rec: GenericRecord) = {
-      val chunk     = tileUnionCodec.decode(rec[GenericRecord]("chunk"))
+      val chunk     = geotrellis.spark.io.tileUnionCodec.decode(rec[GenericRecord]("chunk"))
       val colOffset = rec[Int]("colOffset")
       val rowOffset = rec[Int]("rowOffset")
       val cols      = rec[Int]("cols")
@@ -57,7 +62,7 @@ trait Implicits extends Serializable {
     }
   }
 
-  implicit def extendedTileUnionCodec = new AvroUnionCodec[Tile](
+  implicit def tileUnionCodec = new AvroUnionCodec[Tile](
     byteArrayTileCodec,
     floatArrayTileCodec,
     doubleArrayTileCodec,
@@ -77,23 +82,23 @@ trait Implicits extends Serializable {
     paddedTileCodec
   )
 
-  implicit def extendedMultibandTileCodec: AvroRecordCodec[MultibandTile] = new AvroRecordCodec[MultibandTile] {
+  implicit def multibandTileCodec: AvroRecordCodec[MultibandTile] = new AvroRecordCodec[MultibandTile] {
     def schema = SchemaBuilder
       .record("ArrayMultibandTile").namespace("geotrellis.raster")
       .fields()
-      .name("bands").`type`().array().items.`type`(extendedTileUnionCodec.schema).noDefault()
+      .name("bands").`type`().array().items.`type`(tileUnionCodec.schema).noDefault()
       .endRecord()
 
     def encode(tile: MultibandTile, rec: GenericRecord) = {
       val bands = for (i <- 0 until tile.bandCount) yield tile.band(i)
-      rec.put("bands", bands.map(extendedTileUnionCodec.encode).asJavaCollection)
+      rec.put("bands", bands.map(tileUnionCodec.encode).asJavaCollection)
     }
 
     def decode(rec: GenericRecord) = {
       val bands = rec.get("bands")
         .asInstanceOf[java.util.Collection[GenericRecord]]
         .asScala // notice that Avro does not have native support for Short primitive
-        .map(extendedTileUnionCodec.decode)
+        .map(tileUnionCodec.decode)
         .toArray
 
       ArrayMultibandTile(bands)

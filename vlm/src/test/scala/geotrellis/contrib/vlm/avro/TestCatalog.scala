@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
+package geotrellis.contrib.vlm.avro
 
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff._
@@ -24,6 +24,8 @@ import geotrellis.raster.reproject._
 import geotrellis.proj4._
 import geotrellis.spark._
 import geotrellis.spark.io._
+import geotrellis.spark.io.avro.codecs._
+import geotrellis.spark.io.avro.codecs.Implicits._
 import geotrellis.spark.io.file._
 import geotrellis.spark.io.hadoop._
 import geotrellis.spark.io.index._
@@ -38,18 +40,19 @@ import org.apache.spark.rdd._
 import scala.io.StdIn
 import java.io.File
 
-import geotrellis.contrib.vlm.geotiff.GeoTiffRasterSource
+import geotrellis.contrib.vlm._
+import geotrellis.contrib.vlm.geotiff._
 
 object TestCatalog {
   val filePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
-  val inputPath = s"file://$filePath"
-  val outputPath = s"${new File("").getAbsolutePath()}/src/test/resources/data/catalog"
+  val multibandOutputPath = s"${new File("").getAbsolutePath()}/src/test/resources/data/catalog"
+  val singlebandOutputPath = s"${new File("").getAbsolutePath()}/src/test/resources/data/single_band_catalog"
 
   def fullPath(path: String) = new java.io.File(path).getAbsolutePath
 
-  def create(implicit sc: SparkContext) = {
+  def createMultiband(implicit sc: SparkContext) = {
     // Create the attributes store that will tell us information about our catalog.
-    val attributeStore = FileAttributeStore(outputPath)
+    val attributeStore = FileAttributeStore(multibandOutputPath)
 
     // Create the writer that we will use to store the tiles in the local catalog.
     val writer = FileLayerWriter(attributeStore)
@@ -63,6 +66,31 @@ object TestCatalog {
           .withContext( tiledd =>
             // the tiles are actually `PaddedTile`, this forces them to be ArrayTile
             tiledd.mapValues { mb: MultibandTile => ArrayMultibandTile(mb.bands.map(_.toArrayTile))}
+          )
+
+      val id = LayerId("landsat", index)
+      writer.write(id, rdd, ZCurveKeyIndexMethod)
+    }
+  }
+
+  def createSingleband(implicit sc: SparkContext) = {
+    // Create the attributes store that will tell us information about our catalog.
+    val attributeStore = FileAttributeStore(singlebandOutputPath)
+
+    // Create the writer that we will use to store the tiles in the local catalog.
+    val writer = FileLayerWriter(attributeStore)
+
+    val rs = GeoTiffRasterSource(TestCatalog.filePath)
+    rs.resolutions.sortBy(_.cellSize.resolution).zipWithIndex.foreach { case (rasterExtent, index) =>
+      val layout = LayoutDefinition(rasterExtent, tileSize = 256)
+
+      val rdd: TileLayerRDD[SpatialKey] =
+        RasterSourceRDD(List(rs), layout)
+          .withContext( tiledd =>
+            tiledd.mapValues {mb: MultibandTile =>
+              ArrayMultibandTile(mb.bands.map(_.toArrayTile))
+                .band(0)  // Get only first band
+            }
           )
 
       val id = LayerId("landsat", index)

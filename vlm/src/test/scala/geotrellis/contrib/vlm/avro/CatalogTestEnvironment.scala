@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
+package geotrellis.contrib.vlm.avro
 
 import TestCatalog._
 import geotrellis.spark.testkit.TestEnvironment
@@ -24,11 +24,17 @@ import java.io.File
 trait CatalogTestEnvironment extends TestEnvironment { self: Suite =>
 
   override def beforeAll() = {
-    val file = new File(TestCatalog.outputPath)
-    if (!(file).exists) {
-      TestCatalog.create
+    val multibandFile = new File(TestCatalog.multibandOutputPath)
+    if (!(multibandFile).exists) {
+      TestCatalog.createMultiband
     } else {
-      println(s"Test catalog exists at: $file")
+      println(s"Test multi-band catalog exists at: $multibandFile")
+    }
+    val singlebandFile = new File(TestCatalog.singlebandOutputPath)
+    if (!(singlebandFile).exists) {
+      TestCatalog.createSingleband
+    } else {
+      println(s"Test single-band catalog exists at: $singlebandFile")
     }
   }
 

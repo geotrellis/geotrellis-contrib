@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
+package geotrellis.contrib.vlm.avro
 
 import TestCatalog._
 import geotrellis.contrib.vlm.geotiff._
@@ -30,36 +30,46 @@ import java.io.File
 
 
 class TestCatalogSpec extends FunSpec with CatalogTestEnvironment {
-  val absOutputPath = s"file://${TestCatalog.outputPath}"
+  val absMultibandOutputPath = s"file://${TestCatalog.multibandOutputPath}"
+  val absSinglebandOutputPath = s"file://${TestCatalog.singlebandOutputPath}"
 
   describe("catalog test environment") {
-    it("should create catalog before test is run") {
-      assert(new File(TestCatalog.outputPath).exists)
+    it("should create multiband catalog before test is run") {
+      assert(new File(TestCatalog.multibandOutputPath).exists)
+    }
+    it("should create singleband catalog before test is run") {
+      assert(new File(TestCatalog.singlebandOutputPath).exists)
     }
   }
   describe("value reader") {
-    it("should be able to read test catalog") {
-      ValueReader(absOutputPath).reader[SpatialKey, Tile](LayerId("landsat", 0))
+    it("should be able to read multiband test catalog") {
+      ValueReader(absMultibandOutputPath).reader[SpatialKey, Tile](LayerId("landsat", 0))
+    }
+    it("should be able to read single test catalog") {
+      ValueReader(absSinglebandOutputPath).reader[SpatialKey, Tile](LayerId("landsat", 0))
     }
     it("should be unable to read non-existent test catalog") {
       assertThrows[AttributeNotFoundError] {
-        ValueReader(absOutputPath).reader[SpatialKey, Tile](LayerId("INVALID", 0))
+        ValueReader(absMultibandOutputPath).reader[SpatialKey, Tile](LayerId("INVALID", 0))
       }
     }
   }
   describe("collection layer reader") {
-    it("should be able to read test catalog") {
-      CollectionLayerReader(absOutputPath).read[SpatialKey, MultibandTile, TileLayerMetadata[SpatialKey]](LayerId("landsat", 0))
+    it("should be able to read multiband test catalog") {
+      CollectionLayerReader(absMultibandOutputPath).read[SpatialKey, MultibandTile, TileLayerMetadata[SpatialKey]](LayerId("landsat", 0))
+    }
+    it("should be able to read singleband test catalog") {
+      CollectionLayerReader(absSinglebandOutputPath).read[SpatialKey, Tile, TileLayerMetadata[SpatialKey]](LayerId("landsat", 0))
     }
     it("should be unable to read non-existent test catalog") {
       assertThrows[LayerNotFoundError] {
-        CollectionLayerReader(absOutputPath).read[SpatialKey, MultibandTile, TileLayerMetadata[SpatialKey]](LayerId("INVALID", 0))
+        CollectionLayerReader(absMultibandOutputPath).read[SpatialKey, MultibandTile, TileLayerMetadata[SpatialKey]](LayerId("INVALID", 0))
       }
     }
   }
 
   describe("test catalog") {
-    lazy val reader = ValueReader(absOutputPath)
+    lazy val reader = ValueReader(absMultibandOutputPath)
     lazy val rs = GeoTiffRasterSource(TestCatalog.filePath)
 
     it("preserves geotiff overviews") {
