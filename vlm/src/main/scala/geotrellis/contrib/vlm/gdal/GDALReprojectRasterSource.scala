@@ -39,8 +39,9 @@ case class GDALReprojectRasterSource(
   lazy val warpOptions: GDALWarpOptions = AnyRef.synchronized {
     val baseSpatialReference = {
       val baseDataset = fromBaseWarpList
-      val result = new SpatialReference(Option(baseDataset.GetProjection).getOrElse(LatLng.toProj4String))
-      result
+      val spatialReference = new SpatialReference()
+      spatialReference.ImportFromWkt(Option(baseDataset.GetProjection).getOrElse(LatLng.toWKT.get))
+      spatialReference
     }
     val targetSpatialReference = {
       val spatialReference = new SpatialReference()

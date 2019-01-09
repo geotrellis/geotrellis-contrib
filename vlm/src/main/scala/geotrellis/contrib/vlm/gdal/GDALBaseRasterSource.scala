@@ -49,12 +49,12 @@ trait GDALBaseRasterSource extends RasterSource {
 
   /** private setters to keep things away from the user API */
   private[gdal] def addParentDataset(ds: Dataset): GDALBaseRasterSource = {
-    parentDatasets :+ ds
+    parentDatasets += ds
     this
   }
 
   private[gdal] def addParentDatasets(ds: List[Dataset]): GDALBaseRasterSource = {
-    parentDatasets ++ ds
+    parentDatasets ++= ds
     this
   }
 

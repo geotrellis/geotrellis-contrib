@@ -199,7 +199,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         assertRDDLayersEqual(reprojectedExpectedRDDGDAL, reprojectedSourceRDD, true)
       }
 
-      def parellSpec(n: Int = 1000)(implicit cs: ContextShift[IO]): List[RasterSource] = {
+      def parellSpec(n: Int = 1000)(implicit cs: ContextShift[IO]): Unit = {
         println(java.lang.Thread.activeCount())
 
         /** Do smth usual with the original RasterSource to force VRTs allocation */
@@ -218,41 +218,37 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
           rs
         }
 
-        // to make it work with weak refs we have to remember all the datasets
-        val res: List[RasterSource] =
-          (1 to n).toList.flatMap { _ =>
-            (0 to 4).flatMap { i =>
-              List(IO {
-                // println(Thread.currentThread().getName())
-                // Thread.sleep((Math.random() * 100).toLong)
-                val lts = reprojRS(i)
-                lts.readAll(lts.keys.take(10).toIterator)
-                reprojRS(i).source.resolutions
+        (1 to n).toList.flatMap { _ =>
+          (0 to 4).flatMap { i =>
+            List(IO {
+              // println(Thread.currentThread().getName())
+              // Thread.sleep((Math.random() * 100).toLong)
+              val lts = reprojRS(i)
+              lts.readAll(lts.keys.take(10).toIterator)
+              reprojRS(i).source.resolutions
 
-                dirtyCalls(reprojRS(i).source)
-              }, IO {
-                // println(Thread.currentThread().getName())
-                // Thread.sleep((Math.random() * 100).toLong)
-                val lts = reprojRS(i)
-                lts.readAll(lts.keys.take(10).toIterator)
-                reprojRS(i).source.resolutions
+              dirtyCalls(reprojRS(i).source)
+            }, IO {
+              // println(Thread.currentThread().getName())
+              // Thread.sleep((Math.random() * 100).toLong)
+              val lts = reprojRS(i)
+              lts.readAll(lts.keys.take(10).toIterator)
+              reprojRS(i).source.resolutions
 
-                dirtyCalls(reprojRS(i).source)
-              }, IO {
-                // println(Thread.currentThread().getName())
-                // Thread.sleep((Math.random() * 100).toLong)
-                val lts = reprojRS(i)
-                lts.readAll(lts.keys.take(10).toIterator)
-                reprojRS(i).source.resolutions
+              dirtyCalls(reprojRS(i).source)
+            }, IO {
+              // println(Thread.currentThread().getName())
+              // Thread.sleep((Math.random() * 100).toLong)
+              val lts = reprojRS(i)
+              lts.readAll(lts.keys.take(10).toIterator)
+              reprojRS(i).source.resolutions
 
-                dirtyCalls(reprojRS(i).source)
-              })
-            }
-          }.parSequence.unsafeRunSync
+              dirtyCalls(reprojRS(i).source)
+            })
+          }
+        }.parSequence.void.unsafeRunSync
 
         println(java.lang.Thread.activeCount())
-        
-        res
       }
 
       /** These tests are not in a single loop to make them more honest,
