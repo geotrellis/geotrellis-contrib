@@ -18,17 +18,19 @@ package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm._
 import geotrellis.gdal._
-import geotrellis.gdal.config.GDALCacheConfig
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.OverviewStrategy
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.vector._
-
 import java.net.MalformedURLException
 
-import scala.annotation.tailrec
+import org.gdal.gdal.Dataset
+import org.gdal.gdal.{gdal => sgdal}
+
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 trait GDALBaseRasterSource extends RasterSource {
   val vsiPath: String = if (VSIPath.isVSIFormatted(uri)) uri else try {
@@ -42,6 +44,20 @@ trait GDALBaseRasterSource extends RasterSource {
       )
   }
 
+  /** pointers to parent datasets to prevent them from being garbage collected */
+  @transient private val parentDatasets: mutable.ListBuffer[Dataset] = ListBuffer()
+
+  /** private setters to keep things away from the user API */
+  private[gdal] def addParentDataset(ds: Dataset): GDALBaseRasterSource = {
+    parentDatasets :+ ds
+    this
+  }
+
+  private[gdal] def addParentDatasets(ds: List[Dataset]): GDALBaseRasterSource = {
+    parentDatasets ++ ds
+    this
+  }
+
   /** options to override some values on transformation steps, should be used carefully as these params can change the behaviour significantly */
   val options: GDALWarpOptions
   /** options from previous transformation steps */
@@ -52,28 +68,9 @@ trait GDALBaseRasterSource extends RasterSource {
   lazy val warpList: List[GDALWarpOptions] = baseWarpList :+ warpOptions
 
   // generate a vrt before the current options application
-  @transient lazy val fromBaseWarpList: GDALDataset = GDAL.fromGDALWarpOptions(uri, baseWarpList)
-  // generate a vrt with the current options application
-  @transient lazy val fromWarpList: GDALDataset = GDAL.fromGDALWarpOptions(uri, warpList)
-
-  // parent datasets, required to keep them alive and not being collected when the cache is on weak references
-  @transient private lazy val parentDatasets: Array[GDALDataset] = {
-    @tailrec
-    def rec0(d: GDALDataset, acc: Array[GDALDataset]): Array[GDALDataset] = {
-      if(d.parents.isEmpty) acc
-      else rec0(d.parents.head, d.parents ++ acc) // until we don't have multiple parents for the single warp step
-                                                  // parents.head will work for us
-    }
-    rec0(fromWarpList, Array())
-  }
-
-  @transient private lazy val parentDatasetsNumber: Int = parentDatasets.length
-
+  @transient lazy val fromBaseWarpList: Dataset = GDAL.fromGDALWarpOptions(uri, baseWarpList)
   // current dataset
-  @transient lazy val dataset: GDALDataset = {
-    if(GDALCacheConfig.valuesType.isWeak) parentDatasetsNumber
-    fromWarpList
-  }
+  @transient lazy val dataset: Dataset = GDAL.fromGDALWarpOptions(uri, warpList)
 
   protected lazy val geoTransform: Array[Double] = dataset.geoTransform
 
@@ -84,15 +81,15 @@ trait GDALBaseRasterSource extends RasterSource {
   private lazy val reader: GDALReader = GDALReader(dataset)
 
   // noDataValue from the previous step
-  lazy val noDataValue: Option[Double] = fromBaseWarpList.getRasterBand(1).getNoDataValue
+  lazy val noDataValue: Option[Double] = fromBaseWarpList.getNoDataValue
 
   lazy val cellType: CellType = {
     val (noDataValue, bufferType, typeSizeInBits) = {
-      val baseBand = dataset.getRasterBand(1)
+      val baseBand = dataset.GetRasterBand(1)
 
       val nd = baseBand.getNoDataValue
       val bufferType = baseBand.getDataType
-      val typeSizeInBits = sgdal.getDataTypeSize(bufferType)
+      val typeSizeInBits = sgdal.GetDataTypeSize(bufferType)
       (nd, bufferType, Some(typeSizeInBits))
     }
     GDALUtils.dataTypeToCellType(bufferType, noDataValue, typeSizeInBits)
@@ -119,9 +116,9 @@ trait GDALBaseRasterSource extends RasterSource {
     * or overviews of VRT that was created as result of resample operations.
     */
   lazy val resolutions: List[RasterExtent] = {
-    val band = dataset.getRasterBand(1)
-    rasterExtent :: (0 until band.getOverviewCount).toList.map { idx =>
-      val ovr = band.getOverview(idx)
+    val band = dataset.GetRasterBand(1)
+    rasterExtent :: (0 until band.GetOverviewCount).toList.map { idx =>
+      val ovr = band.GetOverview(idx)
       RasterExtent(extent, cols = ovr.getXSize, rows = ovr.getYSize)
     }
   }
@@ -155,10 +152,10 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options)
+    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options).addParentDataset(dataset)
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options)
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options).addParentDataset(dataset)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)

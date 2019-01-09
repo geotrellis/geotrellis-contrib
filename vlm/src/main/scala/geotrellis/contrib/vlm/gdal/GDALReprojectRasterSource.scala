@@ -17,7 +17,6 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.gdal._
-import geotrellis.gdal.osr._
 import geotrellis.proj4._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.contrib.vlm.{RasterSource, ResampleGrid}
@@ -25,6 +24,7 @@ import geotrellis.raster.resample.ResampleMethod
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 
 import cats.syntax.option._
+import org.gdal.osr.SpatialReference
 
 case class GDALReprojectRasterSource(
   uri: String,
@@ -36,15 +36,15 @@ case class GDALReprojectRasterSource(
 ) extends GDALBaseRasterSource {
   def resampleMethod: Option[ResampleMethod] = reprojectOptions.method.some
 
-  lazy val warpOptions: GDALWarpOptions = {
+  lazy val warpOptions: GDALWarpOptions = AnyRef.synchronized {
     val baseSpatialReference = {
       val baseDataset = fromBaseWarpList
-      val result = OSRSpatialReference(baseDataset.getProjection.getOrElse(LatLng.toProj4String))
+      val result = new SpatialReference(Option(baseDataset.GetProjection).getOrElse(LatLng.toProj4String))
       result
     }
     val targetSpatialReference = {
-      val spatialReference = OSRSpatialReference()
-      spatialReference.importFromProj4(targetCRS.toProj4String)
+      val spatialReference = new SpatialReference()
+      spatialReference.ImportFromProj4(targetCRS.toProj4String)
       spatialReference
     }
 
@@ -68,8 +68,8 @@ case class GDALReprojectRasterSource(
   }
 
   override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, warpList)
+    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, warpList).addParentDataset(dataset)
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options, warpList)
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options, warpList).addParentDataset(dataset)
 }
