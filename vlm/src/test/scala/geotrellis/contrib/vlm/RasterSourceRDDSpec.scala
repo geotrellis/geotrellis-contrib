@@ -34,11 +34,11 @@ import org.scalatest._
 import Inspectors._
 
 import java.io.File
-import java.util.concurrent.{Executors, ForkJoinPool}
+import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
 
-class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with BeforeAndAfterAll {
+class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with BeforeAndAfterAll with BeforeAndAfterEach {
   val filePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
   def filePathByIndex(i: Int): String = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-$i.tif"
   val uri = s"file://$filePath"
@@ -48,6 +48,9 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
   val layout = scheme.levelForZoom(13).layout
 
   val reprojectedSource = rasterSource.reprojectToGrid(targetCRS, layout)
+
+  /** Cleanup in beforeEach to check ShutdownHook cache cleanup. */
+  override def beforeEach(): Unit = { GDAL.cacheCleanUp; super.beforeEach() }
 
   describe("reading in GeoTiffs as RDDs") {
     it("should have the right number of tiles") {
