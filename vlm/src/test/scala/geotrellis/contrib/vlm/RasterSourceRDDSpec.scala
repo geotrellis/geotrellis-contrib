@@ -49,8 +49,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
   val reprojectedSource = rasterSource.reprojectToGrid(targetCRS, layout)
 
-  /** Cleanup in beforeEach to check ShutdownHook cache cleanup. */
-  override def beforeEach(): Unit = { GDAL.cacheCleanUp; super.beforeEach() }
+  override def afterEach(): Unit = { GDAL.cacheCleanUp; super.afterEach() }
 
   describe("reading in GeoTiffs as RDDs") {
     it("should have the right number of tiles") {
