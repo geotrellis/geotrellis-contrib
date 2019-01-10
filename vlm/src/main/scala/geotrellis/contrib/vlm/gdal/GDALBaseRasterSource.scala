@@ -24,10 +24,10 @@ import geotrellis.raster.io.geotiff.OverviewStrategy
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.vector._
-import java.net.MalformedURLException
 
 import org.gdal.gdal.Dataset
-import org.gdal.gdal.{gdal => sgdal}
+
+import java.net.MalformedURLException
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -81,17 +81,7 @@ trait GDALBaseRasterSource extends RasterSource {
   // noDataValue from the previous step
   lazy val noDataValue: Option[Double] = fromBaseWarpList.getNoDataValue
 
-  lazy val cellType: CellType = {
-    val (noDataValue, bufferType, typeSizeInBits) = {
-      val baseBand = dataset.GetRasterBand(1)
-
-      val nd = baseBand.getNoDataValue
-      val bufferType = baseBand.getDataType
-      val typeSizeInBits = sgdal.GetDataTypeSize(bufferType)
-      (nd, bufferType, Some(typeSizeInBits))
-    }
-    GDALUtils.dataTypeToCellType(bufferType, noDataValue, typeSizeInBits)
-  }
+  lazy val cellType: CellType = dataset.cellType
 
   lazy val rasterExtent: RasterExtent = dataset.rasterExtent
 
