@@ -34,7 +34,7 @@ import org.scalatest._
 import Inspectors._
 
 import java.io.File
-import java.util.concurrent.Executors
+import java.util.concurrent.{Executors, ForkJoinPool}
 
 import scala.concurrent.ExecutionContext
 
@@ -254,56 +254,61 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
       /** These tests are not in a single loop to make them more honest,
         * as weak references are likely not to be collected in a single loop */
 
-      it("should not fail on parallelization with a fixed thread pool on weak refs") {
-        val n = 200
-        val pool = Executors.newFixedThreadPool(n)
-        val ec = ExecutionContext.fromExecutor(pool)
-        implicit val cs = IO.contextShift(ec)
+      describe("Weak references pool") {
+        it("should not fail on parallelization with a fixed thread pool on weak refs") {
+          val n = 200
+          val pool = Executors.newFixedThreadPool(n)
+          val ec = ExecutionContext.fromExecutor(pool)
+          implicit val cs = IO.contextShift(ec)
 
-        parellSpec()
+          parellSpec()
+        }
+
+        it("should not fail on parallelization with a fork join pool on weak refs") {
+          implicit val cs = IO.contextShift(ExecutionContext.global)
+
+          parellSpec()
+        }
       }
 
-      // TODO: this test should not fail
-      it("should not fail on parallelization with a fork join pool on weak refs") {
-        implicit val cs = IO.contextShift(ExecutionContext.global)
+      describe("Hard references pool") {
+        it("should not fail on parallelization with a fixed thread pool on hard refs") {
+          modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Hard).getCache)
 
-        parellSpec()
+          val n = 200
+          val pool = Executors.newFixedThreadPool(n)
+          val ec = ExecutionContext.fromExecutor(pool)
+          implicit val cs = IO.contextShift(ec)
+
+          parellSpec()
+        }
+
+        it("should not fail on parallelization with a fork join pool on hard refs") {
+          modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Hard).getCache)
+          implicit val cs = IO.contextShift(ExecutionContext.global)
+
+          parellSpec()
+        }
       }
 
-      it("should not fail on parallelization with a fixed thread pool on hard refs") {
-       modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Hard).getCache)
+      describe("Soft references pool") {
+        it("should not fail on parallelization with a fixed thread pool on soft refs") {
+          modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Soft).getCache)
 
-        val n = 200
-        val pool = Executors.newFixedThreadPool(n)
-        val ec = ExecutionContext.fromExecutor(pool)
-        implicit val cs = IO.contextShift(ec)
+          val n = 200
+          val pool = Executors.newFixedThreadPool(n)
+          val ec = ExecutionContext.fromExecutor(pool)
+          implicit val cs = IO.contextShift(ec)
 
-        parellSpec()
-      }
+          parellSpec()
+        }
 
-      it("should not fail on parallelization with a fork join pool on hard refs") {
-        modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Hard).getCache)
-        implicit val cs = IO.contextShift(ExecutionContext.global)
+        it("should not fail on parallelization with a fork join pool on soft refs") {
+          modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Soft).getCache)
+          implicit val cs = IO.contextShift(ExecutionContext.global)
 
-        parellSpec()
-      }
-
-      it("should not fail on parallelization with a fixed thread pool on soft refs") {
-        modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Soft).getCache)
-
-        val n = 200
-        val pool = Executors.newFixedThreadPool(n)
-        val ec = ExecutionContext.fromExecutor(pool)
-        implicit val cs = IO.contextShift(ec)
-
-        parellSpec()
-      }
-
-      it("should not fail on parallelization with a fork join pool on soft refs") {
-        modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Soft).getCache)
-        implicit val cs = IO.contextShift(ExecutionContext.global)
-
-        parellSpec()
+          parellSpec()
+        }
       }
     }
   }
