@@ -20,15 +20,17 @@ import TestCatalog._
 
 import GeotrellisRasterSource._
 
-import org.scalatest.{FunSpec, GivenWhenThen}
-import geotrellis.spark.io.{ValueReader, CollectionLayerReader}
-import geotrellis.raster.{Tile, MultibandTile, RasterExtent}
+import geotrellis.contrib.vlm._
+import geotrellis.proj4._
+import geotrellis.raster._
+import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.testkit._
+import geotrellis.raster.{Tile, MultibandTile, RasterExtent}
+import geotrellis.raster.resample.{NearestNeighbor}
 import geotrellis.spark._
 import geotrellis.spark.io._
-import geotrellis.raster._
-import geotrellis.proj4._
-import geotrellis.contrib.vlm._
+import geotrellis.spark.io.{ValueReader, CollectionLayerReader}
+import org.scalatest.{FunSpec, GivenWhenThen}
 
 import java.io.File
 
@@ -91,6 +93,31 @@ class GeotrellisRasterSourceSpec extends FunSpec with RasterMatchers with Better
     it("should be able to read empty layer") {
       val bounds = GridBounds(9999, 9999, 10000, 10000)
       assert(sourceMultiband.read(bounds) == None)
+    }
+
+    it("should be able to resample") {
+      // read in the whole file and resample the pixels in memory
+      val expected: Raster[MultibandTile] =
+        GeoTiffReader
+          .readMultiband(TestCatalog.filePath, streaming = false)
+          .raster
+          .resample((sourceMultiband.cols * 0.95).toInt , (sourceMultiband.rows * 0.95).toInt, NearestNeighbor)
+          // resample to 0.9 so RasterSource picks the base layer and not an overview
+
+      val resampledSource =
+        sourceMultiband.resample(expected.tile.cols, expected.tile.rows, NearestNeighbor)
+
+      resampledSource should have (dimensions (expected.tile.dimensions))
+
+      val actual: Raster[MultibandTile] =
+        resampledSource
+          .resampleToGrid(expected.rasterExtent)
+          .read(expected.extent)
+          .get
+
+      withGeoTiffClue(actual, expected, resampledSource.crs)  {
+        assertRastersEqual(actual, expected)
+      }
     }
   }
 }

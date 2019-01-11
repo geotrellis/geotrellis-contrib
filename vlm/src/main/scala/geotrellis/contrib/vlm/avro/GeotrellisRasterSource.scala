@@ -45,18 +45,52 @@ case class GeotrellisRasterSource(uri: String, layerId: LayerId, bandCount: Int 
   lazy val rasterExtent: RasterExtent =
     metadata.layout.createAlignedGridExtent(metadata.extent).toRasterExtent()
 
-  lazy val resolutions: List[RasterExtent] = reader.attributeStore.layerIds.map { currLayerId =>
-    val layerMetadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](currLayerId)
-    layerMetadata.layout.createAlignedGridExtent(layerMetadata.extent).toRasterExtent()
-  }.toList
+  lazy val resolutions: List[RasterExtent] = GeotrellisRasterSource.getResolutions(reader, layerId.name)
 
   def crs: CRS = metadata.crs
-
   def cellType: CellType = metadata.cellType
-
   def resampleMethod: Option[ResampleMethod] = None
 
-  def readTiles(extent: Extent, bands: Seq[Int]): Seq[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]] = {
+  def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+    GeotrellisRasterSource.read(reader, layerId, metadata, extent, bands)
+  }
+
+  def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+    val extent: Extent = metadata.extentFor(bounds)
+    read(extent, bands)
+  }
+
+  override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
+    extents.toIterator.flatMap(extent => read(extent, bands))
+  }
+
+  override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
+    bounds.toIterator.flatMap(bounds => read(bounds, bands))
+  }
+
+  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
+    ???
+
+  def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
+    GeotrellisResampleRasterSource(uri, layerId.name, bandCount, rasterExtent, resampleGrid, method, strategy)
+  }
+}
+
+
+object GeotrellisRasterSource {
+
+  def getLayerIdsByName(reader: CollectionLayerReader[LayerId], layerName: String): Seq[LayerId] =
+    reader.attributeStore.layerIds
+      .filter { layerId => layerId.name == layerName }
+
+  def getResolutions(reader: CollectionLayerReader[LayerId], layerName: String): List[RasterExtent] =
+    getLayerIdsByName(reader, layerName)
+      .map { currLayerId =>
+        val layerMetadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](currLayerId)
+        layerMetadata.layout.createAlignedGridExtent(layerMetadata.extent).toRasterExtent()
+      }.toList
+
+  def readTiles(reader: CollectionLayerReader[LayerId], layerId: LayerId, extent: Extent, bands: Seq[Int]): Seq[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]] = {
     val header = reader.attributeStore.readHeader[LayerHeader](layerId)
     (header.keyClass, header.valueClass) match {
       case ("geotrellis.spark.SpatialKey", "geotrellis.raster.Tile") => {
@@ -82,8 +116,8 @@ case class GeotrellisRasterSource(uri: String, layerId: LayerId, bandCount: Int 
     }
   }
 
-  def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val tiles = readTiles(extent, bands)
+  def read(reader: CollectionLayerReader[LayerId], layerId: LayerId, metadata: TileLayerMetadata[SpatialKey], extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+    val tiles = readTiles(reader, layerId, extent, bands)
     if (tiles.isEmpty)
       None
     else
@@ -94,23 +128,4 @@ case class GeotrellisRasterSource(uri: String, layerId: LayerId, bandCount: Int 
           None
       }
   }
-
-  def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val extent: Extent = metadata.extentFor(bounds)
-    read(extent, bands)
-  }
-
-  override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    extents.toIterator.map(extent => read(extent, bands)).flatten
-  }
-
-  override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    bounds.toIterator.map(bounds => read(bounds, bands)).flatten
-  }
-
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
-    ???
-
-  def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    ???
 }
