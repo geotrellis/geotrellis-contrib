@@ -38,7 +38,7 @@ import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
 
-class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with BeforeAndAfterAll with BeforeAndAfterEach {
+class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with BeforeAndAfterAll {
   val filePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
   def filePathByIndex(i: Int): String = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-$i.tif"
   val uri = s"file://$filePath"
@@ -48,8 +48,6 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
   val layout = scheme.levelForZoom(13).layout
 
   val reprojectedSource = rasterSource.reprojectToGrid(targetCRS, layout)
-
-  override def afterEach(): Unit = { GDAL.cacheCleanUp; super.afterEach() }
 
   describe("reading in GeoTiffs as RDDs") {
     it("should have the right number of tiles") {
@@ -256,60 +254,28 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
       /** These tests are not in a single loop to make them more honest,
         * as weak references are likely not to be collected in a single loop */
 
-      describe("Weak references pool") {
-        it("should not fail on parallelization with a fixed thread pool on weak refs") {
-          val n = 200
-          val pool = Executors.newFixedThreadPool(n)
-          val ec = ExecutionContext.fromExecutor(pool)
-          implicit val cs = IO.contextShift(ec)
+      List(Weak, Soft, Hard).foreach { ref =>
+        describe(s"${ref} references pool") {
+          it(s"should not fail on parallelization with a fixed thread pool on ${ref} refs") {
+            GDAL.cacheCleanUp
+            modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = ref).getCache)
 
-          parellSpec()
-        }
+            val n = 200
+            val pool = Executors.newFixedThreadPool(n)
+            val ec = ExecutionContext.fromExecutor(pool)
+            implicit val cs = IO.contextShift(ec)
 
-        it("should not fail on parallelization with a fork join pool on weak refs") {
-          implicit val cs = IO.contextShift(ExecutionContext.global)
+            parellSpec()
+          }
 
-          parellSpec()
-        }
-      }
+          it(s"should not fail on parallelization with a fork join pool on ${ref} refs") {
+            GDAL.cacheCleanUp
+            modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = ref).getCache)
 
-      describe("Hard references pool") {
-        it("should not fail on parallelization with a fixed thread pool on hard refs") {
-          modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Hard).getCache)
+            implicit val cs = IO.contextShift(ExecutionContext.global)
 
-          val n = 200
-          val pool = Executors.newFixedThreadPool(n)
-          val ec = ExecutionContext.fromExecutor(pool)
-          implicit val cs = IO.contextShift(ec)
-
-          parellSpec()
-        }
-
-        it("should not fail on parallelization with a fork join pool on hard refs") {
-          modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Hard).getCache)
-          implicit val cs = IO.contextShift(ExecutionContext.global)
-
-          parellSpec()
-        }
-      }
-
-      describe("Soft references pool") {
-        it("should not fail on parallelization with a fixed thread pool on soft refs") {
-          modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Soft).getCache)
-
-          val n = 200
-          val pool = Executors.newFixedThreadPool(n)
-          val ec = ExecutionContext.fromExecutor(pool)
-          implicit val cs = IO.contextShift(ec)
-
-          parellSpec()
-        }
-
-        it("should not fail on parallelization with a fork join pool on soft refs") {
-          modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Soft).getCache)
-          implicit val cs = IO.contextShift(ExecutionContext.global)
-
-          parellSpec()
+            parellSpec()
+          }
         }
       }
     }
