@@ -23,13 +23,17 @@ import GeotrellisRasterSource._
 import geotrellis.contrib.vlm._
 import geotrellis.proj4._
 import geotrellis.raster._
+import geotrellis.raster.io.geotiff.{Auto, AutoHigherResolution, Base}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.testkit._
 import geotrellis.raster.{Tile, MultibandTile, RasterExtent}
 import geotrellis.raster.resample.{NearestNeighbor}
+import geotrellis.raster.reproject.{ReprojectRasterExtent, Reproject}
 import geotrellis.spark._
 import geotrellis.spark.io._
 import geotrellis.spark.io.{ValueReader, CollectionLayerReader}
+import geotrellis.vector.Extent
+
 import org.scalatest.{FunSpec, GivenWhenThen}
 
 import java.io.File
@@ -101,7 +105,7 @@ class GeotrellisRasterSourceSpec extends FunSpec with RasterMatchers with Better
         GeoTiffReader
           .readMultiband(TestCatalog.filePath, streaming = false)
           .raster
-          .resample((sourceMultiband.cols * 0.95).toInt , (sourceMultiband.rows * 0.95).toInt, NearestNeighbor)
+          .resample((sourceMultiband.cols * 0.95).toInt, (sourceMultiband.rows * 0.95).toInt, NearestNeighbor)
           // resample to 0.9 so RasterSource picks the base layer and not an overview
 
       val resampledSource =
@@ -116,6 +120,82 @@ class GeotrellisRasterSourceSpec extends FunSpec with RasterMatchers with Better
           .get
 
       withGeoTiffClue(actual, expected, resampledSource.crs)  {
+        assertRastersEqual(actual, expected)
+      }
+    }
+
+    it("should have resolutions only for given layer name") {
+      assert(
+        sourceMultiband.resolutions.length ===
+          CollectionLayerReader(uriMultiband).attributeStore.layerIds.filter(_.name == layerId.name).length
+      )
+      assert(
+        GeotrellisRasterSource(uriMultiband, LayerId("bogusLayer", 0)).resolutions.length === 0
+      )
+    }
+
+    it("should get the closest resolution") {
+      val extent = Extent(0.0, 0.0, 10.0, 10.0)
+      val rasterExtent1 = RasterExtent(extent, 1.0, 1.0, 10, 10)
+      val rasterExtent2 = RasterExtent(extent, 2.0, 2.0, 10, 10)
+      val rasterExtent3 = RasterExtent(extent, 4.0, 4.0, 10, 10)
+
+      val resolutions = List(rasterExtent1, rasterExtent2, rasterExtent3)
+      val cellSize1 = CellSize(1.0, 1.0)
+      val cellSize2 = CellSize(2.0, 2.0)
+
+      assert(GeotrellisRasterSource.getClosestResolution(resolutions, cellSize1, AutoHigherResolution).get == rasterExtent1)
+      assert(GeotrellisRasterSource.getClosestResolution(resolutions, cellSize2, AutoHigherResolution).get == rasterExtent2)
+
+      assert(GeotrellisRasterSource.getClosestResolution(resolutions, cellSize1, Auto(0)).get == rasterExtent1)
+      assert(GeotrellisRasterSource.getClosestResolution(resolutions, cellSize1, Auto(1)).get == rasterExtent2)
+      assert(GeotrellisRasterSource.getClosestResolution(resolutions, cellSize1, Auto(2)).get == rasterExtent3)
+      assert(GeotrellisRasterSource.getClosestResolution(resolutions, cellSize1, Auto(3)) == None)
+
+      assert(GeotrellisRasterSource.getClosestResolution(resolutions, cellSize1, Base) == None)
+    }
+
+    it("should get the closest layer") {
+      val extent = Extent(0.0, 0.0, 10.0, 10.0)
+      val rasterExtent1 = RasterExtent(extent, 1.0, 1.0, 10, 10)
+      val rasterExtent2 = RasterExtent(extent, 2.0, 2.0, 10, 10)
+      val rasterExtent3 = RasterExtent(extent, 4.0, 4.0, 10, 10)
+
+      val resolutions = List(rasterExtent1, rasterExtent2, rasterExtent3)
+
+      val layerId1 = LayerId("foo", 0)
+      val layerId2 = LayerId("foo", 1)
+      val layerId3 = LayerId("foo", 2)
+      val layerIds = List(layerId1, layerId2, layerId3)
+
+      val cellSize = CellSize(1.0, 1.0)
+
+      assert(GeotrellisRasterSource.getClosestLayer(resolutions, layerIds, layerId3, cellSize) == layerId1)
+      assert(GeotrellisRasterSource.getClosestLayer(List(), List(), layerId3, cellSize) == layerId3)
+      assert(GeotrellisRasterSource.getClosestLayer(resolutions, List(), layerId3, cellSize) == layerId3)
+    }
+
+    it("should reproject") {
+      val targetCRS = WebMercator
+      val bounds = GridBounds(0, 0, sourceMultiband.cols - 1, sourceMultiband.rows - 1)
+
+      val expected: Raster[MultibandTile] =
+        GeoTiffReader
+          .readMultiband(TestCatalog.filePath, streaming = false)
+          .raster
+          .reproject(bounds, sourceMultiband.crs, targetCRS)
+
+      val reprojectedSource = sourceMultiband.reprojectToRegion(targetCRS, expected.rasterExtent)
+
+      reprojectedSource should have (dimensions (expected.tile.dimensions))
+
+      val actual: Raster[MultibandTile] =
+        reprojectedSource
+          .reprojectToRegion(targetCRS, expected.rasterExtent)
+          .read(expected.extent)
+          .get
+
+      withGeoTiffClue(actual, expected, reprojectedSource.crs)  {
         assertRastersEqual(actual, expected)
       }
     }
