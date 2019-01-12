@@ -50,6 +50,7 @@ trait GDALBaseRasterSource extends RasterSource {
   /** private setters to keep things away from the user API */
   private[gdal] def addParentDataset(ds: Dataset): GDALBaseRasterSource = { parentDatasets += ds; this }
   private[gdal] def addParentDatasets(ds: Traversable[Dataset]): GDALBaseRasterSource = { parentDatasets ++= ds; this }
+  private[gdal] def getParentDatasets: List[Dataset] = parentDatasets.toList
 
   /** options to override some values on transformation steps, should be used carefully as these params can change the behaviour significantly */
   val options: GDALWarpOptions
@@ -64,6 +65,7 @@ trait GDALBaseRasterSource extends RasterSource {
   @transient lazy val fromBaseWarpList: Dataset = GDAL.fromGDALWarpOptions(uri, baseWarpList)
   // current dataset
   @transient lazy val dataset: Dataset = {
+    // TODO: refactor to avoid possible Datasets pool race and as a => possible reference leak
     // adding a parent link as we can easily forget about the initial dataset
     addParentDataset(GDAL.open(vsiPath))
     // it will always be a VRT Dataset
@@ -125,10 +127,10 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options).addParentDataset(dataset)
+    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options).addParentDatasets(getParentDatasets).addParentDataset(dataset)
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options).addParentDataset(dataset)
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options).addParentDatasets(getParentDatasets).addParentDataset(dataset)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
