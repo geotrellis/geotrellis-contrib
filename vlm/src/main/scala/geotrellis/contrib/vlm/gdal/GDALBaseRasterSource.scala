@@ -45,11 +45,11 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   /** pointers to parent datasets to prevent them from being garbage collected */
-  @transient private val parentDatasets: mutable.ListBuffer[Dataset] = ListBuffer()
+  @transient private lazy val parentDatasets: mutable.ListBuffer[Dataset] = ListBuffer()
 
   /** private setters to keep things away from the user API */
   private[gdal] def addParentDataset(ds: Dataset): GDALBaseRasterSource = { parentDatasets += ds; this }
-  private[gdal] def addParentDatasets(ds: List[Dataset]): GDALBaseRasterSource = { parentDatasets ++= ds; this }
+  private[gdal] def addParentDatasets(ds: Traversable[Dataset]): GDALBaseRasterSource = { parentDatasets ++= ds; this }
 
   /** options to override some values on transformation steps, should be used carefully as these params can change the behaviour significantly */
   val options: GDALWarpOptions
@@ -63,7 +63,12 @@ trait GDALBaseRasterSource extends RasterSource {
   // generate a vrt before the current options application
   @transient lazy val fromBaseWarpList: Dataset = GDAL.fromGDALWarpOptions(uri, baseWarpList)
   // current dataset
-  @transient lazy val dataset: Dataset = GDAL.fromGDALWarpOptions(uri, warpList)
+  @transient lazy val dataset: Dataset = {
+    // adding a parent link as we can easily forget about the initial dataset
+    addParentDataset(GDAL.open(vsiPath))
+    // it will always be a VRT Dataset
+    GDAL.fromGDALWarpOptions(uri, warpList)
+  }
 
   lazy val bandCount: Int = dataset.getRasterCount
 
