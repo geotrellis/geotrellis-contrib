@@ -199,7 +199,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         assertRDDLayersEqual(reprojectedExpectedRDDGDAL, reprojectedSourceRDD, true)
       }
 
-      def parellSpec(n: Int = 1000)(implicit cs: ContextShift[IO]): Unit = {
+      def parellSpec(n: Int = 1000)(implicit cs: ContextShift[IO]): Seq[RasterSource] = {
         println(java.lang.Thread.activeCount())
 
         /** Do smth usual with the original RasterSource to force VRTs allocation */
@@ -218,7 +218,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
           rs
         }
 
-        (1 to n).toList.flatMap { _ =>
+        val res = (1 to n).toList.flatMap { _ =>
           (0 to 4).flatMap { i =>
             List(IO {
               // println(Thread.currentThread().getName())
@@ -246,14 +246,13 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
               dirtyCalls(reprojRS(i).source)
             })
           }
-        }.parSequence.void.unsafeRunSync
+        }.parSequence.unsafeRunSync
 
         println(java.lang.Thread.activeCount())
+
+        res
       }
-
-      /** These tests are not in a single loop to make them more honest,
-        * as weak references are likely not to be collected in a single loop */
-
+      
       List(Weak, Soft, Hard).foreach { ref =>
         describe(s"${ref} references pool") {
           it(s"should not fail on parallelization with a fixed thread pool on ${ref} refs") {
@@ -265,7 +264,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
             val ec = ExecutionContext.fromExecutor(pool)
             implicit val cs = IO.contextShift(ec)
 
-            parellSpec()
+            val res = parellSpec()
           }
 
           it(s"should not fail on parallelization with a fork join pool on ${ref} refs") {
@@ -274,7 +273,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
             implicit val cs = IO.contextShift(ExecutionContext.global)
 
-            parellSpec()
+            val res = parellSpec()
           }
         }
       }
