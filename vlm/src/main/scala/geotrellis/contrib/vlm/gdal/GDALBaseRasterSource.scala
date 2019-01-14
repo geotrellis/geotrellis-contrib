@@ -68,10 +68,9 @@ trait GDALBaseRasterSource extends RasterSource {
     // if it's the initial raster source let's persist the initial gdal.Open dataset
     // as this lazy val always returns a VRT and we may loose the initial Dataset reference
     if(baseWarpList.isEmpty) {
-      val baseDataset = GDAL.open(vsiPath)
-      addParentDataset(baseDataset)
+      addParentDataset(fromBaseWarpList)
       // this overload is used there to prevent possible Datasets pool collisions
-      GDAL.fromGDALWarpOptions(uri, warpList, baseDataset)
+      GDAL.fromGDALWarpOptions(uri, warpList, fromBaseWarpList)
     } else GDAL.fromGDALWarpOptions(uri, warpList)
   }
 
