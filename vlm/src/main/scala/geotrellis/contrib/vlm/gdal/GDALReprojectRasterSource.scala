@@ -69,8 +69,8 @@ case class GDALReprojectRasterSource(
   }
 
   override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, warpList).addParentDatasets(getParentDatasets).addParentDataset(dataset)
+    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, warpList)
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options, warpList).addParentDatasets(getParentDatasets).addParentDataset(dataset)
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options, warpList)
 }
