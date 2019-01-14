@@ -65,11 +65,14 @@ trait GDALBaseRasterSource extends RasterSource {
   @transient lazy val fromBaseWarpList: Dataset = GDAL.fromGDALWarpOptions(uri, baseWarpList)
   // current dataset
   @transient lazy val dataset: Dataset = {
-    // TODO: refactor to avoid possible Datasets pool race and as a => possible reference leak
-    // adding a parent link as we can easily forget about the initial dataset
-    addParentDataset(GDAL.open(vsiPath))
-    // it will always be a VRT Dataset
-    GDAL.fromGDALWarpOptions(uri, warpList)
+    // if it's the initial raster source let's persist the initial gdal.Open dataset
+    // as this lazy val always returns a VRT and we may loose the initial Dataset reference
+    if(baseWarpList.isEmpty) {
+      val baseDataset = GDAL.open(vsiPath)
+      addParentDataset(baseDataset)
+      // this overload is used there to prevent possible Datasets pool collisions
+      GDAL.fromGDALWarpOptions(uri, warpList, baseDataset)
+    } else GDAL.fromGDALWarpOptions(uri, warpList)
   }
 
   lazy val bandCount: Int = dataset.getRasterCount
