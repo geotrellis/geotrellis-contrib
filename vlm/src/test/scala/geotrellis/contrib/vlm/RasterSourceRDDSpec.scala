@@ -251,29 +251,19 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         println(java.lang.Thread.activeCount())
       }
 
-      List(Weak, Soft, Hard).foreach { ref =>
-        describe(s"${ref} references pool") {
-          it(s"should not fail on parallelization with a fixed thread pool on ${ref} refs") {
-            GDAL.cacheCleanUp
-            modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = ref).getCache)
+      it(s"should not fail on parallelization with a fixed thread pool") {
+        val n = 200
+        val pool = Executors.newFixedThreadPool(n)
+        val ec = ExecutionContext.fromExecutor(pool)
+        implicit val cs = IO.contextShift(ec)
 
-            val n = 200
-            val pool = Executors.newFixedThreadPool(n)
-            val ec = ExecutionContext.fromExecutor(pool)
-            implicit val cs = IO.contextShift(ec)
+        parellSpec()
+      }
 
-            parellSpec()
-          }
+      it(s"should not fail on parallelization with a fork join pool") {
+        implicit val cs = IO.contextShift(ExecutionContext.global)
 
-          it(s"should not fail on parallelization with a fork join pool on ${ref} refs") {
-            GDAL.cacheCleanUp
-            modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = ref).getCache)
-
-            implicit val cs = IO.contextShift(ExecutionContext.global)
-
-            parellSpec()
-          }
-        }
+        parellSpec()
       }
     }
   }
