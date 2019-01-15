@@ -33,7 +33,6 @@ import java.net.MalformedURLException
 
 class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
   val url = Resource.path("img/aspect-tiled.tif")
-  println(url)
   val uri = s"file://$url"
 
   // we are going to use this source for resampling into weird resolutions, let's check it
