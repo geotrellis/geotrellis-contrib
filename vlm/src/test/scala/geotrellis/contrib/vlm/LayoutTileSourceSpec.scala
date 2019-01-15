@@ -30,7 +30,6 @@ class LayoutTileSourceSpec extends FunSpec with RasterMatchers with BetterRaster
   val testFile = Resource.path("img/aspect-tiled.tif")
   val tiff = GeoTiffReader.readMultiband(testFile, streaming = false)
 
-
   val rasterSource = new GeoTiffRasterSource(testFile)
   val scheme = FloatingLayoutScheme(256)
   val layout = scheme.levelFor(rasterSource.extent, rasterSource.cellSize).layout

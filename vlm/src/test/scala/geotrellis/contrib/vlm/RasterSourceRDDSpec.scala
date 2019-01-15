@@ -172,8 +172,6 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
     }
 
     describe("GDALRasterSource") {
-      import Utils._
-
       val expectedFilePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-near-merc-rdd.tif"
 
       it("should reproduce tileToLayout") {
