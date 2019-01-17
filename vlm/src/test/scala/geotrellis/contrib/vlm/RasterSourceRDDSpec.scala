@@ -197,7 +197,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         assertRDDLayersEqual(reprojectedExpectedRDDGDAL, reprojectedSourceRDD, true)
       }
 
-      def parellSpec(n: Int = 1000)(implicit cs: ContextShift[IO]): List[RasterSource] = {
+      def parellSpec(n: Int = 1000)(implicit cs: ContextShift[IO]): Unit = {
         println(java.lang.Thread.activeCount())
 
         /** Do smth usual with the original RasterSource to force VRTs allocation */
@@ -216,7 +216,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
           rs
         }
 
-        val res = (1 to n).toList.flatMap { _ =>
+        (1 to n).toList.flatMap { _ =>
           (0 to 4).flatMap { i =>
             List(IO {
               // println(Thread.currentThread().getName())
@@ -244,18 +244,16 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
               dirtyCalls(reprojRS(i).source)
             })
           }
-        }.parSequence.unsafeRunSync
+        }.parSequence.void.unsafeRunSync
 
         println(java.lang.Thread.activeCount())
-
-        res
       }
 
       it(s"should not fail on parallelization with a fork join pool") {
         val i = 1000
         implicit val cs = IO.contextShift(ExecutionContext.global)
 
-        val res = parellSpec(i)
+        parellSpec(i)
       }
 
       it(s"should not fail on parallelization with a fixed thread pool") {
@@ -265,7 +263,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         val ec = ExecutionContext.fromExecutor(pool)
         implicit val cs = IO.contextShift(ec)
 
-        val res = parellSpec(i)
+        parellSpec(i)
       }
     }
   }
