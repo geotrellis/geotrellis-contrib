@@ -19,6 +19,7 @@ package geotrellis.contrib.vlm
 import geotrellis.contrib.vlm.geotiff._
 import geotrellis.contrib.vlm.gdal._
 import geotrellis.raster._
+import geotrellis.raster.io.geotiff._
 import geotrellis.proj4._
 import geotrellis.spark._
 import geotrellis.spark.io.hadoop._
@@ -49,6 +50,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
   val reprojectedSource = rasterSource.reprojectToGrid(targetCRS, layout)
 
+  /*
   describe("reading in GeoTiffs as RDDs") {
     it("should have the right number of tiles") {
       val expectedKeys =
@@ -267,6 +269,34 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
         val res = parellSpec(i)
       }
+    }
+  }
+  */
+
+  describe("RasterSourceRDD.read") {
+    it("should read in single band tiles") {
+      val paths: Seq[String] =
+        0 until 5 map { index =>
+          filePathByIndex(index)
+        }
+
+      val readingSources: Seq[ReadingSource] =
+        paths.zipWithIndex.map { case (path, index) =>
+          ReadingSource(GeoTiffRasterSource(path).reprojectToGrid(targetCRS, layout), 0, index)
+        }
+
+      val expected: MultibandTile = {
+        val geotiffs = paths.map { MultibandGeoTiff(_) }
+        val reprojectedRasters = geotiffs.map { _.raster.reproject(readingSources.head.source.crs, targetCRS) }
+
+        val tiles = reprojectedRasters.map { _.tile.band(0) }
+
+        MultibandTile(tiles)
+      }
+
+      val actual: MultibandTile = RasterSourceRDD.read(readingSources, layout).stitch().tile
+
+      assertEqual(expected, actual)
     }
   }
 }
