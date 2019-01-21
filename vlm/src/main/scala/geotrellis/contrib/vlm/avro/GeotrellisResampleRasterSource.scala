@@ -30,17 +30,22 @@ import geotrellis.spark.io._
 
 case class GeotrellisResampleRasterSource(
   uri: String,
-  layerName: String,
+  baseLayerId: LayerId,
   bandCount: Int,
-  baseRasterExtent: RasterExtent,
   resampleGrid: ResampleGrid,
   method: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution
 ) extends RasterSource { self =>
   lazy val reader = CollectionLayerReader(uri)
 
-  @transient protected lazy val layerId: LayerId =
-    getClosestLayer(rasterExtent.cellSize, strategy)
+  lazy val baseMetadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](baseLayerId)
+  lazy val baseRasterExtent: RasterExtent =
+    baseMetadata.layout.createAlignedGridExtent(baseMetadata.extent).toRasterExtent()
+
+  @transient protected lazy val layerId: LayerId = {
+    val closestResolution = getClosestResolution(rasterExtent.cellSize, strategy)
+    getClosestLayer(closestResolution)
+  }
 
   lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
 
@@ -48,13 +53,12 @@ case class GeotrellisResampleRasterSource(
   def cellType: CellType = metadata.cellType
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
+  lazy val layerName = baseLayerId.name
   lazy val rasterExtent: RasterExtent = resampleGrid(baseRasterExtent)
   lazy val resolutions: List[RasterExtent] = GeotrellisRasterSource.getResolutions(reader, layerName)
-  lazy val layerIds: Seq[LayerId] = GeotrellisRasterSource.getLayerIdsByName(reader, layerName)
-  lazy val resolutionLayerIds: Map[RasterExtent, LayerId] = (resolutions zip layerIds).toMap
 
-  def getClosestLayer(cellSize: CellSize, strategy: OverviewStrategy = AutoHigherResolution): LayerId = {
-    val closestResolution = strategy match {
+  def getClosestResolution(cellSize: CellSize, strategy: OverviewStrategy = AutoHigherResolution): Option[RasterExtent] = {
+    strategy match {
       case AutoHigherResolution =>
         resolutions
           .map { v => (cellSize.resolution - v.cellSize.resolution) -> v }
@@ -62,20 +66,26 @@ case class GeotrellisResampleRasterSource(
           .sortBy(_._1)
           .map(_._2)
           .headOption
-          .getOrElse(rasterExtent)
       case Auto(n) =>
         resolutions
           .sortBy(v => math.abs(cellSize.resolution - v.cellSize.resolution))
-          .lift(n)
-          .getOrElse(rasterExtent) // n can be out of bounds,
+          .lift(n) // n can be out of bounds,
       // makes only overview lookup as overview position is important
-      case Base => rasterExtent
+      case Base => None
     }
-    resolutionLayerIds.get(closestResolution) match {
-      case Some(closestLayerId) =>
-        closestLayerId
-      case None =>
-        throw new Exception("Could not find closest layer")
+  }
+
+  def getClosestLayer(closestResolution: Option[RasterExtent]): LayerId = {
+    closestResolution match {
+      case Some(resolution) => {
+        val layerIds: Seq[LayerId] = GeotrellisRasterSource.getLayerIdsByName(reader, layerName)
+        val resolutionLayerIds: Map[RasterExtent, LayerId] = (resolutions zip layerIds).toMap
+        resolutionLayerIds.get(resolution) match {
+          case Some(closestLayerId) => closestLayerId
+          case None => baseLayerId
+        }
+      }
+      case None => baseLayerId
     }
   }
 
@@ -96,7 +106,7 @@ case class GeotrellisResampleRasterSource(
     ???
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GeotrellisResampleRasterSource(uri, layerName, bandCount, baseRasterExtent, resampleGrid, method, strategy)
+    GeotrellisResampleRasterSource(uri, baseLayerId, bandCount, resampleGrid, method, strategy)
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
     extents.toIterator.flatMap(extent => read(extent, bands))

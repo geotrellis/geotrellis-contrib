@@ -72,7 +72,7 @@ case class GeotrellisRasterSource(uri: String, layerId: LayerId, bandCount: Int 
     ???
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
-    GeotrellisResampleRasterSource(uri, layerId.name, bandCount, rasterExtent, resampleGrid, method, strategy)
+    GeotrellisResampleRasterSource(uri, layerId, bandCount, resampleGrid, method, strategy)
   }
 }
 
