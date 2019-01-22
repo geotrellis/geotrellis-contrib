@@ -50,7 +50,6 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
   val reprojectedSource = rasterSource.reprojectToGrid(targetCRS, layout)
 
-  /*
   describe("reading in GeoTiffs as RDDs") {
     it("should have the right number of tiles") {
       val expectedKeys =
@@ -271,7 +270,6 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
       }
     }
   }
-  */
 
   describe("RasterSourceRDD.read") {
     val floatingScheme = FloatingLayoutScheme(500, 270)
