@@ -58,7 +58,7 @@ object RasterSourceRDD {
     val layerMetadata =
       TileLayerMetadata[SpatialKey](cellType, layout, combinedExtents, crs, layerKeyBounds)
 
-    lazy val noDataTile = ArrayTile.alloc(cellType, layout.tileCols, layout.tileRows).fill(NODATA)
+    lazy val noDataTile = ArrayTile.alloc(cellType, layout.tileCols, layout.tileRows).fill(NODATA).interpretAs(cellType)
 
     val maxIndex = readingSources.map { _.targetBand }.max
     val targetIndexes: Seq[Int] = 0 to maxIndex
