@@ -77,12 +77,16 @@ case class GeotrellisReprojectRasterSource(
     }
   }
 
-  def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] =
-    GeotrellisRasterSource.read(reader, layerId, metadata, extent, bands)
-      .map { raster =>
-        val targetRasterExtent = rasterExtent.createAlignedRasterExtent(extent)
-        raster.reproject(targetRasterExtent, transform, backTransform, reprojectOptions)
-      }
+  def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+    for {
+      _ <- this.extent.intersection(extent)
+      targetRasterExtent = rasterExtent.createAlignedRasterExtent(extent)
+      sourceExtent = targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope
+      raster <- GeotrellisRasterSource.read(reader, layerId, metadata, sourceExtent, bands)
+    } yield {
+      raster.reproject(targetRasterExtent, transform, backTransform, reprojectOptions)
+    }
+  }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val extent: Extent = metadata.extentFor(bounds)
