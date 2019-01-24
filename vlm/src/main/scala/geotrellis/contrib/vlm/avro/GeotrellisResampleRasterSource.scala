@@ -57,7 +57,7 @@ case class GeotrellisResampleRasterSource(
   lazy val layerIds: Seq[LayerId] = GeotrellisRasterSource.getLayerIdsByName(reader, layerName)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] =
-    GeotrellisRasterSource.read(reader, layerId, metadata, extent, bands)
+    GeotrellisRasterSource.readIntersecting(reader, layerId, metadata, extent, bands)
       .map { raster =>
         val targetRasterExtent = rasterExtent.createAlignedRasterExtent(extent)
         raster.resample(targetRasterExtent, method)

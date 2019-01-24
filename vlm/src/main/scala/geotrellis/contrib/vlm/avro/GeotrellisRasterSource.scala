@@ -147,6 +147,14 @@ object GeotrellisRasterSource {
     }
   }
 
+  def readIntersecting(reader: CollectionLayerReader[LayerId], layerId: LayerId, metadata: TileLayerMetadata[SpatialKey], extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+    val tiles = readTiles(reader, layerId, extent, bands)
+    if (tiles.isEmpty)
+      None
+    else
+      Some(tiles.stitch())
+  }
+
   def read(reader: CollectionLayerReader[LayerId], layerId: LayerId, metadata: TileLayerMetadata[SpatialKey], extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val tiles = readTiles(reader, layerId, extent, bands)
     if (tiles.isEmpty)

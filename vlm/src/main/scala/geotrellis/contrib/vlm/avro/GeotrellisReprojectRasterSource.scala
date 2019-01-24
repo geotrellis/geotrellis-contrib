@@ -82,7 +82,7 @@ case class GeotrellisReprojectRasterSource(
       _ <- this.extent.intersection(extent)
       targetRasterExtent = rasterExtent.createAlignedRasterExtent(extent)
       sourceExtent = targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope
-      raster <- GeotrellisRasterSource.read(reader, layerId, metadata, sourceExtent, bands)
+      raster <- GeotrellisRasterSource.readIntersecting(reader, layerId, metadata, sourceExtent, bands)
     } yield {
       raster.reproject(targetRasterExtent, transform, backTransform, reprojectOptions)
     }
