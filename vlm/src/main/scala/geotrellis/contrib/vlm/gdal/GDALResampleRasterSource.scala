@@ -46,7 +46,7 @@ case class GDALResampleRasterSource(
           resampleMethod = resampleMethod
         )
       case _ =>
-        lazy val rasterExtent: RasterExtent = fromBaseWarpList.rasterExtent
+        lazy val rasterExtent: RasterExtent = baseDataset.rasterExtent
         // raster extent won't be calculated if it's not called in the apply function body explicitly
         val targetRasterExtent = resampleGrid(rasterExtent)
         GDALWarpOptions(
@@ -59,10 +59,4 @@ case class GDALResampleRasterSource(
 
     options combine res
   }
-
-  override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, warpList)
-
-  override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options, warpList)
 }

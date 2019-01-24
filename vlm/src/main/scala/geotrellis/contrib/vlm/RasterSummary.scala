@@ -16,6 +16,7 @@
 
 package geotrellis.contrib.vlm
 
+import geotrellis.gdal._
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellGrid, CellSize, CellType, RasterExtent}
 import geotrellis.spark._
