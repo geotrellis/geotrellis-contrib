@@ -16,6 +16,7 @@
 
 package geotrellis.contrib.vlm.avro
 
+import geotrellis.gdal._
 import geotrellis.contrib.vlm._
 import geotrellis.contrib.vlm.geotiff._
 import geotrellis.vector._

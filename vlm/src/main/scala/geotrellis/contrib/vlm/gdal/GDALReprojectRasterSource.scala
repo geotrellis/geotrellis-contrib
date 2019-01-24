@@ -19,7 +19,7 @@ package geotrellis.contrib.vlm.gdal
 import geotrellis.gdal._
 import geotrellis.proj4._
 import geotrellis.raster.reproject.Reproject
-import geotrellis.contrib.vlm.{RasterSource, ResampleGrid}
+import geotrellis.contrib.vlm._
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 
@@ -38,7 +38,6 @@ case class GDALReprojectRasterSource(
 
   lazy val warpOptions: GDALWarpOptions = AnyRef.synchronized {
     val baseSpatialReference = {
-      val baseDataset = fromBaseWarpList
       val spatialReference = new SpatialReference()
       spatialReference.ImportFromWkt(Option(baseDataset.GetProjection).getOrElse(LatLng.toWKT.get))
       spatialReference
@@ -68,9 +67,9 @@ case class GDALReprojectRasterSource(
     )
   }
 
-  override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
+  /*override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
     GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, warpList)
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options, warpList)
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options, warpList)*/
 }

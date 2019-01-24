@@ -53,19 +53,12 @@ trait GDALBaseRasterSource extends RasterSource {
 
   /** options to override some values on transformation steps, should be used carefully as these params can change the behaviour significantly */
   val options: GDALWarpOptions
-  /** options from previous transformation steps */
-  val baseWarpList: List[GDALWarpOptions]
   /** current transformation options */
   val warpOptions: GDALWarpOptions
   /** the list of transformation options including the current one */
-  lazy val warpList: List[GDALWarpOptions] = baseWarpList :+ warpOptions
+  lazy val warpList: List[GDALWarpOptions] = warpOptions :: Nil
 
-  // generate a vrt before the current options application
-  @transient lazy val fromBaseWarpList: Dataset = {
-    val (ds, history) = GDAL.fromGDALWarpOptionsH(uri, baseWarpList)
-    addParentDatasets(history)
-    ds
-  }
+  @transient lazy val baseDataset: Dataset = GDAL.open(vsiPath)
   // current dataset
   @transient lazy val dataset: Dataset = {
     val (ds, history) = GDAL.fromGDALWarpOptionsH(uri, warpList)
@@ -80,11 +73,13 @@ trait GDALBaseRasterSource extends RasterSource {
   private lazy val reader: GDALReader = GDALReader(dataset)
 
   // noDataValue from the previous step
-  lazy val noDataValue: Option[Double] = fromBaseWarpList.getNoDataValue
+  lazy val noDataValue: Option[Double] = baseDataset.getNoDataValue
 
   lazy val cellType: CellType = dataset.cellType
 
   lazy val rasterExtent: RasterExtent = dataset.rasterExtent
+
+  lazy val gridExtent: GridExtent = GridExtent(rasterExtent.extent, rasterExtent.cellwidth, rasterExtent.cellheight)
 
   /** Resolutions of available overviews in GDAL Dataset
     *
@@ -111,10 +106,10 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options)
+    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options.reproject(rasterExtent, crs, targetCRS, reprojectOptions))
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options)
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options.resample(gridExtent, _ => resampleGrid))
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
