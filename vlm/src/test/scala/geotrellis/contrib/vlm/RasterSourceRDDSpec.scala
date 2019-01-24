@@ -38,7 +38,7 @@ import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
 
-class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with BeforeAndAfterAll with BeforeAndAfterEach {
+class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with BeforeAndAfterAll {
   val filePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
   def filePathByIndex(i: Int): String = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-$i.tif"
   val uri = s"file://$filePath"
@@ -48,8 +48,6 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
   val layout = scheme.levelForZoom(13).layout
 
   val reprojectedSource = rasterSource.reprojectToGrid(targetCRS, layout)
-
-  override def afterEach(): Unit = { GDAL.cacheCleanUp; super.afterEach() }
 
   describe("reading in GeoTiffs as RDDs") {
     it("should have the right number of tiles") {
@@ -174,8 +172,6 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
     }
 
     describe("GDALRasterSource") {
-      import Utils._
-
       val expectedFilePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-near-merc-rdd.tif"
 
       it("should reproduce tileToLayout") {
@@ -201,7 +197,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         assertRDDLayersEqual(reprojectedExpectedRDDGDAL, reprojectedSourceRDD, true)
       }
 
-      def parellSpec(n: Int = 1000)(implicit cs: ContextShift[IO]): Unit = {
+      def parellSpec(n: Int = 1000)(implicit cs: ContextShift[IO]): List[RasterSource] = {
         println(java.lang.Thread.activeCount())
 
         /** Do smth usual with the original RasterSource to force VRTs allocation */
@@ -220,7 +216,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
           rs
         }
 
-        (1 to n).toList.flatMap { _ =>
+        val res = (1 to n).toList.flatMap { _ =>
           (0 to 4).flatMap { i =>
             List(IO {
               // println(Thread.currentThread().getName())
@@ -248,69 +244,28 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
               dirtyCalls(reprojRS(i).source)
             })
           }
-        }.parSequence.void.unsafeRunSync
+        }.parSequence.unsafeRunSync
 
         println(java.lang.Thread.activeCount())
+
+        res
       }
 
-      /** These tests are not in a single loop to make them more honest,
-        * as weak references are likely not to be collected in a single loop */
+      it(s"should not fail on parallelization with a fork join pool") {
+        val i = 1000
+        implicit val cs = IO.contextShift(ExecutionContext.global)
 
-      describe("Weak references pool") {
-        it("should not fail on parallelization with a fixed thread pool on weak refs") {
-          val n = 200
-          val pool = Executors.newFixedThreadPool(n)
-          val ec = ExecutionContext.fromExecutor(pool)
-          implicit val cs = IO.contextShift(ec)
-
-          parellSpec()
-        }
-
-        it("should not fail on parallelization with a fork join pool on weak refs") {
-          implicit val cs = IO.contextShift(ExecutionContext.global)
-
-          parellSpec()
-        }
+        val res = parellSpec(i)
       }
 
-      describe("Hard references pool") {
-        it("should not fail on parallelization with a fixed thread pool on hard refs") {
-          modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Hard).getCache)
+      it(s"should not fail on parallelization with a fixed thread pool") {
+        val i = 1000
+        val n = 200
+        val pool = Executors.newFixedThreadPool(n)
+        val ec = ExecutionContext.fromExecutor(pool)
+        implicit val cs = IO.contextShift(ec)
 
-          val n = 200
-          val pool = Executors.newFixedThreadPool(n)
-          val ec = ExecutionContext.fromExecutor(pool)
-          implicit val cs = IO.contextShift(ec)
-
-          parellSpec()
-        }
-
-        it("should not fail on parallelization with a fork join pool on hard refs") {
-          modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Hard).getCache)
-          implicit val cs = IO.contextShift(ExecutionContext.global)
-
-          parellSpec()
-        }
-      }
-
-      describe("Soft references pool") {
-        it("should not fail on parallelization with a fixed thread pool on soft refs") {
-          modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Soft).getCache)
-
-          val n = 200
-          val pool = Executors.newFixedThreadPool(n)
-          val ec = ExecutionContext.fromExecutor(pool)
-          implicit val cs = IO.contextShift(ec)
-
-          parellSpec()
-        }
-
-        it("should not fail on parallelization with a fork join pool on soft refs") {
-          modifyField(GDAL, "cache", GDALCacheConfig.conf.copy(valuesType = Soft).getCache)
-          implicit val cs = IO.contextShift(ExecutionContext.global)
-
-          parellSpec()
-        }
+        val res = parellSpec(i)
       }
     }
   }
