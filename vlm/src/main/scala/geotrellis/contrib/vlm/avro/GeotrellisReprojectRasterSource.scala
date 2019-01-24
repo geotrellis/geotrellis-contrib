@@ -70,7 +70,7 @@ case class GeotrellisReprojectRasterSource(
       || reprojectOptions.targetCellSize.isDefined)
     {
       // we're asked to match specific target resolution, estimate what resolution we need in source to sample it
-      val estimatedSource = ReprojectRasterExtent(rasterExtent, backTransform)
+      val estimatedSource = ReprojectRasterExtent(rasterExtent, backTransform, reprojectOptions)
       GeotrellisRasterSource.getClosestLayer(resolutions, layerIds, baseLayerId, estimatedSource.cellSize, strategy)
     } else {
       GeotrellisRasterSource.getClosestLayer(resolutions, layerIds, baseLayerId, baseRasterExtent.cellSize, strategy)
