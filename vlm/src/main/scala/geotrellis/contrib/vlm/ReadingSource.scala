@@ -3,6 +3,5 @@ package geotrellis.contrib.vlm
 
 case class ReadingSource(
   source: RasterSource,
-  sourceBand: Int,
-  targetBand: Int
+  sourceToTargetBand: Map[Int, Int]
 ) extends Serializable
