@@ -58,22 +58,22 @@ object RasterSourceRDD {
     val layerMetadata =
       TileLayerMetadata[SpatialKey](cellType, layout, combinedExtents, crs, layerKeyBounds)
 
-    lazy val noDataTile = ArrayTile.alloc(cellType, layout.tileCols, layout.tileRows).fill(NODATA).interpretAs(cellType)
+    def getNoDataTile = ArrayTile.alloc(cellType, layout.tileCols, layout.tileRows).fill(NODATA).interpretAs(cellType)
 
-    val maxIndex = readingSources.map { _.targetBand }.max
+    val maxIndex = readingSources.map { _.sourceToTargetBand.values.max }.max
     val targetIndexes: Seq[Int] = 0 to maxIndex
 
     val sourcesRDD: RDD[(SpatialKey, (Int, Option[MultibandTile]))] =
       sc.parallelize(readingSources).flatMap { source =>
         val layoutSource = new LayoutTileSource(source.source, layout)
 
-        val sourceBand = source.sourceBand
-        val targetBand = source.targetBand
         val keys = layoutSource.keys
 
-        partition(keys, partitionBytes)( _ => tileSize).flatMap { _.map { key =>
-          (key, (targetBand, layoutSource.read(key, Seq(sourceBand))))
+        partition(keys, partitionBytes)( _ => tileSize).flatMap { _.flatMap { key =>
+          source.sourceToTargetBand.map { case (sourceBand, targetBand) =>
+            (key, (targetBand, layoutSource.read(key, Seq(sourceBand))))
           }
+        }
         }
       }
 
@@ -91,19 +91,23 @@ object RasterSourceRDD {
       repartitioned.groupByKey()
 
     val result: RDD[(SpatialKey, MultibandTile)] =
-    groupedSourcesRDD.mapValues { iter =>
-      val mappedBands: Map[Int, Option[MultibandTile]] = iter.toSeq.sortBy { _._1 }.toMap
+    groupedSourcesRDD.mapPartitions ({ partition =>
+      val noDataTile = getNoDataTile
 
-      val tiles: Seq[Tile] =
-        targetIndexes.map { index =>
-          mappedBands.get(index).getOrElse(None) match {
-            case Some(multibandTile) => multibandTile.band(0)
-            case None => noDataTile
+      partition.map { case (key, iter) =>
+        val mappedBands: Map[Int, Option[MultibandTile]] = iter.toSeq.sortBy { _._1 }.toMap
+
+        val tiles: Seq[Tile] =
+          targetIndexes.map { index =>
+            mappedBands.getOrElse(index, None) match {
+              case Some(multibandTile) => multibandTile.band(0)
+              case None => noDataTile
+            }
           }
-        }
 
-      MultibandTile(tiles)
-    }
+        key -> MultibandTile(tiles)
+      }
+    }, preservesPartitioning = true)
 
     sourcesRDD.unpersist()
 
