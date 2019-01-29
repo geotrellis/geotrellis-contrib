@@ -27,6 +27,8 @@ import geotrellis.spark.io.s3.AmazonS3Client
 
 import org.apache.http.client.utils.URLEncodedUtils
 import com.amazonaws.services.s3.{AmazonS3ClientBuilder, AmazonS3URI}
+import geotrellis.raster._
+import geotrellis.vector._
 
 import java.nio.file.Paths
 import java.net.{URI, URL}

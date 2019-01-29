@@ -62,20 +62,23 @@ trait GDALBaseRasterSource extends RasterSource {
 
   lazy val rasterExtent: RasterExtent = dataset.rasterExtent
 
+  lazy val gridExtent: GridExtent = this.rasterExtent
+
   /** Resolutions of available overviews in GDAL Dataset
-    *
-    * These resolutions could represent actual overview as seen in source file
-    * or overviews of VRT that was created as result of resample operations.
-    */
-  lazy val resolutions: List[RasterExtent] = {
-    val band = dataset.GetRasterBand(1)
-    rasterExtent :: (0 until band.GetOverviewCount).toList.map { idx =>
-      val ovr = band.GetOverview(idx)
-      RasterExtent(extent, cols = ovr.getXSize, rows = ovr.getYSize)
+      *
+      * These resolutions could represent actual overview as seen in source file
+      * or overviews of VRT that was created as result of resample operations.
+      */
+    lazy val resolutions: List[GridExtent] = {
+      val band = dataset.GetRasterBand(1)
+      gridExtent :: (0 until band.GetOverviewCount).toList.map { idx =>
+        val ovr = band.GetOverview(idx)
+        RasterExtent(extent, cols = ovr.getXSize, rows = ovr.getYSize): GridExtent
+      }
     }
-  }
 
   override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
+    val gridBounds = GridBounds(0, 0, dataset.GetRasterXSize - 1, dataset.GetRasterYSize - 1)
     bounds
       .toIterator
       .flatMap { gb => gridBounds.intersection(gb) }
@@ -99,7 +102,7 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val it = readBounds(List(bounds).flatMap(_.intersection(this)), bands)
+    val it = readBounds(List(bounds), bands)
     if (it.hasNext) Some(it.next) else None
   }
 

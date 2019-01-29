@@ -47,6 +47,8 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
   def uri: String
   def crs: CRS
   def bandCount: Int
+  def cols: Int = (gridExtent.extent.width / gridExtent.cellwidth).toInt
+  def rows: Int = (gridExtent.extent.height / gridExtent.cellheight).toInt
 
   def cellType: CellType
 
@@ -54,9 +56,9 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
     *
     * Note: some re-sampling of underlying raster data may be required to produce this cell size.
     */
-  def cellSize: CellSize = rasterExtent.cellSize
+  def cellSize: CellSize = gridExtent.cellSize
 
-  def rasterExtent: RasterExtent
+  def gridExtent: GridExtent
 
   /** All available resolutions for this raster source
     *
@@ -70,18 +72,15 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
     *
     * __Note__: It is expected but not guaranteed that the extent each [[RasterExtent]] in this list will be the same.
     */
-  def resolutions: List[RasterExtent]
+  def resolutions: List[GridExtent]
 
-  def extent: Extent = rasterExtent.extent
+  def extent: Extent = gridExtent.extent
 
-  /** Raster pixel column count */
-  def cols: Int = rasterExtent.cols
-
-  /** Raster pixel row count */
-  def rows: Int = rasterExtent.rows
-
-  /** Raster pixel bounds */
-  def bounds: GridBounds = GridBounds(0, 0, cols - 1, rows - 1)
+//  /** Raster pixel column count */
+//  def cols: Int = gridExtent.cols
+//
+//  /** Raster pixel row count */
+//  def rows: Int = gridExtent.rows
 
   /** Reproject to different CRS with explicit sampling reprojectOptions.
     * @see [[geotrellis.raster.reproject.Reproject]]

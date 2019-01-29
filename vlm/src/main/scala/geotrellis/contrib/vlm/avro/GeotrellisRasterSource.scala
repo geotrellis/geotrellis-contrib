@@ -39,10 +39,10 @@ case class GeotrellisRasterSource(uri: String, layerId: LayerId, bandCount: Int 
 
   lazy val reader = CollectionLayerReader(uri)
   lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
-  lazy val rasterExtent: RasterExtent =
-    metadata.layout.createAlignedGridExtent(metadata.extent).toRasterExtent()
+  lazy val gridExtent: GridExtent =
+      metadata.layout.createAlignedGridExtent(metadata.extent).toRasterExtent()
 
-  lazy val resolutions: List[RasterExtent] = GeotrellisRasterSource.getResolutions(reader, layerId.name)
+  lazy val resolutions: scala.List[GridExtent] = GeotrellisRasterSource.getResolutions(reader, layerId.name)
 
   def crs: CRS = metadata.crs
   def cellType: CellType = metadata.cellType
@@ -80,14 +80,14 @@ object GeotrellisRasterSource {
   def getLayerIdsByName(reader: CollectionLayerReader[LayerId], layerName: String): Seq[LayerId] =
     reader.attributeStore.layerIds.filter(_.name == layerName)
 
-  def getResolutions(reader: CollectionLayerReader[LayerId], layerName: String): List[RasterExtent] =
+  def getResolutions(reader: CollectionLayerReader[LayerId], layerName: String): List[GridExtent] =
     getLayerIdsByName(reader, layerName)
       .map { currLayerId =>
         val layerMetadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](currLayerId)
-        layerMetadata.layout.createAlignedGridExtent(layerMetadata.extent).toRasterExtent()
+        layerMetadata.layout.createAlignedGridExtent(layerMetadata.extent)
       }.toList
 
-  def getClosestResolution(resolutions: List[RasterExtent], cellSize: CellSize, strategy: OverviewStrategy = AutoHigherResolution): Option[RasterExtent] = {
+  def getClosestResolution(resolutions: List[GridExtent], cellSize: CellSize, strategy: OverviewStrategy = AutoHigherResolution): Option[GridExtent] = {
     strategy match {
       case AutoHigherResolution =>
         resolutions
@@ -105,10 +105,10 @@ object GeotrellisRasterSource {
     }
   }
 
-  def getClosestLayer(resolutions: List[RasterExtent], layerIds: Seq[LayerId], baseLayerId: LayerId, cellSize: CellSize, strategy: OverviewStrategy = AutoHigherResolution): LayerId = {
+  def getClosestLayer(resolutions: List[GridExtent], layerIds: Seq[LayerId], baseLayerId: LayerId, cellSize: CellSize, strategy: OverviewStrategy = AutoHigherResolution): LayerId = {
     getClosestResolution(resolutions, cellSize, strategy) match {
       case Some(resolution) => {
-        val resolutionLayerIds: Map[RasterExtent, LayerId] = (resolutions zip layerIds).toMap
+        val resolutionLayerIds: Map[GridExtent, LayerId] = (resolutions zip layerIds).toMap
         resolutionLayerIds.get(resolution) match {
           case Some(closestLayerId) => closestLayerId
           case None => baseLayerId
@@ -139,7 +139,7 @@ object GeotrellisRasterSource {
           )
       }
       case _ => {
-        throw new Exception("Unable to read single or multiband tiles from file")
+        throw new Exception(s"Unable to read single or multiband tiles from file, ${header.keyClass}, ${header.valueClass}")
       }
     }
   }

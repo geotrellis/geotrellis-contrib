@@ -24,33 +24,31 @@ import geotrellis.raster._
   * @note It is required that the [[RasterSource]] intersects with the given [[GridBounds]].
   *
   * @param source raster source that can be used to read this region.
-  * @param bounds pixel bounds relative to the source, maybe not be fully contained by the source bounds.
+  * @param extent Extent extent of region pixels, should be aligned to source pixl grid
   */
 case class RasterRegion(
   source: RasterSource,
-  bounds: GridBounds
+  extent: Extent
 ) extends CellGrid with Serializable {
-  require(bounds.intersects(source.gridBounds), s"The given bounds: $bounds must intersect the given source: $source")
   @transient lazy val raster: Option[Raster[MultibandTile]] =
     for {
-      intersection <- source.gridBounds.intersection(bounds)
-      raster <- source.read(intersection)
+      raster <- source.read(rasterExtent.extent)
     } yield {
-      if (raster.tile.cols == cols && raster.tile.rows == rows)
+      if (raster.tile.cols == rasterExtent.cols && raster.tile.rows == rasterExtent.rows)
         raster
-      else {
-        val colOffset = math.abs(bounds.colMin - intersection.colMin)
-        val rowOffset = math.abs(bounds.rowMin - intersection.rowMin)
-
-        raster.mapTile { _.mapBands { (_, band) => PaddedTile(band, colOffset, rowOffset, cols, rows) } }
+      else { // we have a raster thats smaller than desired
+        val gb = rasterExtent.gridBoundsFor(raster.extent)
+        val tile = raster.tile.mapBands { (_, band) =>
+          PaddedTile(band, gb.colMin, gb.rowMin, cols, rows)
+      }
+        Raster(tile, rasterExtent.extent)
       }
     }
 
-  def cols: Int = bounds.width
-  def rows: Int = bounds.height
-  def extent: Extent = source.rasterExtent.extentFor(bounds, clamp = false)
+  def cols: Int = rasterExtent.cols
+  def rows: Int = rasterExtent.rows
   def crs: CRS = source.crs
   def cellType: CellType = source.cellType
-  def rasterExtent: RasterExtent = RasterExtent(extent, cols, rows)
-  def projectedExtent: ProjectedExtent = ProjectedExtent(extent, crs)
+  def rasterExtent: RasterExtent = source.gridExtent.createAlignedRasterExtent(extent)
+  def projectedExtent: ProjectedExtent = ProjectedExtent(rasterExtent.extent, crs)
 }

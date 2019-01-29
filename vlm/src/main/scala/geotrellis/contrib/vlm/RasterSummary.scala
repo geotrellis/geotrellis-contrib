@@ -87,7 +87,7 @@ case class RasterSummary(
       cellType = cellType,
       cellSize = re.cellSize,
       extent   = re.extent,
-      cells    = re.size,
+      cells    = (re.extent.width / re.cellwidth).toLong * (re.extent.height / re.cellheight).toLong,
       count    = count
     )
   }
@@ -131,4 +131,3 @@ object RasterSummary {
     all.head
   }
 }
-
