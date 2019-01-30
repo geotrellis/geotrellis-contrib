@@ -19,6 +19,7 @@ package geotrellis.contrib.vlm
 import geotrellis.contrib.vlm.geotiff._
 import geotrellis.contrib.vlm.gdal._
 import geotrellis.raster._
+import geotrellis.raster.io.geotiff._
 import geotrellis.proj4._
 import geotrellis.spark._
 import geotrellis.spark.io.hadoop._
@@ -267,6 +268,98 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
         val res = parellSpec(i)
       }
+    }
+  }
+
+  describe("RasterSourceRDD.read") {
+    val floatingScheme = FloatingLayoutScheme(500, 270)
+    val floatingLayout = floatingScheme.levelFor(rasterSource.extent, rasterSource.cellSize).layout
+
+    val cellType = rasterSource.cellType
+
+    val multibandTilePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-0-1-2.tif"
+
+    val noDataTile = ArrayTile.alloc(cellType, rasterSource.cols, rasterSource.rows).fill(NODATA).interpretAs(cellType)
+
+    val paths: Seq[String] =
+      0 to 5 map { index =>
+        filePathByIndex(index)
+      }
+
+    val expectedMultibandTile = {
+      val tiles = paths.map { MultibandGeoTiff(_, streaming = false).tile.band(0) }
+
+      MultibandTile(tiles)
+    }
+
+    it("should read in singleband tiles") {
+      val readingSources: Seq[ReadingSource] =
+        paths.zipWithIndex.map { case (path, index) =>
+          ReadingSource(GeoTiffRasterSource(path), 0, index)
+        }
+
+      val expected: MultibandTile = expectedMultibandTile
+
+      val actual: MultibandTile = RasterSourceRDD.read(readingSources, floatingLayout).stitch().tile
+
+      assertEqual(expected, actual)
+    }
+
+    it("should read in singleband tiles with missing bands") {
+      val readingSources: Seq[ReadingSource] =
+        Seq(
+          ReadingSource(GeoTiffRasterSource(paths(0)), 0, 0),
+          ReadingSource(GeoTiffRasterSource(paths(2)), 0, 1),
+          ReadingSource(GeoTiffRasterSource(paths(4)), 0, 3)
+        )
+
+      val expected: MultibandTile =
+        MultibandTile(expectedMultibandTile.band(0), expectedMultibandTile.band(2), noDataTile, expectedMultibandTile.band(4))
+
+      val actual: MultibandTile = RasterSourceRDD.read(readingSources, floatingLayout).stitch().tile
+
+      assertEqual(expected, actual)
+    }
+
+    it("should read in singleband and multiband tiles") {
+      val readingSources: Seq[ReadingSource] =
+        Seq(
+          ReadingSource(GeoTiffRasterSource(multibandTilePath), 0, 0),
+          ReadingSource(GeoTiffRasterSource(paths(1)), 0, 1),
+          ReadingSource(GeoTiffRasterSource(multibandTilePath), 2, 2),
+          ReadingSource(GeoTiffRasterSource(paths(3)), 0, 3),
+          ReadingSource(GeoTiffRasterSource(paths(4)), 0, 4),
+          ReadingSource(GeoTiffRasterSource(paths(5)), 0, 5)
+        )
+
+      val expected: MultibandTile = expectedMultibandTile
+
+      val actual: MultibandTile = RasterSourceRDD.read(readingSources, floatingLayout).stitch().tile
+
+      assertEqual(expected, actual)
+    }
+
+    it("should read in singleband and multiband tiles with missing bands") {
+      val readingSources: Seq[ReadingSource] =
+        Seq(
+          ReadingSource(GeoTiffRasterSource(paths(4)), 0, 5),
+          ReadingSource(GeoTiffRasterSource(multibandTilePath), 1, 0),
+          ReadingSource(GeoTiffRasterSource(multibandTilePath), 2, 1)
+        )
+
+      val expected: MultibandTile =
+        MultibandTile(
+          expectedMultibandTile.band(1),
+          expectedMultibandTile.band(2),
+          noDataTile,
+          noDataTile,
+          noDataTile,
+          expectedMultibandTile.band(4)
+        )
+
+      val actual: MultibandTile = RasterSourceRDD.read(readingSources, floatingLayout).stitch().tile
+
+      assertEqual(expected, actual)
     }
   }
 }
