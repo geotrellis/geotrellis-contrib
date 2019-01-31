@@ -28,6 +28,8 @@ import geotrellis.spark.testkit._
 import geotrellis.gdal._
 import geotrellis.gdal.config._
 
+import org.apache.spark.rdd.RDD
+
 import cats.implicits._
 import cats.effect.{ContextShift, IO}
 import spire.syntax.cfor._
