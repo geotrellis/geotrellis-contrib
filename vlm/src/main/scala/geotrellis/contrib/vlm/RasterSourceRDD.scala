@@ -118,7 +118,8 @@ object RasterSourceRDD {
   def tiledLayerRDD(
     sources: RDD[RasterSource],
     layout: LayoutDefinition,
-    resampleMethod: ResampleMethod = NearestNeighbor
+    resampleMethod: ResampleMethod = NearestNeighbor,
+    partitioner: Option[Partitioner] = None
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] = {
     val summary = RasterSummary.fromRDD(sources)
     val layerMetadata = summary.toTileLayerMetadata(layout, 0)._1
@@ -131,8 +132,12 @@ object RasterSourceRDD {
 
     val tiledRDD: RDD[(SpatialKey, MultibandTile)] =
       rasterRegionRDD
-        .groupByKey(SpatialPartitioner(summary.estimatePartitionsNumber))
-        .mapValues { iter => MultibandTile(iter.flatMap { _.raster.toSeq.flatMap { _.tile.bands } }) }
+        .groupByKey(partitioner.getOrElse(SpatialPartitioner(summary.estimatePartitionsNumber)))
+        .mapValues { iter =>
+          MultibandTile(
+            iter.flatMap { _.raster.toSeq.flatMap { _.tile.bands } }
+          )
+        }
 
     ContextRDD(tiledRDD, layerMetadata)
   }
