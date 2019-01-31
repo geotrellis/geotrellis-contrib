@@ -51,6 +51,9 @@ trait GDALBaseRasterSource extends RasterSource {
   private[gdal] def addParentDatasets(ds: Traversable[Dataset]): GDALBaseRasterSource = { parentDatasets ++= ds; this }
   private[gdal] def getParentDatasets: Set[Dataset] = parentDatasets.toSet
 
+  /** function to compute Dataset */
+  private[gdal] def withDatasetsTriggered[T](o : => T): T = { dataset.rasterExtent; fromBaseWarpList.rasterExtent; o }
+
   /** options to override some values on transformation steps, should be used carefully as these params can change the behaviour significantly */
   val options: GDALWarpOptions
   /** options from previous transformation steps */
@@ -111,10 +114,10 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options)
+    withDatasetsTriggered(GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options))
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options)
+    withDatasetsTriggered(GDALResampleRasterSource(uri, resampleGrid, method, strategy, options))
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
