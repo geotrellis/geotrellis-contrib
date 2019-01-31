@@ -172,6 +172,20 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
       assert(mismatched < 3)
     }
 
+    it("should reproduce tileToLayout when given an RDD[RasterSource]") {
+      val rasterSourceRDD: RDD[RasterSource] = sc.parallelize(Seq(rasterSource))
+
+      // Need to define these here or else a serialization error will occur
+      val targetLayout = layout
+      val crs = targetCRS
+
+      val reprojectedRasterSourceRDD: RDD[RasterSource] = rasterSourceRDD.map { _.reprojectToGrid(crs, targetLayout) }
+
+      val tiledSource: MultibandTileLayerRDD[SpatialKey] = RasterSourceRDD.tiledLayerRDD(reprojectedRasterSourceRDD, targetLayout)
+
+      assertRDDLayersEqual(reprojectedExpectedRDD, tiledSource)
+    }
+
     describe("GDALRasterSource") {
       val expectedFilePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-near-merc-rdd.tif"
 
