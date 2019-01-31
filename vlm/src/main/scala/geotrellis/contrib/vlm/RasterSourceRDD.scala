@@ -65,7 +65,7 @@ object RasterSourceRDD {
     val targetIndexes: Seq[Int] = 0 to maxIndex
 
     val sourcesRDD: RDD[(SpatialKey, (Int, Option[MultibandTile]))] =
-      sc.parallelize(readingSources).flatMap { source =>
+      sc.parallelize(readingSources, readingSources.size).flatMap { source =>
         val layoutSource = new LayoutTileSource(source.source, layout)
 
         val keys = layoutSource.keys
@@ -111,6 +111,61 @@ object RasterSourceRDD {
     }, preservesPartitioning = true)
 
     sourcesRDD.unpersist()
+
+    ContextRDD(result, layerMetadata)
+  }
+
+  def readFromRDD(
+    readingSourcesRDD: RDD[ReadingSource],
+    layout: LayoutDefinition,
+    partitioner: Option[Partitioner] = None
+  )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] = {
+    val rasterSourcesRDD = readingSourcesRDD.map { _.source }
+    val summary = RasterSummary.fromRDD(rasterSourcesRDD)
+
+    val cellType = summary.cellType
+
+    val layerMetadata: TileLayerMetadata[SpatialKey] = summary.toTileLayerMetadata(layout, 0)._1
+
+    def getNoDataTile = ArrayTile.alloc(cellType, layout.tileCols, layout.tileRows).fill(NODATA).interpretAs(cellType)
+
+    val maxIndex = readingSourcesRDD.map { _.sourceToTargetBand.values.max }.reduce { _ max _ }
+    val targetIndexes: Seq[Int] = 0 to maxIndex
+
+    val keyedRDD: RDD[(SpatialKey, (Int, Option[MultibandTile]))] =
+      readingSourcesRDD.mapPartitions ({ partition =>
+        partition.flatMap { source =>
+          val layoutSource = LayoutTileSource(source.source, layout)
+
+          layoutSource.keys.flatMap { key =>
+            source.sourceToTargetBand.map { case (sourceBand, targetBand) =>
+              (key, (targetBand, layoutSource.read(key, Seq(sourceBand))))
+            }
+          }
+        }
+      })
+
+    val groupedRDD: RDD[(SpatialKey, Iterable[(Int, Option[MultibandTile])])] =
+      keyedRDD.groupByKey(partitioner.getOrElse(SpatialPartitioner(summary.estimatePartitionsNumber)))
+
+    val result: RDD[(SpatialKey, MultibandTile)] =
+      groupedRDD.mapPartitions ({ partition =>
+        val noDataTile = getNoDataTile
+
+      partition.map { case (key, iter) =>
+        val mappedBands: Map[Int, Option[MultibandTile]] = iter.toSeq.sortBy { _._1 }.toMap
+
+        val tiles: Seq[Tile] =
+          targetIndexes.map { index =>
+            mappedBands.getOrElse(index, None) match {
+              case Some(multibandTile) => multibandTile.band(0)
+              case None => noDataTile
+            }
+          }
+
+        key -> MultibandTile(tiles)
+      }
+    }, preservesPartitioning = true)
 
     ContextRDD(result, layerMetadata)
   }
