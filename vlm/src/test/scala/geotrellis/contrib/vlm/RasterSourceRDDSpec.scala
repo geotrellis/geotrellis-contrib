@@ -28,6 +28,8 @@ import geotrellis.spark.testkit._
 import geotrellis.gdal._
 import geotrellis.gdal.config._
 
+import org.apache.spark.rdd.RDD
+
 import cats.implicits._
 import cats.effect.{ContextShift, IO}
 import spire.syntax.cfor._
@@ -170,6 +172,20 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
       assert(diff / pixels < 0.005) // half percent of pixels or less are not equal
       assert(mismatched < 3)
+    }
+
+    it("should reproduce tileToLayout when given an RDD[RasterSource]") {
+      val rasterSourceRDD: RDD[RasterSource] = sc.parallelize(Seq(rasterSource))
+
+      // Need to define these here or else a serialization error will occur
+      val targetLayout = layout
+      val crs = targetCRS
+
+      val reprojectedRasterSourceRDD: RDD[RasterSource] = rasterSourceRDD.map { _.reprojectToGrid(crs, targetLayout) }
+
+      val tiledSource: MultibandTileLayerRDD[SpatialKey] = RasterSourceRDD.tiledLayerRDD(reprojectedRasterSourceRDD, targetLayout)
+
+      assertRDDLayersEqual(reprojectedExpectedRDD, tiledSource)
     }
 
     describe("GDALRasterSource") {

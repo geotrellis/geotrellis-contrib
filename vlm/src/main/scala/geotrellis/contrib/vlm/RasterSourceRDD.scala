@@ -17,6 +17,7 @@
 package geotrellis.contrib.vlm
 
 import geotrellis.raster._
+import geotrellis.raster.resample._
 import geotrellis.vector._
 import geotrellis.spark._
 import geotrellis.spark.partition._
@@ -112,6 +113,33 @@ object RasterSourceRDD {
     sourcesRDD.unpersist()
 
     ContextRDD(result, layerMetadata)
+  }
+
+  def tiledLayerRDD(
+    sources: RDD[RasterSource],
+    layout: LayoutDefinition,
+    resampleMethod: ResampleMethod = NearestNeighbor,
+    partitioner: Option[Partitioner] = None
+  )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] = {
+    val summary = RasterSummary.fromRDD(sources)
+    val layerMetadata = summary.toTileLayerMetadata(layout, 0)._1
+
+    val tiledLayoutSourceRDD =
+      sources.map { _.tileToLayout(layout, resampleMethod) }
+
+    val rasterRegionRDD: RDD[(SpatialKey, RasterRegion)] =
+      tiledLayoutSourceRDD.flatMap { _.keyedRasterRegions() }
+
+    val tiledRDD: RDD[(SpatialKey, MultibandTile)] =
+      rasterRegionRDD
+        .groupByKey(partitioner.getOrElse(SpatialPartitioner(summary.estimatePartitionsNumber)))
+        .mapValues { iter =>
+          MultibandTile(
+            iter.flatMap { _.raster.toSeq.flatMap { _.tile.bands } }
+          )
+        }
+
+    ContextRDD(tiledRDD, layerMetadata)
   }
 
   def apply(
