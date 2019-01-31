@@ -217,11 +217,23 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
       def parellSpec(n: Int = 1000)(implicit cs: ContextShift[IO]): List[RasterSource] = {
         println(java.lang.Thread.activeCount())
 
+        /** Functions to trigger Datasets computation */
+        def ltsWithDatasetsTriggered(lts: LayoutTileSource): LayoutTileSource = { rsWithDatasetsTriggered(lts.source); lts }
+        def rsWithDatasetsTriggered(rs: RasterSource): RasterSource = {
+          val brs = rs.asInstanceOf[GDALBaseRasterSource]
+          brs.dataset.rasterExtent
+          brs.fromBaseWarpList.rasterExtent
+          rs
+        }
+
         /** Do smth usual with the original RasterSource to force VRTs allocation */
         def reprojRS(i: Int): LayoutTileSource =
-          GDALRasterSource(filePathByIndex(i))
-            .reprojectToGrid(targetCRS, layout)
-            .tileToLayout(layout)
+          ltsWithDatasetsTriggered(
+            rsWithDatasetsTriggered(
+              rsWithDatasetsTriggered(GDALRasterSource(filePathByIndex(i)))
+                .reprojectToGrid(targetCRS, layout)
+            ).tileToLayout(layout)
+          )
 
         /** Simulate possible RF backsplash calls */
         def dirtyCalls(rs: RasterSource): RasterSource = {
