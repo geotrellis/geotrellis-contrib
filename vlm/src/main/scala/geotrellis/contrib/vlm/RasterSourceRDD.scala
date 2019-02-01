@@ -31,12 +31,18 @@ import scala.collection.mutable.ArrayBuilder
 import scala.reflect.ClassTag
 
 object RasterSourceRDD {
-  final val PARTITION_BYTES: Long = 128l * 1024 * 1024
+  final val DEFAULT_PARTITION_BYTES: Long = 128l * 1024 * 1024
+
+  def read(
+    readingSources: Seq[ReadingSource],
+    layout: LayoutDefinition
+  )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
+    read(readingSources, layout, DEFAULT_PARTITION_BYTES)
 
   def read(
     readingSources: Seq[ReadingSource],
     layout: LayoutDefinition,
-    partitionBytes: Long = PARTITION_BYTES
+    partitionBytes: Long
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] = {
     val cellTypes = readingSources.map { _.source.cellType }.toSet
     require(cellTypes.size == 1, s"All RasterSources must have the same CellType, but multiple ones were found: $cellTypes")
@@ -67,10 +73,9 @@ object RasterSourceRDD {
     val sourcesRDD: RDD[(SpatialKey, (Int, Option[MultibandTile]))] =
       sc.parallelize(readingSources, readingSources.size).flatMap { source =>
         val layoutSource = new LayoutTileSource(source.source, layout)
-
         val keys = layoutSource.keys
 
-        partition(keys, partitionBytes)( _ => tileSize).flatMap { _.flatMap { key =>
+        RasterSourceRDD.partition(keys, partitionBytes)( _ => tileSize).flatMap { _.flatMap { key =>
           source.sourceToTargetBand.map { case (sourceBand, targetBand) =>
             (key, (targetBand, layoutSource.read(key, Seq(sourceBand))))
           }
@@ -115,10 +120,16 @@ object RasterSourceRDD {
     ContextRDD(result, layerMetadata)
   }
 
-  def readFromRDD(
+  def read(
+    readingSourcesRDD: RDD[ReadingSource],
+    layout: LayoutDefinition
+  )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
+    read(readingSourcesRDD, layout, None)
+
+  def read(
     readingSourcesRDD: RDD[ReadingSource],
     layout: LayoutDefinition,
-    partitioner: Option[Partitioner] = None
+    partitioner: Option[Partitioner]
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] = {
     val rasterSourcesRDD = readingSourcesRDD.map { _.source }
     val summary = RasterSummary.fromRDD(rasterSourcesRDD)
@@ -200,7 +211,7 @@ object RasterSourceRDD {
   def apply(
     sources: Seq[RasterSource],
     layout: LayoutDefinition,
-    partitionBytes: Long = PARTITION_BYTES
+    partitionBytes: Long = DEFAULT_PARTITION_BYTES
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] = {
 
     val cellTypes = sources.map { _.cellType }.toSet
