@@ -68,9 +68,7 @@ trait GDALBaseRasterSource extends RasterSource {
   }
   // current dataset
   @transient lazy val dataset: Dataset = {
-    // let's force parent Dataset computation
-    fromBaseWarpList
-    val (ds, history) = GDAL.fromGDALWarpOptionsH(uri, warpList)
+    val (ds, history) = GDAL.fromGDALWarpOptionsH(uri, warpList, fromBaseWarpList)
     addParentDatasets(history)
     ds
   }
