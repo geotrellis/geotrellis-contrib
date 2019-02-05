@@ -43,6 +43,9 @@ case class GeoTiffRasterSource(uri: String) extends RasterSource {
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): GeoTiffResampleRasterSource =
     GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy)
 
+  def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
+    GeoTiffConvertedRasterSource(uri, cellType, strategy)
+
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
     val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]

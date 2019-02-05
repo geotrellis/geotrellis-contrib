@@ -103,4 +103,7 @@ case class GeoTiffResampleRasterSource(
       ).resample(targetRasterExtent.cols, targetRasterExtent.rows, method)
     }
   }
+
+  def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
+    GeoTiffConvertedRasterSource(uri, cellType, strategy)
 }
