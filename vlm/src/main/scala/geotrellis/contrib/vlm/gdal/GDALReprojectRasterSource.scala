@@ -18,6 +18,7 @@ package geotrellis.contrib.vlm.gdal
 
 import geotrellis.gdal._
 import geotrellis.proj4._
+import geotrellis.raster.CellType
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
