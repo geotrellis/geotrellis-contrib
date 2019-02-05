@@ -18,6 +18,7 @@ package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm._
 import geotrellis.gdal._
+import geotrellis.vector.Extent
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
@@ -38,6 +39,8 @@ case class GDALConvertedRasterSource(
   def resampleMethod = options.resampleMethod
 
   private val exceptionMessage = s"Cannot convert to $targetCellType using GDAL"
+
+  override lazy val cellType: CellType = targetCellType
 
   lazy val warpOptions: GDALWarpOptions = {
     val res =
@@ -95,6 +98,21 @@ case class GDALConvertedRasterSource(
       }
 
     options combine res
+  }
+
+  override def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+    val it = readBounds(List(bounds).flatMap(_.intersection(this)), bands)
+    if (it.hasNext) {
+      val raster = it.next
+
+      Some(raster.copy(tile = raster.tile.convert(cellType)))
+    } else
+      None
+  }
+
+  override def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+    val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
+    read(bounds, bands)
   }
 
   override def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
