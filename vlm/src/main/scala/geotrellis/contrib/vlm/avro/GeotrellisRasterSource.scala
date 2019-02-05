@@ -72,6 +72,9 @@ case class GeotrellisRasterSource(uri: String, layerId: LayerId, bandCount: Int 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
     GeotrellisResampleRasterSource(uri, layerId, bandCount, resampleGrid, method, strategy)
   }
+
+  def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
+    GeoTrellisConvertedRasterSource(uri, layerId, cellType, bandCount, strategy)
 }
 
 

@@ -72,6 +72,9 @@ case class GeotrellisResampleRasterSource(
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
     GeotrellisResampleRasterSource(uri, baseLayerId, bandCount, resampleGrid, method, strategy)
 
+  def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
+    GeoTrellisConvertedRasterSource(uri, baseLayerId, cellType, bandCount, strategy)
+
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
     extents.toIterator.flatMap(extent => read(extent, bands))
 

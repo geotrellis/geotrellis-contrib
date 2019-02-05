@@ -105,4 +105,7 @@ case class GeotrellisReprojectRasterSource(
     val resampledReprojectOptions = reprojectOptions.copy(method = method, targetRasterExtent = Some(resampleGrid(self.rasterExtent)))
     GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, crs, resampledReprojectOptions, strategy)
   }
+
+  def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
+    GeoTrellisConvertedRasterSource(uri, baseLayerId, cellType, bandCount, strategy)
 }
