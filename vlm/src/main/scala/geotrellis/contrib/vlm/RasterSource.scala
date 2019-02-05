@@ -140,6 +140,8 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
   def resampleToRegion(region: RasterExtent, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
     resample(TargetRegion(region), method, strategy)
 
+  def convert(cellType: CellType, strategy: OverviewStrategy = AutoHigherResolution): RasterSource
+
   /** Reads a window for the extent.
     * Return extent may be smaller than requested extent around raster edges.
     * May return None if the requested extent does not overlap the raster extent.
