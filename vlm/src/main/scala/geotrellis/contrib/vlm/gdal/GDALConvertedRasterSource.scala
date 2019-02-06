@@ -48,7 +48,10 @@ case class GDALConvertedRasterSource(
         case BitCellType => throw new Exception(exceptionMessage)
 
         case ByteConstantNoDataCellType =>
-          GDALWarpOptions(outputType = Some("Byte"), dstNoData = List(Byte.MinValue))
+          GDALWarpOptions(
+            outputType = Some("Byte"),
+            dstNoData = List(Byte.MinValue)
+          )
         case ByteCellType =>
           GDALWarpOptions(outputType = Some("Byte"), dstNoData = List())
         case ByteUserDefinedNoDataCellType(value) =>
@@ -62,39 +65,99 @@ case class GDALConvertedRasterSource(
           throw new Exception(exceptionMessage)
 
         case ShortConstantNoDataCellType =>
-          GDALWarpOptions(outputType = Some("Int16"), dstNoData = List(Short.MinValue))
+          GDALWarpOptions(
+            outputType = Some("Int16"),
+            dstNoData = List(Short.MinValue),
+            srcNoData = noDataValue.toList
+          )
         case ShortCellType =>
-          GDALWarpOptions(outputType = Some("Int16"), dstNoData = List())
+          GDALWarpOptions(
+            outputType = Some("Int16"),
+            dstNoData = List(),
+            srcNoData = noDataValue.toList
+          )
         case ShortUserDefinedNoDataCellType(value) =>
-          GDALWarpOptions(outputType = Some("Int16"), dstNoData = List(value))
+          GDALWarpOptions(
+            outputType = Some("Int16"),
+            dstNoData = List(value),
+            srcNoData = noDataValue.toList
+          )
 
         case UShortConstantNoDataCellType =>
-          GDALWarpOptions(outputType = Some("UInt16"), dstNoData = List(0))
+          GDALWarpOptions(
+            outputType = Some("UInt16"),
+            dstNoData = List(0),
+            srcNoData = noDataValue.toList
+          )
         case UShortCellType =>
-          GDALWarpOptions(outputType = Some("UInt16"), dstNoData = List())
+          GDALWarpOptions(
+            outputType = Some("UInt16"),
+            dstNoData = List(),
+            srcNoData = noDataValue.toList
+          )
         case UShortUserDefinedNoDataCellType(value) =>
-          GDALWarpOptions(outputType = Some("UInt16"), dstNoData = List(value))
+          GDALWarpOptions(
+            outputType = Some("UInt16"),
+            dstNoData = List(value),
+            srcNoData = noDataValue.toList
+          )
 
         case IntConstantNoDataCellType =>
-          GDALWarpOptions(outputType = Some("Int32"), dstNoData = List(Int.MinValue))
+          GDALWarpOptions(
+            outputType = Some("Int32"),
+            dstNoData = List(Int.MinValue),
+            srcNoData = noDataValue.toList
+          )
         case IntCellType =>
-          GDALWarpOptions(outputType = Some("Int32"), dstNoData = List())
+          GDALWarpOptions(
+            outputType = Some("Int32"),
+            dstNoData = List(),
+            srcNoData = noDataValue.toList
+          )
         case IntUserDefinedNoDataCellType(value) =>
-          GDALWarpOptions(outputType = Some("Int32"), dstNoData = List(value))
+          GDALWarpOptions(
+            outputType = Some("Int32"),
+            dstNoData = List(value),
+            srcNoData = noDataValue.toList
+          )
 
         case FloatConstantNoDataCellType =>
-          GDALWarpOptions(outputType = Some("Float32"), dstNoData = List(Float.NaN))
+          GDALWarpOptions(
+            outputType = Some("Float32"),
+            dstNoData = List(Float.NaN),
+            srcNoData = noDataValue.toList
+          )
         case FloatCellType =>
-          GDALWarpOptions(outputType = Some("Float32"), dstNoData = List())
+          GDALWarpOptions(
+            outputType = Some("Float32"),
+            dstNoData = List(),
+            srcNoData = noDataValue.toList
+          )
         case FloatUserDefinedNoDataCellType(value) =>
-          GDALWarpOptions(outputType = Some("Float32"), dstNoData = List(value))
+          GDALWarpOptions(
+            outputType = Some("Float32"),
+            dstNoData = List(value),
+            srcNoData = noDataValue.toList
+          )
 
         case DoubleConstantNoDataCellType =>
-          GDALWarpOptions(outputType = Some("Float64"), dstNoData = List(Double.NaN))
+          GDALWarpOptions(
+            outputType = Some("Float64"),
+            dstNoData = List(Double.NaN),
+            srcNoData = noDataValue.toList
+          )
         case DoubleCellType =>
-          GDALWarpOptions(outputType = Some("Float64"), dstNoData = List())
+          GDALWarpOptions(
+            outputType = Some("Float64"),
+            dstNoData = List(),
+            srcNoData = noDataValue.toList
+          )
         case DoubleUserDefinedNoDataCellType(value) =>
-          GDALWarpOptions(outputType = Some("Float64"), dstNoData = List(value))
+          GDALWarpOptions(
+            outputType = Some("Float64"),
+            dstNoData = List(value),
+            srcNoData = noDataValue.toList
+          )
       }
 
     options combine res
