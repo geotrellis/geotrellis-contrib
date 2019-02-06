@@ -51,8 +51,8 @@ case class GDALResampleRasterSource(
           te             = targetRasterExtent.extent.some,
           cellSize       = targetRasterExtent.cellSize.some,
           resampleMethod = resampleMethod,
-          srcNoData      = noDataValue.map(_.toString).toList,
-          ovr            = strategy.some
+          srcNoData = noDataValue.map { _.toString }.toList,
+          ovr = strategy.some
         )
     }
 
