@@ -41,17 +41,13 @@ class GDALConvertedRasterSourceSpec extends FunSpec with RasterMatchers with Bet
       .readMultiband(url, streaming = false)
       .raster
 
-  val targetExtent = expectedRaster.gridBounds//extent
+  val targetExtent = expectedRaster.extent
 
   describe("Converting to a different CellType") {
-    /*
     describe("Byte CellType") {
       it("should convert to: ByteConstantNoDataCellType") {
         val actual = source.convert(ByteConstantNoDataCellType).read(targetExtent).get
         val expected = source.read(targetExtent).get.mapTile { _.convert(ByteConstantNoDataCellType) }
-
-        println(s"These are the cols and rows of the actual: ${actual.cols}, ${actual.rows}")
-        println(s"These are the cols and rows of the expected: ${expected.cols}, ${expected.rows}")
 
         assertRastersEqual(actual, expected, 1.0)
       }
@@ -60,7 +56,6 @@ class GDALConvertedRasterSourceSpec extends FunSpec with RasterMatchers with Bet
         val actual = source.convert(ByteUserDefinedNoDataCellType(10)).read(targetExtent).get
         val expected = source.read(targetExtent).get.mapTile { _.convert(ByteUserDefinedNoDataCellType(10)) }
 
-        //assertEqual(actual, expected)
         assertRastersEqual(actual, expected, 1.0)
       }
 
@@ -68,7 +63,6 @@ class GDALConvertedRasterSourceSpec extends FunSpec with RasterMatchers with Bet
         val actual = source.convert(ByteCellType).read(targetExtent).get
         val expected = source.read(targetExtent).get.mapTile { _.convert(ByteCellType) }
 
-        //assertEqual(actual, expected)
         assertRastersEqual(actual, expected, 1.0)
       }
     }
@@ -118,10 +112,8 @@ class GDALConvertedRasterSourceSpec extends FunSpec with RasterMatchers with Bet
         assertRastersEqual(actual, expected, 1.0)
       }
     }
-    */
 
     describe("Int CellType") {
-      /*
       it("should convert to: IntConstantNoDataCellType") {
         val actual = source.convert(IntConstantNoDataCellType).read(targetExtent).get
         val expected = source.read(targetExtent).get.mapTile { _.convert(IntConstantNoDataCellType) }
@@ -135,20 +127,15 @@ class GDALConvertedRasterSourceSpec extends FunSpec with RasterMatchers with Bet
 
         assertRastersEqual(actual, expected, 1.0)
       }
-      */
 
       it("should convert to: IntCellType") {
         val actual = source.convert(IntCellType).read(targetExtent).get
         val expected = source.read(targetExtent).get.mapTile { _.convert(IntCellType) }
 
-        actual.cellType should be (IntCellType)
-        expected.cellType should be (IntCellType)
-
         assertRastersEqual(actual, expected, 1.0)
       }
     }
 
-    /*
     describe("Float CellType") {
       it("should convert to: FloatConstantNoDataCellType") {
         val actual = source.convert(FloatConstantNoDataCellType).read(targetExtent).get
@@ -194,6 +181,5 @@ class GDALConvertedRasterSourceSpec extends FunSpec with RasterMatchers with Bet
         assertRastersEqual(actual, expected, 1.0)
       }
     }
-    */
   }
 }
