@@ -59,7 +59,7 @@ class GeoTrellisConvertedRasterSourceSpec extends FunSpec with RasterMatchers wi
     describe("Bit CellType") {
       it("should convert to: ByteCellType") {
         val actual = source.convert(BitCellType).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(BitCellType))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(BitCellType) }
 
         assertEqual(actual, expected)
       }
@@ -68,21 +68,21 @@ class GeoTrellisConvertedRasterSourceSpec extends FunSpec with RasterMatchers wi
     describe("Byte CellType") {
       it("should convert to: ByteConstantNoDataCellType") {
         val actual = source.convert(ByteConstantNoDataCellType).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(ByteConstantNoDataCellType))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(ByteConstantNoDataCellType) }
 
         assertEqual(actual, expected)
       }
 
       it("should convert to: ByteUserDefinedNoDataCellType(10)") {
         val actual = source.convert(ByteUserDefinedNoDataCellType(10)).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(ByteUserDefinedNoDataCellType(10)))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(ByteUserDefinedNoDataCellType(10)) }
 
         assertEqual(actual, expected)
       }
 
       it("should convert to: ByteCellType") {
         val actual = source.convert(ByteCellType).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(ByteCellType))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(ByteCellType) }
 
         assertEqual(actual, expected)
       }
@@ -91,21 +91,21 @@ class GeoTrellisConvertedRasterSourceSpec extends FunSpec with RasterMatchers wi
     describe("UByte CellType") {
       it("should convert to: UByteConstantNoDataCellType") {
         val actual = source.convert(UByteConstantNoDataCellType).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(UByteConstantNoDataCellType))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(UByteConstantNoDataCellType) }
 
         assertEqual(actual, expected)
       }
 
       it("should convert to: UByteUserDefinedNoDataCellType(10)") {
         val actual = source.convert(UByteUserDefinedNoDataCellType(10)).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(UByteUserDefinedNoDataCellType(10)))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(UByteUserDefinedNoDataCellType(10)) }
 
         assertEqual(actual, expected)
       }
 
       it("should convert to: UByteCellType") {
         val actual = source.convert(UByteCellType).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(UByteCellType))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(UByteCellType) }
 
         assertEqual(actual, expected)
       }
@@ -114,21 +114,21 @@ class GeoTrellisConvertedRasterSourceSpec extends FunSpec with RasterMatchers wi
     describe("Short CellType") {
       it("should convert to: ShortConstantNoDataCellType") {
         val actual = source.convert(ShortConstantNoDataCellType).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(ShortConstantNoDataCellType))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(ShortConstantNoDataCellType) }
 
         assertEqual(actual, expected)
       }
 
       it("should convert to: ShortUserDefinedNoDataCellType(-1)") {
         val actual = source.convert(ShortUserDefinedNoDataCellType(-1)).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(ShortUserDefinedNoDataCellType(-1)))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(ShortUserDefinedNoDataCellType(-1)) }
 
         assertEqual(actual, expected)
       }
 
       it("should convert to: ShortCellType") {
         val actual = source.convert(ShortCellType).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(ShortCellType))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(ShortCellType) }
 
         assertEqual(actual, expected)
       }
@@ -137,21 +137,21 @@ class GeoTrellisConvertedRasterSourceSpec extends FunSpec with RasterMatchers wi
     describe("UShort CellType") {
       it("should convert to: UShortConstantNoDataCellType") {
         val actual = source.convert(UShortConstantNoDataCellType).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(UShortConstantNoDataCellType))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(UShortConstantNoDataCellType) }
 
         assertEqual(actual, expected)
       }
 
       it("should convert to: UShortUserDefinedNoDataCellType(-1)") {
         val actual = source.convert(UShortUserDefinedNoDataCellType(-1)).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(UShortUserDefinedNoDataCellType(-1)))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(UShortUserDefinedNoDataCellType(-1)) }
 
         assertEqual(actual, expected)
       }
 
       it("should convert to: UShortCellType") {
         val actual = source.convert(UShortCellType).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(UShortCellType))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(UShortCellType) }
 
         assertEqual(actual, expected)
       }
@@ -160,21 +160,21 @@ class GeoTrellisConvertedRasterSourceSpec extends FunSpec with RasterMatchers wi
     describe("Int CellType") {
       it("should convert to: IntConstantNoDataCellType") {
         val actual = source.convert(IntConstantNoDataCellType).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(IntConstantNoDataCellType))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(IntConstantNoDataCellType) }
 
         assertEqual(actual, expected)
       }
 
       it("should convert to: IntUserDefinedNoDataCellType(-100)") {
         val actual = source.convert(IntUserDefinedNoDataCellType(-100)).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(IntUserDefinedNoDataCellType(-100)))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(IntUserDefinedNoDataCellType(-100)) }
 
         assertEqual(actual, expected)
       }
 
       it("should convert to: IntCellType") {
         val actual = source.convert(IntCellType).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(IntCellType))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(IntCellType) }
 
         assertEqual(actual, expected)
       }
@@ -183,21 +183,21 @@ class GeoTrellisConvertedRasterSourceSpec extends FunSpec with RasterMatchers wi
     describe("Float CellType") {
       it("should convert to: FloatConstantNoDataCellType") {
         val actual = source.convert(FloatConstantNoDataCellType).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(FloatConstantNoDataCellType))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(FloatConstantNoDataCellType) }
 
         assertEqual(actual, expected)
       }
 
       it("should convert to: FloatUserDefinedNoDataCellType(0)") {
         val actual = source.convert(FloatUserDefinedNoDataCellType(0)).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(FloatUserDefinedNoDataCellType(0)))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(FloatUserDefinedNoDataCellType(0)) }
 
         assertEqual(actual, expected)
       }
 
       it("should convert to: FloatCellType") {
         val actual = source.convert(FloatCellType).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(FloatCellType))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(FloatCellType) }
 
         assertEqual(actual, expected)
       }
@@ -206,21 +206,21 @@ class GeoTrellisConvertedRasterSourceSpec extends FunSpec with RasterMatchers wi
     describe("Double CellType") {
       it("should convert to: DoubleConstantNoDataCellType") {
         val actual = source.convert(DoubleConstantNoDataCellType).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(DoubleConstantNoDataCellType))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(DoubleConstantNoDataCellType) }
 
         assertEqual(actual, expected)
       }
 
       it("should convert to: DoubleUserDefinedNoDataCellType(1.0)") {
         val actual = source.convert(DoubleUserDefinedNoDataCellType(1.0)).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(DoubleUserDefinedNoDataCellType(1.0)))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(DoubleUserDefinedNoDataCellType(1.0)) }
 
         assertEqual(actual, expected)
       }
 
       it("should convert to: DoubleCellType") {
         val actual = source.convert(DoubleCellType).read(targetExtent).get
-        val expected = expectedRaster.copy(tile = expectedTile.convert(DoubleCellType))
+        val expected = source.read(targetExtent).get.mapTile { _.convert(DoubleCellType) }
 
         assertEqual(actual, expected)
       }

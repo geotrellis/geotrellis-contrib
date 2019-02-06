@@ -105,7 +105,9 @@ case class GDALConvertedRasterSource(
     if (it.hasNext) {
       val raster = it.next
 
-      Some(raster.copy(tile = raster.tile.convert(cellType)))
+      Some(
+        raster.mapTile { _.convert(targetCellType) }
+      )
     } else
       None
   }

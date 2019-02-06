@@ -19,10 +19,10 @@ package geotrellis.contrib.vlm.geotiff
 import geotrellis.contrib.vlm._
 import geotrellis.vector._
 import geotrellis.raster._
-import geotrellis.raster.reproject._
-import geotrellis.raster.resample._
+import geotrellis.raster.reproject.Reproject
+import geotrellis.raster.resample.ResampleMethod
 import geotrellis.proj4._
-import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiff, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
+import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
 case class GeoTiffConvertedRasterSource(
@@ -47,7 +47,9 @@ case class GeoTiffConvertedRasterSource(
     if (it.hasNext) {
       val raster = it.next
 
-      Some(raster.copy(tile = raster.tile.convert(cellType)))
+      Some(
+        raster.mapTile { _.convert(cellType) }
+      )
     } else
       None
   }
@@ -57,7 +59,9 @@ case class GeoTiffConvertedRasterSource(
     if (it.hasNext) {
       val raster = it.next
 
-      Some(raster.copy(tile = raster.tile.convert(cellType)))
+      Some(
+        raster.mapTile { _.convert(cellType) }
+      )
     } else
       None
   }

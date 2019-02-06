@@ -52,7 +52,7 @@ case class GeoTrellisConvertedRasterSource(
     val result = GeotrellisRasterSource.read(reader, baseLayerId, metadata, extent, bands)
 
     result.map { raster =>
-      raster.copy(tile = raster.tile.convert(cellType))
+      raster.mapTile { _.convert(cellType) }
     }
   }
 

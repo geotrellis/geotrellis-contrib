@@ -25,7 +25,6 @@ import geotrellis.raster.resample._
 import geotrellis.raster.testkit._
 import geotrellis.vector._
 import geotrellis.spark._
-import geotrellis.spark.tiling._
 import geotrellis.util._
 import org.scalatest._
 
@@ -37,31 +36,163 @@ class GDALConvertedRasterSourceSpec extends FunSpec with RasterMatchers with Bet
 
   // we are going to use this source for resampling into weird resolutions, let's check it
   // usually we align pixels
-  val source: GDALRasterSource = GDALRasterSource(uri, GDALWarpOptions(alignTargetPixels = true))
+  val source: GDALRasterSource = GDALRasterSource(uri, GDALWarpOptions(alignTargetPixels = false))
 
   val expectedRaster: Raster[MultibandTile] =
     GeoTiffReader
       .readMultiband(url, streaming = false)
       .raster
 
-  val targetExtent = expectedRaster.gridBounds//extent
+  val targetExtent = expectedRaster.extent
 
   val expectedTile: MultibandTile = expectedRaster.tile
 
   describe("Converting to a different CellType") {
     describe("Byte CellType") {
       it("should convert to: ByteConstantNoDataCellType") {
-        val actual: Raster[MultibandTile] = source.convert(ByteConstantNoDataCellType).read(targetExtent).get
+        val actual = source.convert(ByteConstantNoDataCellType).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(ByteConstantNoDataCellType) }
 
-        val expected: Raster[MultibandTile] =
-          expectedRaster.copy(tile = expectedTile.convert(ByteConstantNoDataCellType).withNoData(Some(Byte.MinValue)))
-
-        //writePngOutputTile(actual.tile, name = "actual-result", outputDir = Some("/tmp"))
-        //writePngOutputTile(expected.tile, name = "expected-result", outputDir = Some("/tmp"))
+        println(s"These are the cols and rows of the actual: ${actual.cols}, ${actual.rows}")
+        println(s"These are the cols and rows of the expected: ${expected.cols}, ${expected.rows}")
 
         assertRastersEqual(actual, expected, 1.0)
+      }
+
+      /*
+      it("should convert to: ByteUserDefinedNoDataCellType(10)") {
+        val actual = source.convert(ByteUserDefinedNoDataCellType(10)).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(ByteUserDefinedNoDataCellType(10)) }
+
         //assertEqual(actual, expected)
+        assertRastersEqual(actual, expected, 1.0)
+      }
+
+      it("should convert to: ByteCellType") {
+        val actual = source.convert(ByteCellType).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(ByteCellType) }
+
+        //assertEqual(actual, expected)
+        assertRastersEqual(actual, expected, 1.0)
+      }
+      */
+    }
+
+    /*
+    describe("Short CellType") {
+      it("should convert to: ShortConstantNoDataCellType") {
+        val actual = source.convert(ShortConstantNoDataCellType).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(ShortConstantNoDataCellType) }
+
+        assertEqual(actual, expected)
+      }
+
+      it("should convert to: ShortUserDefinedNoDataCellType(-1)") {
+        val actual = source.convert(ShortUserDefinedNoDataCellType(-1)).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(ShortUserDefinedNoDataCellType(-1)) }
+
+        assertEqual(actual, expected)
+      }
+
+      it("should convert to: ShortCellType") {
+        val actual = source.convert(ShortCellType).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(ShortCellType) }
+
+        assertEqual(actual, expected)
       }
     }
+
+    describe("UShort CellType") {
+      it("should convert to: UShortConstantNoDataCellType") {
+        val actual = source.convert(UShortConstantNoDataCellType).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(UShortConstantNoDataCellType) }
+
+        assertEqual(actual, expected)
+      }
+
+      it("should convert to: UShortUserDefinedNoDataCellType(-1)") {
+        val actual = source.convert(UShortUserDefinedNoDataCellType(-1)).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(UShortUserDefinedNoDataCellType(-1)) }
+
+        assertEqual(actual, expected)
+      }
+
+      it("should convert to: UShortCellType") {
+        val actual = source.convert(UShortCellType).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(UShortCellType) }
+
+        assertEqual(actual, expected)
+      }
+    }
+
+    describe("Int CellType") {
+      it("should convert to: IntConstantNoDataCellType") {
+        val actual = source.convert(IntConstantNoDataCellType).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(IntConstantNoDataCellType) }
+
+        assertEqual(actual, expected)
+      }
+
+      it("should convert to: IntUserDefinedNoDataCellType(-100)") {
+        val actual = source.convert(IntUserDefinedNoDataCellType(-100)).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(IntUserDefinedNoDataCellType(-100)) }
+
+        assertEqual(actual, expected)
+      }
+
+      it("should convert to: IntCellType") {
+        val actual = source.convert(IntCellType).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(IntCellType) }
+
+        assertEqual(actual, expected)
+      }
+    }
+
+    describe("Float CellType") {
+      it("should convert to: FloatConstantNoDataCellType") {
+        val actual = source.convert(FloatConstantNoDataCellType).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(FloatConstantNoDataCellType) }
+
+        assertEqual(actual, expected)
+      }
+
+      it("should convert to: FloatUserDefinedNoDataCellType(0)") {
+        val actual = source.convert(FloatUserDefinedNoDataCellType(0)).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(FloatUserDefinedNoDataCellType(0)) }
+
+        assertEqual(actual, expected)
+      }
+
+      it("should convert to: FloatCellType") {
+        val actual = source.convert(FloatCellType).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(FloatCellType) }
+
+        assertEqual(actual, expected)
+      }
+    }
+
+    describe("Double CellType") {
+      it("should convert to: DoubleConstantNoDataCellType") {
+        val actual = source.convert(DoubleConstantNoDataCellType).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(DoubleConstantNoDataCellType) }
+
+        assertEqual(actual, expected)
+      }
+
+      it("should convert to: DoubleUserDefinedNoDataCellType(1.0)") {
+        val actual = source.convert(DoubleUserDefinedNoDataCellType(1.0)).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(DoubleUserDefinedNoDataCellType(1.0)) }
+
+        assertEqual(actual, expected)
+      }
+
+      it("should convert to: DoubleCellType") {
+        val actual = source.convert(DoubleCellType).read(targetExtent).get
+        val expected = source.read(targetExtent).get.mapTile { _.convert(DoubleCellType) }
+
+        assertEqual(actual, expected)
+      }
+    }
+    */
   }
 }
