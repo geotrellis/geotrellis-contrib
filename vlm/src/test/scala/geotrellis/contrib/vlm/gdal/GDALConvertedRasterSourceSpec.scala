@@ -53,7 +53,6 @@ class GDALConvertedRasterSourceSpec extends FunSpec with RasterMatchers with Bet
   val targetExtent = expectedRaster.extent
 
   describe("Converting to a different CellType") {
-      /*
     describe("Byte CellType") {
       it("should convert to: ByteConstantNoDataCellType") {
 
@@ -66,10 +65,10 @@ class GDALConvertedRasterSourceSpec extends FunSpec with RasterMatchers with Bet
         assertRastersEqual(actual, expected, 1.0)
       }
 
-      it("should convert to: ByteUserDefinedNoDataCellType(10)") {
-        val actual = source.convert(ByteUserDefinedNoDataCellType(10)).read(targetExtent).get
-        //val expected = source.read(targetExtent).get.mapTile { _.convert(ByteUserDefinedNoDataCellType(10)) }
-        val expected = GDALRasterSource("/tmp/converted-aspect.tif").read(targetExtent).get.mapTile { _.convert(ByteUserDefinedNoDataCellType(10)) }
+      it("should convert to: ByteUserDefinedNoDataCellType(-10)") {
+        val actual = source.convert(ByteUserDefinedNoDataCellType(-10)).read(targetExtent).get
+        //val expected = source.read(targetExtent).get.mapTile { _.convert(ByteUserDefinedNoDataCellType(-10)) }
+        val expected = GDALRasterSource("/tmp/converted-aspect.tif").read(targetExtent).get.mapTile { _.convert(ByteUserDefinedNoDataCellType(-10)) }
 
         assertRastersEqual(actual, expected, 1.0)
       }
@@ -82,7 +81,35 @@ class GDALConvertedRasterSourceSpec extends FunSpec with RasterMatchers with Bet
         assertRastersEqual(actual, expected, 1.0)
       }
     }
-    */
+
+    describe("UByte CellType") {
+      it("should convert to: UByteConstantNoDataCellType") {
+
+        val actual = source.convert(UByteConstantNoDataCellType).read(targetExtent).get
+        val expected = GDALRasterSource("/tmp/converted-aspect.tif").read(targetExtent).get.mapTile { _.convert(UByteConstantNoDataCellType) }
+        //val expected = source.read(targetExtent).get.mapTile { _.convert(UByteConstantNoDataCellType) }
+
+        actual.cellType should be (UByteConstantNoDataCellType)
+
+        assertRastersEqual(actual, expected, 1.0)
+      }
+
+      it("should convert to: UByteUserDefinedNoDataCellType(10)") {
+        val actual = source.convert(UByteUserDefinedNoDataCellType(10)).read(targetExtent).get
+        //val expected = source.read(targetExtent).get.mapTile { _.convert(UByteUserDefinedNoDataCellType(10)) }
+        val expected = GDALRasterSource("/tmp/converted-aspect.tif").read(targetExtent).get.mapTile { _.convert(UByteUserDefinedNoDataCellType(10)) }
+
+        assertRastersEqual(actual, expected, 1.0)
+      }
+
+      it("should convert to: UByteCellType") {
+        val actual = source.convert(UByteCellType).read(targetExtent).get
+        //val expected = source.read(targetExtent).get.mapTile { _.convert(UByteCellType) }
+        val expected = GDALRasterSource("/tmp/converted-aspect.tif").read(targetExtent).get.mapTile { _.convert(UByteCellType) }
+
+        assertRastersEqual(actual, expected, 1.0)
+      }
+    }
 
     describe("Short CellType") {
       it("should convert to: ShortConstantNoDataCellType") {

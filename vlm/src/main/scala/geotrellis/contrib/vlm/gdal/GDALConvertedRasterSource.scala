@@ -79,11 +79,25 @@ case class GDALConvertedRasterSource(
           )
 
         case UByteConstantNoDataCellType =>
-          throw new Exception(exceptionMessage)
+          GDALWarpOptions(
+            outputType = Some("Byte"),
+            dstNoData = List(0.toString),
+            srcNoData = noDataValue.map { _.toString }.toList,
+            wt = baseDataType
+          )
         case UByteCellType =>
-          throw new Exception(exceptionMessage)
-        case UByteUserDefinedNoDataCellType(v) =>
-          throw new Exception(exceptionMessage)
+          GDALWarpOptions(
+            outputType = Some("Byte"),
+            dstNoData = List("None"),
+            srcNoData = noDataValue.map { _.toString }.toList
+          )
+        case UByteUserDefinedNoDataCellType(value) =>
+          GDALWarpOptions(
+            outputType = Some("Byte"),
+            dstNoData = List(value.toString),
+            srcNoData = noDataValue.map { _.toString }.toList,
+            wt = baseDataType
+          )
 
         case ShortConstantNoDataCellType =>
           GDALWarpOptions(
