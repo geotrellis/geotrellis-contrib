@@ -40,20 +40,18 @@ case class GDALConvertedRasterSource(
 ) extends GDALBaseRasterSource {
   def resampleMethod = options.resampleMethod
 
-  private val exceptionMessage = s"Cannot convert to $targetCellType using GDAL"
-
   private lazy val baseDataType = {
     val baseBand = fromBaseWarpList.GetRasterBand(1)
 
     Some(gdal.GetDataTypeName(baseBand.getDataType))
   }
 
-  //override lazy val cellType: CellType = targetCellType
+  override lazy val cellType: CellType = targetCellType
 
   lazy val warpOptions: GDALWarpOptions = {
     val res =
       targetCellType match {
-        case BitCellType => throw new Exception(exceptionMessage)
+        case BitCellType => throw new Exception("Cannot convert GDALRasterSource to the BitCellType")
 
         case ByteConstantNoDataCellType =>
           println(s"\n\nI'm being called from within warpOptions")
