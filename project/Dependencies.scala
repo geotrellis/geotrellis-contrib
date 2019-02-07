@@ -18,7 +18,7 @@ import sbt._
 
 object Version {
   val geotrellis     = "2.2.0"
-  val geotrellisGdal = "0.18.5"
+  val geotrellisGdal = "0.17.15-10-g96a9449-SNAPSHOT"
   val scala          = "2.11.12"
   val crossScala     = Seq(scala, "2.12.8")
   val hadoop         = "2.8.0"

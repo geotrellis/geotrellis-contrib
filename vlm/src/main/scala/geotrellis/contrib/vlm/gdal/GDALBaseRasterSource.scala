@@ -53,7 +53,7 @@ trait GDALBaseRasterSource extends RasterSource {
 
   lazy val crs: CRS = dataset.crs.getOrElse(CRS.fromEpsgCode(4326))
 
-  private lazy val reader: GDALReader = GDALReader(dataset)
+  protected lazy val reader: GDALReader = GDALReader(dataset)
 
   // noDataValue from the previous step
   lazy val noDataValue: Option[Double] = baseDataset.getNoDataValue

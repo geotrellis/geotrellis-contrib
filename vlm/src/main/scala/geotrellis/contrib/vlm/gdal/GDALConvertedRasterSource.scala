@@ -28,6 +28,8 @@ import geotrellis.raster.reproject.Reproject
 import cats.syntax.option._
 import org.gdal.gdal.Dataset
 
+import org.gdal.gdal.gdal
+
 case class GDALConvertedRasterSource(
   uri: String,
   targetCellType: CellType,
@@ -40,7 +42,13 @@ case class GDALConvertedRasterSource(
 
   private val exceptionMessage = s"Cannot convert to $targetCellType using GDAL"
 
-  override lazy val cellType: CellType = targetCellType
+  private lazy val baseDataType = {
+    val baseBand = fromBaseWarpList.GetRasterBand(1)
+
+    Some(gdal.GetDataTypeName(baseBand.getDataType))
+  }
+
+  //override lazy val cellType: CellType = targetCellType
 
   lazy val warpOptions: GDALWarpOptions = {
     val res =
@@ -48,10 +56,13 @@ case class GDALConvertedRasterSource(
         case BitCellType => throw new Exception(exceptionMessage)
 
         case ByteConstantNoDataCellType =>
+          println(s"\n\nI'm being called from within warpOptions")
+          println(s"This is the baseDataType: $baseDataType")
           GDALWarpOptions(
             outputType = Some("Byte"),
             dstNoData = List(Byte.MinValue.toString),
-            srcNoData = noDataValue.map { _.toString }.toList
+            srcNoData = noDataValue.map { _.toString }.toList,
+            wt = baseDataType
           )
         case ByteCellType =>
           GDALWarpOptions(
@@ -63,7 +74,8 @@ case class GDALConvertedRasterSource(
           GDALWarpOptions(
             outputType = Some("Byte"),
             dstNoData = List(value.toString),
-            srcNoData = noDataValue.map { _.toString }.toList
+            srcNoData = noDataValue.map { _.toString }.toList,
+            wt = baseDataType
           )
 
         case UByteConstantNoDataCellType =>
@@ -177,9 +189,11 @@ case class GDALConvertedRasterSource(
     if (it.hasNext) {
       val raster = it.next
 
-      Some(
-        raster.mapTile { _.convert(targetCellType) }
-      )
+      println(s"\n\nIn the read method right now")
+      println(s"I got called to convert the cellType to $targetCellType")
+      Some(raster)
+        //raster.mapTile { _.convert(targetCellType) }
+      //)
     } else
       None
   }
@@ -187,6 +201,18 @@ case class GDALConvertedRasterSource(
   override def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
     read(bounds, bands)
+  }
+
+  override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
+    bounds
+      .toIterator
+      .flatMap { gb => gridBounds.intersection(gb) }
+      .map { gb =>
+        val tile = reader.read(gb, bands = bands, targetCellType = Some(targetCellType))
+        //val tile = reader.read(gb, bands = bands)
+        val extent = rasterExtent.extentFor(gb)
+        Raster(tile, extent)
+      }
   }
 
   override def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
