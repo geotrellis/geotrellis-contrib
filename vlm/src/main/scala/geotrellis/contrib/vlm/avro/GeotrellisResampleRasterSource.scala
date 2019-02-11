@@ -32,48 +32,44 @@ case class GeotrellisResampleRasterSource(
   bandCount: Int,
   resampleGrid: ResampleGrid,
   method: ResampleMethod = NearestNeighbor,
-  strategy: OverviewStrategy = AutoHigherResolution
-) extends RasterSource { self =>
-  lazy val reader = CollectionLayerReader(uri)
+  strategy: OverviewStrategy = AutoHigherResolution,
+  private[avro] val parentOptions: RasterViewOptions = RasterViewOptions()
+) extends GeotrellisBaseRasterSource {
+  lazy val rasterExtent: RasterExtent = resampleGrid(parentRasterExtent)
+  def crs: CRS = parentCRS
+  def cellType: CellType = parentCellType
 
-  lazy val baseMetadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](baseLayerId)
-  lazy val baseRasterExtent: RasterExtent =
-    baseMetadata.layout.createAlignedGridExtent(baseMetadata.extent).toRasterExtent()
-
-  @transient protected lazy val layerId: LayerId =
+  @transient lazy val layerId: LayerId =
     GeotrellisRasterSource.getClosestLayer(resolutions, layerIds, baseLayerId, rasterExtent.cellSize, strategy)
 
-  lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
-
-  def crs: CRS = metadata.crs
-  def cellType: CellType = metadata.cellType
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
+  private[avro] val options: RasterViewOptions = parentOptions.copy(rasterExtent = Some(rasterExtent))
+
   lazy val layerName = baseLayerId.name
-  lazy val rasterExtent: RasterExtent = resampleGrid(baseRasterExtent)
-  lazy val resolutions: List[RasterExtent] = GeotrellisRasterSource.getResolutions(reader, layerName)
+  override lazy val resolutions: List[RasterExtent] = GeotrellisRasterSource.getResolutions(reader, layerName)
   lazy val layerIds: Seq[LayerId] = GeotrellisRasterSource.getLayerIdsByName(reader, layerName)
 
-  def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] =
+  override def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] =
     GeotrellisRasterSource.readIntersecting(reader, layerId, metadata, extent, bands)
       .map { raster =>
         val targetRasterExtent = rasterExtent.createAlignedRasterExtent(extent)
-        raster.resample(targetRasterExtent, method)
+        raster.resample(targetRasterExtent, method).mapTile { _.convert(cellType) }
       }
 
-  def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+  override def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val extent: Extent = metadata.extentFor(bounds)
     read(extent, bands)
   }
 
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeotrellisReprojectRasterSource =
-    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, targetCRS, reprojectOptions, strategy)
+  override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeotrellisReprojectRasterSource =
+    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, targetCRS, reprojectOptions, strategy, options)
 
-  def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GeotrellisResampleRasterSource(uri, baseLayerId, bandCount, resampleGrid, method, strategy)
+  override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
+    GeotrellisResampleRasterSource(uri, baseLayerId, bandCount, resampleGrid, method, strategy, options)
 
-  def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
-    GeoTrellisConvertedRasterSource(uri, baseLayerId, cellType, bandCount, strategy)
+  override def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
+    GeoTrellisConvertedRasterSource(uri, baseLayerId, cellType, bandCount, strategy, options)
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
     extents.toIterator.flatMap(extent => read(extent, bands))

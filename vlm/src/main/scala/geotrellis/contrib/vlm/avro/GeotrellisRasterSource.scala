@@ -35,17 +35,16 @@ import geotrellis.raster.{MultibandTile, Tile}
   * @param layerId source layer from above catalog
   * @param bandCount number of bands for each tile in above layer
   */
-case class GeotrellisRasterSource(uri: String, layerId: LayerId, bandCount: Int = 1) extends RasterSource {
+case class GeotrellisRasterSource(uri: String, layerId: LayerId, bandCount: Int = 1) extends GeotrellisBaseRasterSource {
+  val baseLayerId = layerId
+  lazy val rasterExtent: RasterExtent = baseRasterExtent
+  val resolutions = baseResolutions
 
-  lazy val reader = CollectionLayerReader(uri)
-  lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
-  lazy val rasterExtent: RasterExtent =
-    metadata.layout.createAlignedGridExtent(metadata.extent).toRasterExtent()
+  private[avro] val parentOptions: RasterViewOptions = RasterViewOptions()
+  private[avro] val options: RasterViewOptions = RasterViewOptions()
 
-  lazy val resolutions: List[RasterExtent] = GeotrellisRasterSource.getResolutions(reader, layerId.name)
-
-  def crs: CRS = metadata.crs
-  def cellType: CellType = metadata.cellType
+  def crs: CRS = baseCRS
+  def cellType: CellType = baseCellType
   def resampleMethod: Option[ResampleMethod] = None
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
@@ -56,25 +55,6 @@ case class GeotrellisRasterSource(uri: String, layerId: LayerId, bandCount: Int 
     val extent: Extent = metadata.extentFor(bounds)
     read(extent, bands)
   }
-
-  override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    extents.toIterator.flatMap(extent => read(extent, bands))
-  }
-
-  override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    bounds.toIterator.flatMap(bounds => read(bounds, bands))
-  }
-
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeotrellisReprojectRasterSource = {
-    GeotrellisReprojectRasterSource(uri, layerId, bandCount, targetCRS, reprojectOptions, strategy)
-  }
-
-  def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
-    GeotrellisResampleRasterSource(uri, layerId, bandCount, resampleGrid, method, strategy)
-  }
-
-  def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
-    GeoTrellisConvertedRasterSource(uri, layerId, cellType, bandCount, strategy)
 }
 
 
