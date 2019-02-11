@@ -53,6 +53,15 @@ class GDALConvertedRasterSourceSpec extends FunSpec with RasterMatchers with Bet
   val targetExtent = expectedRaster.extent
   val targetExtent2 = expectedRaster2.extent
 
+  /** Note:
+   *  Many of these tests have a threshold of 1.0. The reason for this large value
+   *  is due to the difference in how GeoTrellis and GDAL convert floating point
+   *  to non-floating point values. In GeoTrellis, all floaint point values are
+   *  rounded down. Thus, 17.1 -> 17.0, 256.981 -> 256, etc. Whereas GDAL always
+   *  rounds the values up. Therefore, 17.1 -> 18, 256.981 -> 257, etc. This means
+   *  that we need to account for this when comparing certain conversion results.
+   */
+
   describe("Converting to a different CellType") {
     describe("Byte CellType") {
       it("should convert to: ByteConstantNoDataCellType") {
