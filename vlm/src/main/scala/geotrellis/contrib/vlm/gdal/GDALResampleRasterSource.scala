@@ -29,11 +29,13 @@ case class GDALResampleRasterSource(
   resampleGrid: ResampleGrid,
   method: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
-  options: GDALWarpOptions = GDALWarpOptions()
+  private[gdal] val options: GDALWarpOptions = GDALWarpOptions(),
+  private[gdal] val baseWarpList: List[GDALWarpOptions] = Nil,
+  @transient private[gdal] val parentDatasets: Array[Dataset] = Array()
 ) extends GDALBaseRasterSource {
   def resampleMethod: Option[ResampleMethod] = method.some
 
-  lazy val warpOptions: GDALWarpOptions = {
+  lazy private[gdal] val warpOptions: GDALWarpOptions = {
     val res = resampleGrid match {
       case Dimensions(cols, rows) =>
         GDALWarpOptions(

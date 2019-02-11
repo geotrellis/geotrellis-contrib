@@ -34,15 +34,15 @@ case class GDALConvertedRasterSource(
   uri: String,
   targetCellType: CellType,
   strategy: OverviewStrategy = AutoHigherResolution,
-  options: GDALWarpOptions = GDALWarpOptions(),
-  baseWarpList: List[GDALWarpOptions] = Nil,
-  @transient parentDatasets: Array[Dataset] = Array()
+  private[gdal] val options: GDALWarpOptions = GDALWarpOptions(),
+  private[gdal] val baseWarpList: List[GDALWarpOptions] = Nil,
+  @transient private[gdal] val parentDatasets: Array[Dataset] = Array()
 ) extends GDALBaseRasterSource {
   def resampleMethod = options.resampleMethod
 
   override lazy val cellType: CellType = targetCellType
 
-  lazy val warpOptions: GDALWarpOptions = {
+  lazy private[gdal] val warpOptions: GDALWarpOptions = {
     val res =
       targetCellType match {
         case BitCellType => throw new Exception("Cannot convert GDALRasterSource to the BitCellType")

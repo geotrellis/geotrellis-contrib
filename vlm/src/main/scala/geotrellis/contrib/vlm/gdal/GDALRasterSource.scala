@@ -19,8 +19,11 @@ package geotrellis.contrib.vlm.gdal
 import geotrellis.gdal._
 import geotrellis.raster.resample.ResampleMethod
 
-case class GDALRasterSource(uri: String, options: GDALWarpOptions = GDALWarpOptions()) extends GDALBaseRasterSource {
-  val baseWarpList: List[GDALWarpOptions] = Nil
+case class GDALRasterSource(
+  uri: String,
+  private[gdal] val options: GDALWarpOptions = GDALWarpOptions()
+) extends GDALBaseRasterSource {
+  private[gdal] val baseWarpList: List[GDALWarpOptions] = Nil
   def resampleMethod: Option[ResampleMethod] = None
-  lazy val warpOptions: GDALWarpOptions = options
+  lazy private[gdal] val warpOptions: GDALWarpOptions = options
 }
