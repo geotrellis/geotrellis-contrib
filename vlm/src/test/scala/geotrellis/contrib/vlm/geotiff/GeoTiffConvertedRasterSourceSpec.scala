@@ -17,6 +17,7 @@
 package geotrellis.contrib.vlm.geotiff
 
 import geotrellis.contrib.vlm._
+import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.resample._
@@ -38,11 +39,11 @@ class GeoTiffConvertedRasterSourceSpec extends FunSpec with RasterMatchers with 
       .readMultiband(url, streaming = false)
       .raster
 
-  val targetExtent = expectedRaster.extent
-
-  val expectedTile: MultibandTile = expectedRaster.tile
-
   describe("Converting to a different CellType") {
+    val targetExtent = expectedRaster.extent
+
+    val expectedTile: MultibandTile = expectedRaster.tile
+
     describe("Bit CellType") {
       it("should convert to: ByteCellType") {
         val actual = source.convert(BitCellType).read(targetExtent).get
@@ -211,6 +212,31 @@ class GeoTiffConvertedRasterSourceSpec extends FunSpec with RasterMatchers with 
 
         assertEqual(actual, expected)
       }
+    }
+  }
+
+  describe("Chaining together operations") {
+    val targetCellType = DoubleConstantNoDataCellType
+
+    val targetExtent = expectedRaster.extent.reproject(source.crs, WebMercator)
+
+    val expectedTile: MultibandTile = expectedRaster.tile
+
+    it("should have the correct CellType after reproject") {
+      val actual = source.convert(targetCellType).reproject(WebMercator).read(targetExtent).get.cellType
+
+      actual should be (targetCellType)
+    }
+
+    it("should have the correct CellType after multiple conversions") {
+      val actual =
+        source
+          .convert(FloatUserDefinedNoDataCellType(0))
+          .reproject(WebMercator)
+          .convert(targetCellType)
+          .read(targetExtent).get.cellType
+
+      actual should be (targetCellType)
     }
   }
 }
