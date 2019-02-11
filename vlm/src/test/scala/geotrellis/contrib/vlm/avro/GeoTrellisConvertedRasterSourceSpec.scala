@@ -51,11 +51,12 @@ class GeoTrellisConvertedRasterSourceSpec extends FunSpec with RasterMatchers wi
       .readMultiband(TestCatalog.filePath, streaming = false)
       .raster
 
-  val targetExtent = expectedRaster.extent
-
-  val expectedTile: MultibandTile = expectedRaster.tile
-
+  /*
   describe("Converting to a different CellType") {
+    val targetExtent = expectedRaster.extent
+
+    val expectedTile: MultibandTile = expectedRaster.tile
+
     describe("Bit CellType") {
       it("should convert to: ByteCellType") {
         val actual = source.convert(BitCellType).read(targetExtent).get
@@ -224,6 +225,32 @@ class GeoTrellisConvertedRasterSourceSpec extends FunSpec with RasterMatchers wi
 
         assertEqual(actual, expected)
       }
+    }
+  }
+  */
+
+  describe("Chaining together operations") {
+    val targetCellType = DoubleConstantNoDataCellType
+
+    val targetExtent = expectedRaster.extent.reproject(source.crs, WebMercator)
+
+    val expectedTile: MultibandTile = expectedRaster.tile
+
+    it("should have the correct CellType after reproject") {
+      val actual = source.convert(targetCellType).reproject(WebMercator).read(targetExtent).get.cellType
+
+      actual should be (targetCellType)
+    }
+
+    it("should have the correct CellType after multiple conversions") {
+      val actual =
+        source
+          .convert(FloatUserDefinedNoDataCellType(0))
+          .reproject(WebMercator)
+          .convert(targetCellType)
+          .read(targetExtent).get.cellType
+
+      actual should be (targetCellType)
     }
   }
 }
