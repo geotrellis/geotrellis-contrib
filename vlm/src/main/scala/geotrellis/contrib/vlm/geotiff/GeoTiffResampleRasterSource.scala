@@ -29,18 +29,15 @@ case class GeoTiffResampleRasterSource(
   uri: String,
   resampleGrid: ResampleGrid,
   method: ResampleMethod = NearestNeighbor,
-  strategy: OverviewStrategy = AutoHigherResolution
-) extends RasterSource { self =>
+  strategy: OverviewStrategy = AutoHigherResolution,
+  private[geotiff] val parentOptions: RasterViewOptions = RasterViewOptions()
+) extends GeoTiffBaseRasterSource {
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
-  @transient lazy val tiff: MultibandGeoTiff =
-    GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
+  def crs: CRS = parentCRS
+  def cellType: CellType = parentCellType
 
-  def crs: CRS = tiff.crs
-  def bandCount: Int = tiff.bandCount
-  def cellType: CellType = tiff.cellType
-
-  override lazy val rasterExtent: RasterExtent = resampleGrid(tiff.rasterExtent)
+  override lazy val rasterExtent: RasterExtent = resampleGrid(parentRasterExtent)
   lazy val resolutions: List[RasterExtent] = {
     val ratio = rasterExtent.cellSize.resolution / tiff.rasterExtent.cellSize.resolution
     rasterExtent :: tiff.overviews.map { ovr =>
@@ -50,29 +47,31 @@ case class GeoTiffResampleRasterSource(
     }
   }
 
+  private[geotiff] val options = parentOptions.copy(rasterExtent = Some(rasterExtent))
+
   @transient protected lazy val closestTiffOverview: GeoTiff[MultibandTile] =
     tiff.getClosestOverview(rasterExtent.cellSize, strategy)
 
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
-    new GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy) {
+  override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
+    new GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options) {
       override lazy val rasterExtent: RasterExtent = reprojectOptions.targetRasterExtent match {
         case Some(targetRasterExtent) => targetRasterExtent
-        case None => ReprojectRasterExtent(self.rasterExtent, this.transform, this.reprojectOptions)
+        case None => ReprojectRasterExtent(rasterExtent, this.transform, this.reprojectOptions)
       }
     }
 
-  def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy)
+  override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
+    GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, options)
 
-  def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+  override def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
     val it = readBounds(List(bounds), bands)
-    if (it.hasNext) Some(it.next) else None
+    if (it.hasNext) Some(it.next.mapTile { _.convert(cellType) }) else None
   }
 
-  def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+  override def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val it = readBounds(List(bounds), bands)
-    if (it.hasNext) Some(it.next) else None
+    if (it.hasNext) Some(it.next.mapTile { _.convert(cellType) }) else None
   }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
@@ -104,6 +103,6 @@ case class GeoTiffResampleRasterSource(
     }
   }
 
-  def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
-    GeoTiffConvertedRasterSource(uri, cellType, strategy)
+  override def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
+    GeoTiffConvertedRasterSource(uri, cellType, strategy, options)
 }
