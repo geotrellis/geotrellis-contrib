@@ -51,7 +51,6 @@ class GeoTrellisConvertedRasterSourceSpec extends FunSpec with RasterMatchers wi
       .readMultiband(TestCatalog.filePath, streaming = false)
       .raster
 
-  /*
   describe("Converting to a different CellType") {
     val targetExtent = expectedRaster.extent
 
@@ -227,7 +226,6 @@ class GeoTrellisConvertedRasterSourceSpec extends FunSpec with RasterMatchers wi
       }
     }
   }
-  */
 
   describe("Chaining together operations") {
     val targetCellType = DoubleConstantNoDataCellType
