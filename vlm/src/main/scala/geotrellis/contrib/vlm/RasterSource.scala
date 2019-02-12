@@ -83,6 +83,16 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
   /** Raster pixel bounds */
   def bounds: GridBounds = GridBounds(0, 0, cols - 1, rows - 1)
 
+  protected val parentSteps: StepCollection
+  protected val currentStep: Option[Step]
+  private[vlm] val stepCollection: StepCollection =
+    currentStep match {
+      case Some(step) => parentSteps.update(step)
+      case None => parentSteps
+    }
+
+  def steps: String = stepCollection.status
+
   /** Reproject to different CRS with explicit sampling reprojectOptions.
     * @see [[geotrellis.raster.reproject.Reproject]]
     * @group reproject

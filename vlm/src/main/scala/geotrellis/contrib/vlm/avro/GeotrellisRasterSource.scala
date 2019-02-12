@@ -43,6 +43,9 @@ case class GeotrellisRasterSource(uri: String, layerId: LayerId, bandCount: Int 
   private[avro] val parentOptions: RasterViewOptions = RasterViewOptions()
   private[avro] val options: RasterViewOptions = RasterViewOptions()
 
+  protected lazy val parentSteps: StepCollection = StepCollection()
+  protected lazy val currentStep: Option[Step] = None
+
   def crs: CRS = baseCRS
   def cellType: CellType = baseCellType
   def resampleMethod: Option[ResampleMethod] = None

@@ -30,9 +30,12 @@ case class GeoTiffReprojectRasterSource(
   crs: CRS,
   reprojectOptions: Reproject.Options = Reproject.Options.DEFAULT,
   strategy: OverviewStrategy = AutoHigherResolution,
-  private[geotiff] val parentOptions: RasterViewOptions = RasterViewOptions()
+  private[geotiff] val parentOptions: RasterViewOptions = RasterViewOptions(),
+  protected val parentSteps: StepCollection = StepCollection()
 ) extends GeoTiffBaseRasterSource {
   def resampleMethod: Option[ResampleMethod] = Some(reprojectOptions.method)
+
+  protected lazy val currentStep: Option[Step] = Some(ReprojectStep(parentCRS, crs, reprojectOptions))
 
   protected lazy val transform = Transform(parentCRS, crs)
   protected lazy val backTransform = Transform(crs, parentCRS)
@@ -113,7 +116,7 @@ case class GeoTiffReprojectRasterSource(
   }
 
   override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options)
+    GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, stepCollection)
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
     GeoTiffReprojectRasterSource(
@@ -121,9 +124,10 @@ case class GeoTiffReprojectRasterSource(
       crs,
       reprojectOptions.copy(method = method, targetRasterExtent = Some(resampleGrid(rasterExtent))),
       strategy,
-      options
+      options,
+      stepCollection
     )
 
   override def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
-    GeoTiffConvertedRasterSource(uri, cellType, strategy, options)
+    GeoTiffConvertedRasterSource(uri, cellType, strategy, options, stepCollection)
 }

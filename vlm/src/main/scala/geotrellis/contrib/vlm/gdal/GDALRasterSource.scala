@@ -16,13 +16,16 @@
 
 package geotrellis.contrib.vlm.gdal
 
+import geotrellis.contrib.vlm.{Step, StepCollection}
 import geotrellis.gdal._
 import geotrellis.raster.resample.ResampleMethod
 
 case class GDALRasterSource(
   uri: String,
-  private[gdal] val options: GDALWarpOptions = GDALWarpOptions()
+  private[gdal] val options: GDALWarpOptions = GDALWarpOptions(),
+  protected val parentSteps: StepCollection = StepCollection()
 ) extends GDALBaseRasterSource {
+  protected lazy val currentStep: Option[Step] = None
   private[gdal] val baseWarpList: List[GDALWarpOptions] = Nil
   def resampleMethod: Option[ResampleMethod] = None
   lazy private[gdal] val warpOptions: GDALWarpOptions = options

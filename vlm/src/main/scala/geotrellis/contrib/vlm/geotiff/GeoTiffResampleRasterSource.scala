@@ -30,9 +30,12 @@ case class GeoTiffResampleRasterSource(
   resampleGrid: ResampleGrid,
   method: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
-  private[geotiff] val parentOptions: RasterViewOptions = RasterViewOptions()
+  private[geotiff] val parentOptions: RasterViewOptions = RasterViewOptions(),
+  protected val parentSteps: StepCollection = StepCollection()
 ) extends GeoTiffBaseRasterSource {
   def resampleMethod: Option[ResampleMethod] = Some(method)
+
+  protected lazy val currentStep: Option[Step] = Some(ResampleStep(method, resampleGrid))
 
   def crs: CRS = parentCRS
   def cellType: CellType = parentCellType
@@ -53,7 +56,7 @@ case class GeoTiffResampleRasterSource(
     tiff.getClosestOverview(rasterExtent.cellSize, strategy)
 
   override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
-    new GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options) {
+    new GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, stepCollection) {
       override lazy val rasterExtent: RasterExtent = reprojectOptions.targetRasterExtent match {
         case Some(targetRasterExtent) => targetRasterExtent
         case None => ReprojectRasterExtent(rasterExtent, this.transform, this.reprojectOptions)
@@ -61,7 +64,7 @@ case class GeoTiffResampleRasterSource(
     }
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, options)
+    GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, options, stepCollection)
 
   override def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
@@ -104,5 +107,5 @@ case class GeoTiffResampleRasterSource(
   }
 
   override def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
-    GeoTiffConvertedRasterSource(uri, cellType, strategy, options)
+    GeoTiffConvertedRasterSource(uri, cellType, strategy, options, stepCollection)
 }

@@ -32,15 +32,18 @@ import cats.syntax.option._
 
 case class GDALConvertedRasterSource(
   uri: String,
-  targetCellType: CellType,
+  val targetCellType: CellType,
   strategy: OverviewStrategy = AutoHigherResolution,
   private[gdal] val options: GDALWarpOptions = GDALWarpOptions(),
   private[gdal] val baseWarpList: List[GDALWarpOptions] = Nil,
-  @transient private[gdal] val parentDatasets: Array[Dataset] = Array()
+  @transient private[gdal] val parentDatasets: Array[Dataset] = Array(),
+  protected val parentSteps: StepCollection = StepCollection()
 ) extends GDALBaseRasterSource {
   def resampleMethod = options.resampleMethod
 
   override lazy val cellType: CellType = targetCellType
+
+  protected lazy val currentStep: Option[Step] = Some(ConvertStep(dataset.cellType, cellType))
 
   lazy private[gdal] val warpOptions: GDALWarpOptions = {
     val res =
@@ -197,11 +200,11 @@ case class GDALConvertedRasterSource(
   }
 
   override def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
-    GDALConvertedRasterSource(uri, cellType, strategy, options, warpList)
+    GDALConvertedRasterSource(uri, cellType, strategy, options, warpList, parentSteps = stepCollection)
 
   override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, warpList)
+    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, warpList, parentSteps = stepCollection)
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options, warpList)
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options, warpList, parentSteps = stepCollection)
 }

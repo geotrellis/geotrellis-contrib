@@ -33,13 +33,16 @@ case class GeotrellisResampleRasterSource(
   resampleGrid: ResampleGrid,
   method: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
-  private[avro] val parentOptions: RasterViewOptions = RasterViewOptions()
+  private[avro] val parentOptions: RasterViewOptions = RasterViewOptions(),
+  protected val parentSteps: StepCollection = StepCollection()
 ) extends GeotrellisBaseRasterSource {
   lazy val rasterExtent: RasterExtent =
     parentOptions.rasterExtent match {
       case Some(re) => resampleGrid(re)
       case None => resampleGrid(baseRasterExtent)
     }
+
+  protected lazy val currentStep: Option[Step] = Some(ResampleStep(method, resampleGrid))
 
   def crs: CRS = parentCRS
   def cellType: CellType = parentCellType
@@ -72,13 +75,13 @@ case class GeotrellisResampleRasterSource(
   }
 
   override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeotrellisReprojectRasterSource =
-    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, targetCRS, reprojectOptions, strategy, options)
+    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, targetCRS, reprojectOptions, strategy, options, stepCollection)
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GeotrellisResampleRasterSource(uri, baseLayerId, bandCount, resampleGrid, method, strategy, options)
+    GeotrellisResampleRasterSource(uri, baseLayerId, bandCount, resampleGrid, method, strategy, options, stepCollection)
 
   override def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
-    GeoTrellisConvertedRasterSource(uri, baseLayerId, cellType, bandCount, strategy, options)
+    GeoTrellisConvertedRasterSource(uri, baseLayerId, cellType, bandCount, strategy, options, stepCollection)
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
     extents.toIterator.flatMap(extent => read(extent, bands))

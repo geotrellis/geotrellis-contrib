@@ -33,13 +33,16 @@ case class GeotrellisReprojectRasterSource(
   crs: CRS,
   reprojectOptions: Reproject.Options = Reproject.Options.DEFAULT,
   strategy: OverviewStrategy = AutoHigherResolution,
-  private[avro] val parentOptions: RasterViewOptions = RasterViewOptions()
+  private[avro] val parentOptions: RasterViewOptions = RasterViewOptions(),
+  protected val parentSteps: StepCollection = StepCollection()
 ) extends GeotrellisBaseRasterSource {
   def cellType: CellType = parentCellType
   def resampleMethod: Option[ResampleMethod] = Some(reprojectOptions.method)
 
   protected lazy val transform = Transform(baseCRS, crs)
   protected lazy val backTransform = Transform(crs, baseCRS)
+
+  protected lazy val currentStep: Option[Step] = Some(ReprojectStep(baseCRS, crs, reprojectOptions))
 
   protected lazy val layerName = baseLayerId.name
   protected lazy val layerIds: Seq[LayerId] = GeotrellisRasterSource.getLayerIdsByName(reader, layerName)
@@ -98,13 +101,13 @@ case class GeotrellisReprojectRasterSource(
     bounds.toIterator.flatMap(bounds => read(bounds, bands))
 
   override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, crs, reprojectOptions, strategy, options)
+    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, crs, reprojectOptions, strategy, options, stepCollection)
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
     val resampledReprojectOptions = reprojectOptions.copy(method = method, targetRasterExtent = Some(resampleGrid(rasterExtent)))
-    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, crs, resampledReprojectOptions, strategy, options)
+    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, crs, resampledReprojectOptions, strategy, options, stepCollection)
   }
 
   override def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
-    GeoTrellisConvertedRasterSource(uri, baseLayerId, cellType, bandCount, strategy, options)
+    GeoTrellisConvertedRasterSource(uri, baseLayerId, cellType, bandCount, strategy, options, stepCollection)
 }

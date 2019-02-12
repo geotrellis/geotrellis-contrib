@@ -29,6 +29,9 @@ case class GeoTiffRasterSource(uri: String) extends GeoTiffBaseRasterSource {
   private[geotiff] lazy val parentOptions: RasterViewOptions = RasterViewOptions()
   private[geotiff] lazy val options: RasterViewOptions = RasterViewOptions()
 
+  protected lazy val parentSteps: StepCollection = StepCollection()
+  protected lazy val currentStep: Option[Step] = None
+
   def resampleMethod: Option[ResampleMethod] = None
 
   val rasterExtent: RasterExtent = baseRasterExtent

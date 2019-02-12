@@ -36,12 +36,15 @@ case class GeoTrellisConvertedRasterSource(
   cellType: CellType,
   bandCount: Int,
   strategy: OverviewStrategy = AutoHigherResolution,
-  private[avro] val parentOptions: RasterViewOptions = RasterViewOptions()
+  private[avro] val parentOptions: RasterViewOptions = RasterViewOptions(),
+  protected val parentSteps: StepCollection = StepCollection()
 ) extends GeotrellisBaseRasterSource {
 
   val baseLayerId = layerId
 
   val resolutions = baseResolutions
+
+  protected lazy val currentStep: Option[Step] = Some(ConvertStep(parentCellType, cellType))
 
   private[avro] val options: RasterViewOptions = parentOptions.copy(cellType = Some(cellType))
 
@@ -68,13 +71,13 @@ case class GeoTrellisConvertedRasterSource(
   }
 
   override def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
-    GeoTrellisConvertedRasterSource(uri, layerId, cellType, bandCount, strategy, options)
+    GeoTrellisConvertedRasterSource(uri, layerId, cellType, bandCount, strategy, options, stepCollection)
 
   override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource = {
-    GeotrellisReprojectRasterSource(uri, layerId, bandCount, targetCRS, reprojectOptions, strategy, options)
+    GeotrellisReprojectRasterSource(uri, layerId, bandCount, targetCRS, reprojectOptions, strategy, options, stepCollection)
   }
 
   override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
-    GeotrellisResampleRasterSource(uri, layerId, bandCount, resampleGrid, method, strategy, options)
+    GeotrellisResampleRasterSource(uri, layerId, bandCount, resampleGrid, method, strategy, options, stepCollection)
   }
 }

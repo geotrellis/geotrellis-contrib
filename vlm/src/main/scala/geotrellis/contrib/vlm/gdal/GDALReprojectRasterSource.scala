@@ -16,6 +16,8 @@
 
 package geotrellis.contrib.vlm.gdal
 
+import geotrellis.contrib.vlm.{Step, ReprojectStep, StepCollection}
+
 import geotrellis.gdal._
 import geotrellis.proj4._
 import geotrellis.raster.CellType
@@ -31,11 +33,14 @@ case class GDALReprojectRasterSource(
   reprojectOptions: Reproject.Options = Reproject.Options.DEFAULT,
   strategy: OverviewStrategy = AutoHigherResolution,
   private[gdal] val options: GDALWarpOptions = GDALWarpOptions(),
-  private[gdal] val baseWarpList: List[GDALWarpOptions] = Nil
+  private[gdal] val baseWarpList: List[GDALWarpOptions] = Nil,
+  protected val parentSteps: StepCollection = StepCollection()
 ) extends GDALBaseRasterSource {
   val targetCRS: CRS = options.targetCRS.get
 
   def resampleMethod: Option[ResampleMethod] = reprojectOptions.method.some
+
+  protected lazy val currentStep: Option[Step] = Some(ReprojectStep(crs, targetCRS, reprojectOptions))
 
   lazy private[gdal] val warpOptions: GDALWarpOptions = {
     val baseSpatialReference = {
