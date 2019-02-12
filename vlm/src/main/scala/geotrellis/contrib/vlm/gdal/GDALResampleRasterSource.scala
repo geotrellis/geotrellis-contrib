@@ -47,7 +47,7 @@ case class GDALResampleRasterSource(
         lazy val rasterExtent: RasterExtent = baseDataset.rasterExtent
         // raster extent won't be calculated if it's not called in the apply function body explicitly
         val targetRasterExtent = {
-          val re = resampleGrid(rasterExtent)
+          val re = resampleGrid(rasterExtent).toRasterExtent
           if(options.alignTargetPixels) re.alignTargetPixels else re
         }
         GDALWarpOptions(

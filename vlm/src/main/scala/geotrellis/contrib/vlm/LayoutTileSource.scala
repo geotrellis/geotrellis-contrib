@@ -19,9 +19,6 @@ package geotrellis.contrib.vlm
 import geotrellis.raster._
 import geotrellis.spark.tiling._
 import geotrellis.spark.SpatialKey
-import geotrellis.spark.io.cog._
-
-import scala.concurrent.Future
 
 /** Reads tiles by key from a [[RasterSource]] as keyed by a [[LayoutDefinition]]
   * @note It is required that the [[RasterSource]] is pixel aligned with the [[LayoutDefinition]]
@@ -37,7 +34,7 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
 
   /** Generate RasterRegion for this key */
   def rasterRegionForKey(key: SpatialKey): RasterRegion =
-    RasterRegion(source, key.extent(layout))
+    RasterRegion(source, key.extent(layout).bufferByLayout(layout))
 
   def read(key: SpatialKey): Option[MultibandTile] =
     read(key, 0 until source.bandCount)
@@ -47,22 +44,19 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
     * If tile area does not intersect source None will be returned.
     */
   def read(key: SpatialKey, bands: Seq[Int]): Option[MultibandTile] = {
-    val rasterExtent = layout.createAlignedRasterExtent(key.extent(layout))
+    val extent = key.extent(layout).bufferByLayout(layout)
+    val rasterExtent = layout.createAlignedRasterExtent(extent)
 
     for {
-      raster <- source.read(rasterExtent.extent, bands)
+      raster <- source.read(extent, bands)
     } yield {
       if (raster.tile.cols == layout.tileCols && raster.tile.rows == layout.tileRows) {
         raster.tile
       } else { // we have a raster that's smaller or larger than desired
         val gb = rasterExtent.gridBoundsFor(raster.extent)
-        val sgb = raster
-          .gridBounds
-          .intersection(GridBounds(gb.colMin, gb.rowMin, layout.tileCols - 1, layout.tileRows - 1))
-          .getOrElse(GridBounds(0, 0, layout.tileCols - 1, layout.tileRows - 1))
 
         raster.tile.mapBands { (_, band) =>
-          PaddedTile(band.crop(sgb), gb.colMin, gb.rowMin, layout.tileCols, layout.tileRows)
+          PaddedTile(band, gb.colMin, gb.rowMin, layout.tileCols, layout.tileRows)
         }
       }
     }
@@ -75,22 +69,19 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
   def readAll(keys: Iterator[SpatialKey], bands: Seq[Int]): Iterator[(SpatialKey, MultibandTile)] =
     for {
       key <- keys
-      intersectingExtent <- layout.extent.intersection(key.extent(layout))
+      extent = key.extent(layout).bufferByLayout(layout)
+      intersectingExtent <- layout.extent.intersection(extent)
       raster <- source.read(intersectingExtent, bands)
     } yield {
       val tile =
         if (raster.tile.cols == layout.tileCols && raster.tile.rows == layout.tileRows) {
           raster.tile
         } else { // we have a raster that's smaller or larger than desired
-          val rasterExtent = layout.createAlignedRasterExtent(key.extent(layout))
+          val rasterExtent = layout.createAlignedRasterExtent(extent)
           val gb = rasterExtent.gridBoundsFor(raster.extent)
-          val sgb = raster
-            .gridBounds
-            .intersection(GridBounds(gb.colMin, gb.rowMin, layout.tileCols - 1, layout.tileRows - 1))
-            .getOrElse(GridBounds(0, 0, layout.tileCols - 1, layout.tileRows - 1))
 
           raster.tile.mapBands { (_, band) =>
-            PaddedTile(band.crop(sgb), gb.colMin, gb.rowMin, layout.tileCols, layout.tileRows)
+            PaddedTile(band, gb.colMin, gb.rowMin, layout.tileCols, layout.tileRows)
           }
         }
       (key, tile)

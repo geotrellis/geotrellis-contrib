@@ -18,17 +18,17 @@ package geotrellis.contrib
 
 import geotrellis.util.{FileRangeReader, StreamingByteReader}
 import geotrellis.proj4.{CRS, Transform}
-import geotrellis.raster.{GridExtent, RasterExtent}
+import geotrellis.raster._
 import geotrellis.raster.reproject.Reproject.Options
 import geotrellis.raster.reproject.ReprojectRasterExtent
 import geotrellis.spark.io.http.util.HttpRangeReader
 import geotrellis.spark.io.s3.util.S3RangeReader
 import geotrellis.spark.io.s3.AmazonS3Client
+import geotrellis.spark.tiling.LayoutDefinition
+import geotrellis.vector._
 
 import org.apache.http.client.utils.URLEncodedUtils
 import com.amazonaws.services.s3.{AmazonS3ClientBuilder, AmazonS3URI}
-import geotrellis.raster._
-import geotrellis.vector._
 
 import java.nio.file.Paths
 import java.net.{URI, URL}
@@ -74,7 +74,7 @@ package object vlm {
 
   implicit class rasterExtentMethods(self: RasterExtent) {
     def reproject(src: CRS, dest: CRS, options: Options): RasterExtent =
-      if(src == dest) self
+      if (src == dest) self
       else {
         val transform = Transform(src, dest)
         options.targetRasterExtent.getOrElse(ReprojectRasterExtent(self, transform, options = options))
@@ -84,5 +84,18 @@ package object vlm {
       reproject(src, dest, Options.DEFAULT)
 
     def toGridExtent: GridExtent = GridExtent(self.extent, self.cellheight, self.cellwidth)
+  }
+  /**
+    * A copy to avoid spark.io.cog._ imports in code
+    * Used for a better conversion from the Extent => GridBounds
+    */
+  implicit class withExtentMethods(extent: Extent) {
+    def bufferByLayout(layout: LayoutDefinition): Extent =
+      Extent(
+        extent.xmin + layout.cellwidth / 2,
+        extent.ymin + layout.cellheight / 2,
+        extent.xmax - layout.cellwidth / 2,
+        extent.ymax - layout.cellheight / 2
+      )
   }
 }

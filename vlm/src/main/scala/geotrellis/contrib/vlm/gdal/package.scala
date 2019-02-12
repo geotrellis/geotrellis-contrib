@@ -71,7 +71,7 @@ package object gdal {
         case _ =>
           val re = {
             val targetRasterExtent = resampleGrid(rasterExtent)
-            if(self.alignTargetPixels) targetRasterExtent.alignTargetPixels else targetRasterExtent
+            if(self.alignTargetPixels) targetRasterExtent.toRasterExtent.alignTargetPixels else targetRasterExtent
           }
 
           self.copy(

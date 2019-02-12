@@ -32,20 +32,16 @@ case class RasterRegion(
 ) extends CellGrid with Serializable {
   @transient lazy val raster: Option[Raster[MultibandTile]] =
     for {
-      raster <- source.read(rasterExtent.extent)
+      raster <- source.read(extent)
     } yield {
       if (raster.tile.cols == rasterExtent.cols && raster.tile.rows == rasterExtent.rows)
         raster
-      else { // we have a raster that's smaller or larger than desired
+      else { // we have a raster that's smaller than desired
         val gb = rasterExtent.gridBoundsFor(raster.extent)
-        val sgb = raster
-          .gridBounds
-          .intersection(GridBounds(gb.colMin, gb.rowMin, cols - 1, rows - 1))
-          .getOrElse(GridBounds(0, 0, cols - 1, rows - 1))
 
         val tile = raster.tile.mapBands { (_, band) =>
-          PaddedTile(band.crop(sgb), gb.colMin, gb.rowMin, cols, rows)
-      }
+          PaddedTile(band, gb.colMin, gb.rowMin, cols, rows)
+        }
         Raster(tile, rasterExtent.extent)
       }
     }
