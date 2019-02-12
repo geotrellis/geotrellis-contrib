@@ -17,36 +17,23 @@
 
 package geotrellis.contrib.vlm.avro
 
-import TestCatalog._
-
-import GeotrellisRasterSource._
-
 import geotrellis.contrib.vlm._
 import geotrellis.proj4._
 import geotrellis.raster._
-import geotrellis.raster.io.geotiff.{Auto, AutoHigherResolution, Base}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.testkit._
-import geotrellis.raster.{Tile, MultibandTile, RasterExtent}
-import geotrellis.raster.resample.{NearestNeighbor}
-import geotrellis.raster.reproject.{ReprojectRasterExtent, Reproject}
+import geotrellis.raster.MultibandTile
 import geotrellis.spark._
-import geotrellis.spark.io._
-import geotrellis.spark.io.{ValueReader, CollectionLayerReader}
-import geotrellis.vector.Extent
 
 import org.scalatest.{FunSpec, GivenWhenThen}
-
-import java.io.File
-
 
 class GeoTrellisConvertedRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen with CatalogTestEnvironment {
   val layerId = LayerId("landsat", 0)
   val uriMultiband = s"file://${TestCatalog.multibandOutputPath}"
 
-  val source = GeotrellisRasterSource(uriMultiband, layerId)
+  lazy val source = GeotrellisRasterSource(uriMultiband, layerId)
 
-  val expectedRaster: Raster[MultibandTile] =
+  lazy val expectedRaster: Raster[MultibandTile] =
     GeoTiffReader
       .readMultiband(TestCatalog.filePath, streaming = false)
       .raster

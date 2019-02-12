@@ -34,8 +34,8 @@ class GeotrellisRasterSourceSpec extends FunSpec with RasterMatchers with Better
   val uriMultiband = s"file://${TestCatalog.multibandOutputPath}"
   val uriSingleband = s"file://${TestCatalog.singlebandOutputPath}"
   val layerId = LayerId("landsat", 0)
-  val sourceMultiband = GeotrellisRasterSource(uriMultiband, layerId)
-  val sourceSingleband = GeotrellisRasterSource(uriSingleband, layerId)
+  lazy val sourceMultiband = GeotrellisRasterSource(uriMultiband, layerId)
+  lazy val sourceSingleband = GeotrellisRasterSource(uriSingleband, layerId)
 
   describe("geotrellis raster source") {
 
