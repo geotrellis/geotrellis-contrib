@@ -19,6 +19,9 @@ package geotrellis.contrib.vlm
 import geotrellis.raster._
 import geotrellis.spark.tiling._
 import geotrellis.spark.SpatialKey
+import geotrellis.spark.io.cog._
+
+import scala.concurrent.Future
 
 /** Reads tiles by key from a [[RasterSource]] as keyed by a [[LayoutDefinition]]
   * @note It is required that the [[RasterSource]] is pixel aligned with the [[LayoutDefinition]]
@@ -33,9 +36,8 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
   def sourceRowOffset: Long = ((layout.extent.ymax - source.extent.ymax) / layout.cellheight).toLong
 
   /** Generate RasterRegion for this key */
-  def rasterRegionForKey(key: SpatialKey): RasterRegion = {
-    new RasterRegion(source, key.extent(layout))
-  }
+  def rasterRegionForKey(key: SpatialKey): RasterRegion =
+    RasterRegion(source, key.extent(layout))
 
   def read(key: SpatialKey): Option[MultibandTile] =
     read(key, 0 until source.bandCount)
@@ -52,10 +54,15 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
     } yield {
       if (raster.tile.cols == layout.tileCols && raster.tile.rows == layout.tileRows) {
         raster.tile
-      } else {
+      } else { // we have a raster that's smaller or larger than desired
         val gb = rasterExtent.gridBoundsFor(raster.extent)
+        val sgb = raster
+          .gridBounds
+          .intersection(GridBounds(gb.colMin, gb.rowMin, layout.tileCols - 1, layout.tileRows - 1))
+          .getOrElse(GridBounds(0, 0, layout.tileCols - 1, layout.tileRows - 1))
+
         raster.tile.mapBands { (_, band) =>
-          PaddedTile(band, gb.colMin, gb.rowMin, layout.tileCols, layout.tileRows)
+          PaddedTile(band.crop(sgb), gb.colMin, gb.rowMin, layout.tileCols, layout.tileRows)
         }
       }
     }
@@ -74,11 +81,16 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
       val tile =
         if (raster.tile.cols == layout.tileCols && raster.tile.rows == layout.tileRows) {
           raster.tile
-        } else {
+        } else { // we have a raster that's smaller or larger than desired
           val rasterExtent = layout.createAlignedRasterExtent(key.extent(layout))
           val gb = rasterExtent.gridBoundsFor(raster.extent)
+          val sgb = raster
+            .gridBounds
+            .intersection(GridBounds(gb.colMin, gb.rowMin, layout.tileCols - 1, layout.tileRows - 1))
+            .getOrElse(GridBounds(0, 0, layout.tileCols - 1, layout.tileRows - 1))
+
           raster.tile.mapBands { (_, band) =>
-            PaddedTile(band, gb.colMin, gb.rowMin, layout.tileCols, layout.tileRows)
+            PaddedTile(band.crop(sgb), gb.colMin, gb.rowMin, layout.tileCols, layout.tileRows)
           }
         }
       (key, tile)

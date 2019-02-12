@@ -36,10 +36,15 @@ case class RasterRegion(
     } yield {
       if (raster.tile.cols == rasterExtent.cols && raster.tile.rows == rasterExtent.rows)
         raster
-      else { // we have a raster thats smaller than desired
+      else { // we have a raster that's smaller or larger than desired
         val gb = rasterExtent.gridBoundsFor(raster.extent)
+        val sgb = raster
+          .gridBounds
+          .intersection(GridBounds(gb.colMin, gb.rowMin, cols - 1, rows - 1))
+          .getOrElse(GridBounds(0, 0, cols - 1, rows - 1))
+
         val tile = raster.tile.mapBands { (_, band) =>
-          PaddedTile(band, gb.colMin, gb.rowMin, cols, rows)
+          PaddedTile(band.crop(sgb), gb.colMin, gb.rowMin, cols, rows)
       }
         Raster(tile, rasterExtent.extent)
       }

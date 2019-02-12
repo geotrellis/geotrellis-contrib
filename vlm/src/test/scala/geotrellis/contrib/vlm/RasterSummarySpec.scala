@@ -215,7 +215,10 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     val contextRDD: MultibandTileLayerRDD[SpatialKey] = ContextRDD(tileRDD, metadata)
 
     val res = contextRDD.collect()
-    res.foreach { case (_, v) => v.dimensions shouldBe layout.tileLayout.tileDimensions }
+    res.foreach { case (_, v) =>
+      println(s"v.dimensions: ${v.dimensions}")
+      v.dimensions shouldBe layout.tileLayout.tileDimensions
+    }
     res.length shouldBe rasterRefRdd.count()
     res.length shouldBe 72
 
