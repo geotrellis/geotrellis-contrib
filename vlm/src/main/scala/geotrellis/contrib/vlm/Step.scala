@@ -53,7 +53,7 @@ case class ConvertStep(
   final val name: String = "Convert"
 
   final val message: String =
-    s"Converting from $sourceCellType to $targetCellType"
+    s"Converting from $sourceCellType to the $targetCellType CellType"
 
   private[vlm] def replacePrevious(step: Step): Boolean =
     step match {
