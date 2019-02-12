@@ -35,7 +35,12 @@ case class GeotrellisResampleRasterSource(
   strategy: OverviewStrategy = AutoHigherResolution,
   private[avro] val parentOptions: RasterViewOptions = RasterViewOptions()
 ) extends GeotrellisBaseRasterSource {
-  lazy val rasterExtent: RasterExtent = resampleGrid(parentRasterExtent)
+  lazy val rasterExtent: RasterExtent =
+    parentOptions.rasterExtent match {
+      case Some(re) => resampleGrid(re)
+      case None => resampleGrid(baseRasterExtent)
+    }
+
   def crs: CRS = parentCRS
   def cellType: CellType = parentCellType
 
@@ -44,10 +49,14 @@ case class GeotrellisResampleRasterSource(
 
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
-  private[avro] val options: RasterViewOptions = parentOptions.copy(rasterExtent = Some(rasterExtent))
+  private[avro] val options: RasterViewOptions =
+    parentOptions.copy(
+      rasterExtent = Some(rasterExtent),
+      readMethod = Some(read)
+    )
 
   lazy val layerName = baseLayerId.name
-  override lazy val resolutions: List[RasterExtent] = GeotrellisRasterSource.getResolutions(reader, layerName)
+  lazy val resolutions: List[RasterExtent] = GeotrellisRasterSource.getResolutions(reader, layerName)
   lazy val layerIds: Seq[LayerId] = GeotrellisRasterSource.getLayerIdsByName(reader, layerName)
 
   override def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] =

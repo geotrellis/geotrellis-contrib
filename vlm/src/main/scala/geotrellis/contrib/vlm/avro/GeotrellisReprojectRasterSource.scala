@@ -38,8 +38,8 @@ case class GeotrellisReprojectRasterSource(
   def cellType: CellType = parentCellType
   def resampleMethod: Option[ResampleMethod] = Some(reprojectOptions.method)
 
-  protected lazy val transform = Transform(parentCRS, crs)
-  protected lazy val backTransform = Transform(crs, parentCRS)
+  protected lazy val transform = Transform(baseCRS, crs)
+  protected lazy val backTransform = Transform(crs, baseCRS)
 
   protected lazy val layerName = baseLayerId.name
   protected lazy val layerIds: Seq[LayerId] = GeotrellisRasterSource.getLayerIdsByName(reader, layerName)
@@ -51,7 +51,12 @@ case class GeotrellisReprojectRasterSource(
       ReprojectRasterExtent(parentRasterExtent, transform, reprojectOptions)
   }
 
-  private[avro] val options: RasterViewOptions = parentOptions.copy(crs = Some(crs), rasterExtent = Some(rasterExtent))
+  private[avro] val options: RasterViewOptions =
+    parentOptions.copy(
+      crs = Some(crs),
+      rasterExtent = Some(rasterExtent),
+      readMethod = Some(read)
+  )
 
   override lazy val resolutions: List[RasterExtent] =
     GeotrellisRasterSource.getResolutions(reader, layerName).map(resolution =>
@@ -72,7 +77,7 @@ case class GeotrellisReprojectRasterSource(
 
   override def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     for {
-      _ <- rasterExtent.extent.intersection(extent)
+      _ <- this.extent.intersection(extent)
       targetRasterExtent = rasterExtent.createAlignedRasterExtent(extent)
       sourceExtent = targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope
       raster <- GeotrellisRasterSource.readIntersecting(reader, layerId, metadata, sourceExtent, bands)

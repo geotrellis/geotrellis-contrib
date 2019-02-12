@@ -51,7 +51,11 @@ case class GeoTrellisConvertedRasterSource(
   def resampleMethod: Option[ResampleMethod] = None
 
   override def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val result = GeotrellisRasterSource.read(reader, layerId, metadata, extent, bands)
+    val result =
+      parentOptions.readMethod match {
+        case Some(readMethod) => readMethod(extent, bands)
+        case None => GeotrellisRasterSource.read(reader, layerId, metadata, extent, bands)
+      }
 
     result.map { raster =>
       raster.mapTile { _.convert(cellType) }
