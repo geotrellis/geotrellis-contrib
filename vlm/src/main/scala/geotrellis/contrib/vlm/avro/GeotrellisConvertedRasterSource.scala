@@ -42,7 +42,7 @@ case class GeoTrellisConvertedRasterSource(
 
   val baseLayerId = layerId
 
-  val resolutions = baseResolutions
+  lazy val resolutions = baseResolutions
 
   protected lazy val currentStep: Option[Step] = Some(ConvertStep(parentCellType, cellType))
 

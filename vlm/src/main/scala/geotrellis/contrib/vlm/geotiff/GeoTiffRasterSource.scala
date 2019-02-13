@@ -17,13 +17,9 @@
 package geotrellis.contrib.vlm.geotiff
 
 import geotrellis.contrib.vlm._
-import geotrellis.vector._
 import geotrellis.proj4._
 import geotrellis.raster._
-import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
-import geotrellis.raster.io.geotiff.{GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
-import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
 case class GeoTiffRasterSource(uri: String) extends GeoTiffBaseRasterSource {
   private[geotiff] lazy val parentOptions: RasterViewOptions = RasterViewOptions()
@@ -35,7 +31,7 @@ case class GeoTiffRasterSource(uri: String) extends GeoTiffBaseRasterSource {
   def resampleMethod: Option[ResampleMethod] = None
 
   val rasterExtent: RasterExtent = baseRasterExtent
-  val resolutions: List[RasterExtent] = baseResolutions
+  lazy val resolutions: List[RasterExtent] = baseResolutions
   def crs: CRS = baseCRS
   def cellType: CellType = baseCellType
 }

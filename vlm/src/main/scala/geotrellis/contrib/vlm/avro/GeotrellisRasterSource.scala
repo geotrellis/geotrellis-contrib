@@ -38,7 +38,7 @@ import geotrellis.raster.{MultibandTile, Tile}
 case class GeotrellisRasterSource(uri: String, layerId: LayerId, bandCount: Int = 1) extends GeotrellisBaseRasterSource {
   val baseLayerId = layerId
   lazy val rasterExtent: RasterExtent = baseRasterExtent
-  val resolutions = baseResolutions
+  lazy val resolutions = baseResolutions
 
   private[avro] val parentOptions: RasterViewOptions = RasterViewOptions()
   private[avro] val options: RasterViewOptions = RasterViewOptions()
