@@ -50,7 +50,7 @@ object TestCatalog {
 
   def fullPath(path: String) = new java.io.File(path).getAbsolutePath
 
-  def createMultiband(implicit sc: SparkContext) = {
+  def createMultiband(implicit sc: SparkContext): Unit = {
     // Create the attributes store that will tell us information about our catalog.
     val attributeStore = FileAttributeStore(multibandOutputPath)
 
@@ -73,7 +73,7 @@ object TestCatalog {
     }
   }
 
-  def createSingleband(implicit sc: SparkContext) = {
+  def createSingleband(implicit sc: SparkContext): Unit = {
     // Create the attributes store that will tell us information about our catalog.
     val attributeStore = FileAttributeStore(singlebandOutputPath)
 
@@ -87,9 +87,8 @@ object TestCatalog {
       val rdd: TileLayerRDD[SpatialKey] =
         RasterSourceRDD(List(rs), layout)
           .withContext( tiledd =>
-            tiledd.mapValues {mb: MultibandTile =>
-              ArrayMultibandTile(mb.bands.map(_.toArrayTile))
-                .band(0)  // Get only first band
+            tiledd.mapValues { mb: MultibandTile =>
+              ArrayMultibandTile(mb.bands.map(_.toArrayTile)).band(0)  // Get only first band
             }
           )
 
