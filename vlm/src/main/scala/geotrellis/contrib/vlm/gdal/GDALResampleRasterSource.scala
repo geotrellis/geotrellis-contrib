@@ -52,7 +52,7 @@ case class GDALResampleRasterSource(
         GDALWarpOptions(
           cellSize = targetRasterExtent.cellSize.some,
           resampleMethod = resampleMethod,
-          srcNoData = noDataValue.toList,
+          srcNoData = noDataValue.toList.map(_.toString),
           ovr = strategy.some
         )
     }

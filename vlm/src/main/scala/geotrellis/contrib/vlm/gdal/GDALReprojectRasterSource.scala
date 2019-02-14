@@ -63,7 +63,7 @@ case class GDALReprojectRasterSource(
       cellSize = cellSize,
       sourceCRS = baseSpatialReference.toCRS.some,
       targetCRS = targetSpatialReference.toCRS.some,
-      srcNoData = noDataValue.toList,
+      srcNoData = noDataValue.toList.map(_.toString),
       ovr = strategy.some
     )
   }

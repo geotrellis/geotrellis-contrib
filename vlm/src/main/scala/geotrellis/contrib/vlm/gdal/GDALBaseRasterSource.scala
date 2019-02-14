@@ -29,8 +29,6 @@ import org.gdal.gdal.Dataset
 
 import java.net.MalformedURLException
 
-import scala.collection.mutable
-
 trait GDALBaseRasterSource extends RasterSource {
   val vsiPath: String = if (VSIPath.isVSIFormatted(uri)) uri else try {
     VSIPath(uri).vsiPath
@@ -43,12 +41,6 @@ trait GDALBaseRasterSource extends RasterSource {
       )
   }
 
-  /** pointers to parent datasets to prevent them from being garbage collected */
-  @transient private lazy val parentDatasets: mutable.Set[Dataset] = mutable.Set()
-
-  /** private setters to keep things away from the user API */
-  private[gdal] def getParentDatasets: Set[Dataset] = parentDatasets.toSet
-
   /** options to override some values on transformation steps, should be used carefully as these params can change the behaviour significantly */
   val options: GDALWarpOptions
   /** options from previous transformation steps */
@@ -59,17 +51,9 @@ trait GDALBaseRasterSource extends RasterSource {
   lazy val warpList: List[GDALWarpOptions] = baseWarpList :+ warpOptions
 
   // generate a vrt before the current options application
-  @transient lazy val fromBaseWarpList: Dataset = {
-    val (ds, history) = GDAL.fromGDALWarpOptionsH(uri, baseWarpList)
-    parentDatasets ++= history
-    ds
-  }
+  @transient lazy val fromBaseWarpList: Dataset = GDAL.fromGDALWarpOptionsH(uri, baseWarpList)._1
   // current dataset
-  @transient lazy val dataset: Dataset = {
-    val (ds, history) = GDAL.fromGDALWarpOptionsH(uri, warpList, fromBaseWarpList)
-    parentDatasets ++= history
-    ds
-  }
+  @transient lazy val dataset: Dataset = GDAL.fromGDALWarpOptionsH(uri, warpList, fromBaseWarpList)._1
 
   lazy val bandCount: Int = dataset.getRasterCount
 
