@@ -98,7 +98,7 @@ case class PaddedTile(chunk: Tile, colOffset: Int, rowOffset: Int, cols: Int, ro
 
   def foreachDouble(f: Double => Unit): Unit = {
     cfor(0)(_ < rows, _ + 1) { row =>
-      if (row < rowOffset || row > (rowOffset + rows - 1)) {
+      if (row < rowOffset || row > (rowOffset + chunk.rows) - 1) {
         cfor(0)(_ < cols, _ + 1) { _ =>
           f(Double.NaN)
         }
