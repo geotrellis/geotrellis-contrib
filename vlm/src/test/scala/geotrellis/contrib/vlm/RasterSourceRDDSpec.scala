@@ -222,7 +222,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
         def rsWithDatasetsTriggered(rs: RasterSource): RasterSource = {
           val brs = rs.asInstanceOf[GDALBaseRasterSource]
           brs.dataset.rasterExtent
-          brs.fromBaseWarpList.rasterExtent
+          brs.baseDataset.rasterExtent
           rs
         }
 
