@@ -75,4 +75,30 @@ class PaddedTileSpec extends FunSpec with Matchers with BetterRasterMatchers wit
     }
     copy shouldBe expected
   }
+
+  it("should go through all of the rows of the chunk") {
+    val padded = PaddedTile(
+      chunk = IntArrayTile.fill(1, cols = 8, rows = 8),
+      colOffset = 0, rowOffset = 0, cols = 16, rows = 16)
+
+    val expected = {
+      val tile = IntArrayTile.empty(16, 16)
+      cfor(0)(_ < 8, _ + 1) { col =>
+        cfor(0)(_ < 8, _ + 1) { row =>
+          tile.set(col, row, 1)
+        }
+      }
+      tile
+    }
+
+    val copy = IntArrayTile.empty(16, 16)
+    var i = 0
+
+    padded.foreachDouble{ z =>
+      copy.updateDouble(i, z)
+      i += 1
+    }
+
+    assertEqual(copy, expected)
+  }
 }
