@@ -47,7 +47,7 @@ trait GDALBaseRasterSource extends RasterSource {
   // generate a vrt before the current options application
   @transient lazy val baseDataset: Dataset = GDAL.fromGDALWarpOptions(uri, Nil)
   // current dataset
-  @transient lazy val dataset: Dataset = GDAL.fromGDALWarpOptions(uri, options :: Nil)
+  @transient lazy val dataset: Dataset = GDAL.fromGDALWarpOptions(uri, options :: Nil, baseDataset)
 
   lazy val bandCount: Int = dataset.getRasterCount
 
