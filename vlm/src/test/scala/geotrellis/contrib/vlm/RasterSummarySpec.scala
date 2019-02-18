@@ -102,7 +102,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
         .groupByKey(SpatialPartitioner(summary.estimatePartitionsNumber))
         .mapValues { iter => MultibandTile(iter.flatMap(_.raster.toSeq.flatMap(_.tile.bands))) } // read rasters
 
-    val (metadata, zoom) = summary.toTileLayerMetadata(layoutLevel)
+    val (metadata, _) = summary.toTileLayerMetadata(layoutLevel)
     val contextRDD: MultibandTileLayerRDD[SpatialKey] = ContextRDD(tileRDD, metadata)
 
     contextRDD.count() shouldBe rasterRefRdd.count()
@@ -157,17 +157,18 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
 
       metadata shouldBe metadataResampled
 
-      // TODO: investigate the reason of why this won't work here
-      // summaryCollected.crs shouldBe summaryResampled.crs
-      // summaryCollected.cellType shouldBe summaryResampled.cellType
+      summaryCollected.crs shouldBe summaryResampled.crs
+      summaryCollected.cellType shouldBe summaryResampled.cellType
 
-      // val CellSize(widthCollected, heightCollected) = summaryCollected.cellSize
-      // val CellSize(widthResampled, heightResampled) = summaryResampled.cellSize
+      val CellSize(widthCollected, heightCollected) = summaryCollected.cellSize
+      val CellSize(widthResampled, heightResampled) = summaryResampled.cellSize
 
       // the only weird place where cellSize is a bit different
-      // widthCollected shouldBe (widthResampled +- 1e-7)
-      // heightCollected shouldBe (heightResampled +- 1e-7)
+      widthCollected shouldBe (widthResampled +- 1e-7)
+      heightCollected shouldBe (heightResampled +- 1e-7)
 
+      // TODO: investigate the reason of why this won't work here
+      // but probably this function should be removed in the future completely and nowhere used
       // val Extent(xminc, yminc, xmaxc, ymaxc) = summaryCollected.extent
       // val Extent(xminr, yminr, xmaxr, ymaxr) = summaryResampled.extent
 

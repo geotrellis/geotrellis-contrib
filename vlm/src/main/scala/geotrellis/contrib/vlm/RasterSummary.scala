@@ -16,7 +16,6 @@
 
 package geotrellis.contrib.vlm
 
-import geotrellis.gdal._
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellGrid, CellSize, CellType, RasterExtent}
 import geotrellis.spark._
@@ -113,6 +112,21 @@ object RasterSummary {
   // this code is for the current code simplification
   def fromRDD[V <: CellGrid: GetComponent[?, ProjectedExtent]](rdd: RDD[V]): RasterSummary = {
     val all = collect[V](rdd)
+    require(all.size == 1, "multiple CRSs detected") // what to do in this case?
+    all.head
+  }
+
+  def fromSeq[V <: CellGrid: GetComponent[?, ProjectedExtent]](seq: Seq[V]): RasterSummary = {
+    val all =
+      seq
+        .map { grid =>
+          val ProjectedExtent(extent, crs) = grid.getComponent[ProjectedExtent]
+          val cellSize = CellSize(extent, grid.cols, grid.rows)
+          (crs, RasterSummary(crs, grid.cellType, cellSize, extent, grid.size, 1))
+        }
+        .groupBy(_._1)
+        .map { case (_, v) => v.map(_._2).reduce(_ combine _) }
+
     require(all.size == 1, "multiple CRSs detected") // what to do in this case?
     all.head
   }

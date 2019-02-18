@@ -18,10 +18,10 @@ package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm._
 import geotrellis.gdal._
-import geotrellis.proj4.{CRS, WebMercator}
-import geotrellis.raster.{CellSize, GridExtent}
+import geotrellis.proj4._
+import geotrellis.raster._
 import geotrellis.raster.io.geotiff.AutoHigherResolution
-import geotrellis.raster.resample.NearestNeighbor
+import geotrellis.raster.resample._
 import geotrellis.raster.reproject.Reproject.{Options => ReprojectOptions}
 import geotrellis.vector.Extent
 import geotrellis.raster.testkit._
@@ -113,7 +113,7 @@ class GDALWarpOptionsSpec extends FunSpec with RasterMatchers with BetterRasterM
             strategy         = AutoHigherResolution
           )
           .resampleToRegion(
-            region = GridExtent(Extent(-8769160.0, 4257700.0, -8750630.0, 4274460.0), 22, 22).toRasterExtent
+            region = RasterExtent(Extent(-8769160.0, 4257700.0, -8750630.0, 4274460.0), CellSize(22, 22))
           )
 
       optimizedRawResample.rasterExtent shouldBe rs.rasterExtent
