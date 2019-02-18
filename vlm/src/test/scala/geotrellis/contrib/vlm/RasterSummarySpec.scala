@@ -2,7 +2,6 @@ package geotrellis.contrib.vlm
 
 import geotrellis.contrib.vlm.geotiff._
 import geotrellis.contrib.vlm.gdal._
-import geotrellis.gdal._
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.resample.Bilinear
@@ -227,7 +226,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     val targetCRS = WebMercator
     val method = Bilinear
     val layout = LayoutDefinition(GridExtent(Extent(-2.0037508342789244E7, -2.0037508342789244E7, 2.0037508342789244E7, 2.0037508342789244E7), 9.554628535647032, 9.554628535647032), 256)
-    val RasterExtent(Extent(exmin, eymin, exmax, eymax), ecw, ech, ecols, erows) = GridExtent(Extent(-8769152.078360025, 4257704.9041694235, -8750635.208257942, 4274463.722620948),9.554628535646703,9.554628535646929).toRasterExtent
+    val RasterExtent(Extent(exmin, eymin, exmax, eymax), ecw, ech, ecols, erows) = RasterExtent(Extent(-8769161.632988561, 4257685.794912352, -8750616.09900087, 4274482.8318780195), CellSize(9.554628535647412, 9.554628535646911))
 
     cfor(0)(_ < 11, _ + 1) { _ =>
       val reference = GDALRasterSource(inputPath).reproject(targetCRS, method).tileToLayout(layout, method)

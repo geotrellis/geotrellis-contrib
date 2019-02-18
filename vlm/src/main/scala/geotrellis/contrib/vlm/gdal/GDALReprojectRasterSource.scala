@@ -59,11 +59,11 @@ case class GDALReprojectRasterSource(
     options combine GDALWarpOptions(
       resampleMethod = reprojectOptions.method.some,
       errorThreshold = reprojectOptions.errorThreshold.some,
-      cellSize = cellSize,
-      sourceCRS = baseSpatialReference.toCRS.some,
-      targetCRS = targetSpatialReference.toCRS.some,
-      srcNoData = noDataValue.map(_.toString).toList,
-      ovr = strategy.some
+      cellSize       = cellSize,
+      sourceCRS      = baseSpatialReference.toCRS.some,
+      targetCRS      = targetSpatialReference.toCRS.some,
+      srcNoData      = noDataValue.map(_.toString).toList,
+      ovr            = strategy.some
     )
   }
 }

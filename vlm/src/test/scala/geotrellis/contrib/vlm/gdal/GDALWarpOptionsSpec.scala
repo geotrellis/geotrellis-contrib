@@ -39,37 +39,32 @@ class GDALWarpOptionsSpec extends FunSpec with RasterMatchers with BetterRasterM
 
   val reprojectOptions: GDALWarpOptions =
     generateWarpOptions(
-      et        = None,
       sourceCRS = Some(CRS.fromString("+proj=lcc +lat_1=36.16666666666666 +lat_2=34.33333333333334 +lat_0=33.75 +lon_0=-79 +x_0=609601.22 +y_0=0 +datum=NAD83 +units=m +no_defs ")),
-      targetCRS = Some(WebMercator)
+      targetCRS = Some(WebMercator),
+      cellSize = Some(CellSize(10, 10))
     )
 
   val resampleOptions: GDALWarpOptions =
     generateWarpOptions(
       et        = None,
-      cellSize  = Some(CellSize(5.0, 5.0)),
+      cellSize  = Some(CellSize(22, 22)),
       sourceCRS = None,
       targetCRS = None
     )
 
   def dsreproject(dataset: Dataset): Dataset =
     GDAL.warp("", dataset, reprojectOptions, None)
-  def dsresample(dataset: Dataset, uri: Option[String]): Dataset = {
-    println("---------------")
-    println(s"dsresample::reprojectOptions ${reprojectOptions}")
-    println(s"dsresample::resampleOptions ${resampleOptions}")
-    println("---------------")
+  def dsresample(dataset: Dataset, uri: Option[String]): Dataset =
     GDAL.warp("", dataset, resampleOptions, uri.map(str => str -> List(reprojectOptions)))
-  }
 
   def dsreprojectOpt(dataset: Dataset): Dataset = {
     val opts =
       GDALWarpOptions(Some("MEM"))
         .reproject(
-          rasterExtent = GridExtent(Extent(630000.0, 215000.0, 645000.0, 228500.0), 10.0, 10.0).toRasterExtent,
+          rasterExtent = GridExtent(Extent(630000.0, 215000.0, 645000.0, 228500.0), 10, 10).toRasterExtent,
           CRS.fromString("+proj=lcc +lat_1=36.16666666666666 +lat_2=34.33333333333334 +lat_0=33.75 +lon_0=-79 +x_0=609601.22 +y_0=0 +datum=NAD83 +units=m +no_defs "),
           WebMercator,
-          ReprojectOptions.DEFAULT.copy(targetCellSize = CellSize(19.1, 19.1).some)
+          ReprojectOptions.DEFAULT.copy(targetCellSize = CellSize(10, 10).some)
         )
 
     GDAL.warp("", dataset, opts, None)
@@ -78,42 +73,51 @@ class GDALWarpOptionsSpec extends FunSpec with RasterMatchers with BetterRasterM
     val opts =
       GDALWarpOptions(Some("MEM"))
         .reproject(
-          rasterExtent = GridExtent(Extent(630000.0, 215000.0, 645000.0, 228500.0), 10.0, 10.0).toRasterExtent,
+          rasterExtent = GridExtent(Extent(630000.0, 215000.0, 645000.0, 228500.0), 10, 10).toRasterExtent,
           CRS.fromString("+proj=lcc +lat_1=36.16666666666666 +lat_2=34.33333333333334 +lat_0=33.75 +lon_0=-79 +x_0=609601.22 +y_0=0 +datum=NAD83 +units=m +no_defs "),
           WebMercator,
-          ReprojectOptions.DEFAULT.copy(targetCellSize = CellSize(19.1, 19.1).some)
+          ReprojectOptions.DEFAULT.copy(targetCellSize = CellSize(10, 10).some)
         )
         .resample(
-          GridExtent(Extent(-8769161.632988561, 4257695.349540888, -8750625.653629405, 4274473.277249484), 19.1, 19.1).toRasterExtent,
-          TargetGrid(GridExtent(Extent(-8769161.632988561, 4257695.349540888, -8750625.653629405, 4274473.277249484), 5, 5).toRasterExtent)
+          GridExtent(Extent(-8769160.0, 4257700.0, -8750630.0, 4274460.0), 10, 10).toRasterExtent,
+          TargetRegion(GridExtent(Extent(-8769160.0, 4257700.0, -8750630.0, 4274460.0), 22, 22).toRasterExtent)
         )
-
-    println("===============")
-    println(s"opts:: ${opts}")
-    println("===============")
 
     GDAL.warp("", dataset, opts, None)
   }
 
   describe("GDALWarp transformations") {
-    ignore("optimized transformation should behave in a same way as a list of warp applications") {
+    it("optimized transformation should behave in a same way as a list of warp applications") {
       val base = GDAL.open(filePath)
-
-      // GridExtent(Extent(-8769160.0, 4257680.0, -8750620.0, 4274480.0),20.0,20.0)
-      // GridExtent(Extent(-8769180.0, 4257680.0, -8750620.0, 4274480.0),20.0,20.0)
 
       val originalReproject = dsreproject(base)
       val originalResample = dsresample(originalReproject, Some(filePath))
 
-      //val optimizedReproject = dsreprojectOpt(base)
+      val optimizedReproject = dsreprojectOpt(base)
       val optimizedResample = dsresampleOpt(base)
 
-      //originalReproject.rasterExtent shouldBe optimizedReproject.rasterExtent
-
-      println(s"originalResample.rasterExtent: ${originalResample.rasterExtent}")
-      println(s"optimizedResample.rasterExtent: ${optimizedResample.rasterExtent}")
-
+      originalReproject.rasterExtent shouldBe optimizedReproject.rasterExtent
       originalResample.rasterExtent shouldBe optimizedResample.rasterExtent
+    }
+
+    it("raster sources optimized transformations should behave in a same way as a single warp application") {
+      val base = GDAL.open(filePath)
+      val optimizedRawResample = dsresampleOpt(base)
+      val originalRawResample = dsresample(dsreproject(base), Some(filePath))
+
+      val rs =
+        GDALRasterSource(filePath)
+          .reproject(
+            targetCRS        = WebMercator,
+            reprojectOptions = ReprojectOptions.DEFAULT.copy(targetCellSize = CellSize(10, 10).some),
+            strategy         = AutoHigherResolution
+          )
+          .resampleToRegion(
+            region = GridExtent(Extent(-8769160.0, 4257700.0, -8750630.0, 4274460.0), 22, 22).toRasterExtent
+          )
+
+      optimizedRawResample.rasterExtent shouldBe rs.rasterExtent
+      originalRawResample.rasterExtent shouldBe rs.rasterExtent
     }
   }
 }
@@ -126,7 +130,7 @@ object GDALWarpOptionsSpec {
     targetCRS: Option[CRS] = Some(WebMercator)
   ): GDALWarpOptions = {
     GDALWarpOptions(
-      Some("MEM"),
+      Some("VRT"),
       Some(NearestNeighbor),
       et,
       cellSize,
