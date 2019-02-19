@@ -115,5 +115,20 @@ object RasterSummary {
     require(all.size == 1, "multiple CRSs detected") // what to do in this case?
     all.head
   }
+
+  def fromSeq[V <: CellGrid: GetComponent[?, ProjectedExtent]](seq: Seq[V]): RasterSummary = {
+    val all =
+      seq
+        .map { grid =>
+          val ProjectedExtent(extent, crs) = grid.getComponent[ProjectedExtent]
+          val cellSize = CellSize(extent, grid.cols, grid.rows)
+          (crs, RasterSummary(crs, grid.cellType, cellSize, extent, grid.size, 1))
+        }
+        .groupBy(_._1)
+        .map { case (_, v) => v.map(_._2).reduce(_ combine _) }
+
+    require(all.size == 1, "multiple CRSs detected") // what to do in this case?
+    all.head
+  }
 }
 

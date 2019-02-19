@@ -21,8 +21,6 @@ import geotrellis.gdal._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
-import geotrellis.proj4.CRS
-import geotrellis.raster.reproject.Reproject
 
 import cats.syntax.option._
 import org.gdal.gdal.Dataset
@@ -46,23 +44,21 @@ case class GDALResampleRasterSource(
           resampleMethod = resampleMethod
         )
       case _ =>
-        lazy val rasterExtent: RasterExtent = fromBaseWarpList.rasterExtent
+        lazy val rasterExtent: RasterExtent = baseDataset.rasterExtent
         // raster extent won't be calculated if it's not called in the apply function body explicitly
-        val targetRasterExtent = resampleGrid(rasterExtent)
+        val targetRasterExtent = {
+          val re = resampleGrid(rasterExtent)
+          if(options.alignTargetPixels) re.alignTargetPixels else re
+        }
         GDALWarpOptions(
-          cellSize = targetRasterExtent.cellSize.some,
+          te             = targetRasterExtent.extent.some,
+          cellSize       = targetRasterExtent.cellSize.some,
           resampleMethod = resampleMethod,
-          srcNoData = noDataValue.toList,
-          ovr = strategy.some
+          srcNoData      = noDataValue.map(_.toString).toList,
+          ovr            = strategy.some
         )
     }
 
     options combine res
   }
-
-  override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, warpList)
-
-  override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options, warpList)
 }

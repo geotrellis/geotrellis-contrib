@@ -22,9 +22,8 @@ import geotrellis.raster._
 import geotrellis.raster.reproject._
 import geotrellis.raster.resample._
 import geotrellis.proj4._
-import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiff, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
-import geotrellis.raster.io.geotiff.reader.GeoTiffReader
-import geotrellis.spark.{LayerId, Metadata, SpatialKey, TileLayerMetadata}
+import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
+import geotrellis.spark._
 import geotrellis.spark.io._
 
 case class GeotrellisReprojectRasterSource(

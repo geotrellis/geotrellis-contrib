@@ -17,9 +17,14 @@
 package geotrellis.contrib
 
 import geotrellis.util.{FileRangeReader, StreamingByteReader}
+import geotrellis.proj4.{CRS, Transform}
+import geotrellis.raster.{GridExtent, RasterExtent}
+import geotrellis.raster.reproject.Reproject.Options
+import geotrellis.raster.reproject.ReprojectRasterExtent
 import geotrellis.spark.io.http.util.HttpRangeReader
 import geotrellis.spark.io.s3.util.S3RangeReader
 import geotrellis.spark.io.s3.AmazonS3Client
+
 import org.apache.http.client.utils.URLEncodedUtils
 import com.amazonaws.services.s3.{AmazonS3ClientBuilder, AmazonS3URI}
 
@@ -63,5 +68,19 @@ package object vlm {
         throw new IllegalArgumentException(s"Unable to read scheme $scheme at $uri")
     }
     new StreamingByteReader(rr)
+  }
+
+  implicit class rasterExtentMethods(self: RasterExtent) {
+    def reproject(src: CRS, dest: CRS, options: Options): RasterExtent =
+      if(src == dest) self
+      else {
+        val transform = Transform(src, dest)
+        options.targetRasterExtent.getOrElse(ReprojectRasterExtent(self, transform, options = options))
+      }
+
+    def reproject(src: CRS, dest: CRS): RasterExtent =
+      reproject(src, dest, Options.DEFAULT)
+
+    def toGridExtent: GridExtent = GridExtent(self.extent, self.cellheight, self.cellwidth)
   }
 }

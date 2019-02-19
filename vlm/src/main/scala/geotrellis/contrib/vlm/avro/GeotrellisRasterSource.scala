@@ -17,17 +17,14 @@
 package geotrellis.contrib.vlm.avro
 
 import geotrellis.contrib.vlm._
-import geotrellis.contrib.vlm.geotiff._
 import geotrellis.vector._
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
-import geotrellis.raster.io.geotiff.{Auto, AutoHigherResolution, Base, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
-import geotrellis.raster.io.geotiff.reader.GeoTiffReader
+import geotrellis.raster.io.geotiff.{Auto, AutoHigherResolution, Base, OverviewStrategy}
 import geotrellis.spark.{LayerId, Metadata, SpatialKey, TileLayerMetadata}
 import geotrellis.spark.io._
-import geotrellis.contrib.vlm.avro._
 import geotrellis.raster.{MultibandTile, Tile}
 
 /**
