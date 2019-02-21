@@ -23,16 +23,13 @@ import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 
 import cats.syntax.option._
-import org.gdal.gdal.Dataset
 
 case class GDALResampleRasterSource(
   uri: String,
   resampleGrid: ResampleGrid,
   method: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
-  options: GDALWarpOptions = GDALWarpOptions(),
-  baseWarpList: List[GDALWarpOptions] = Nil,
-  @transient parentDatasets: Array[Dataset] = Array()
+  options: GDALWarpOptions = GDALWarpOptions()
 ) extends GDALBaseRasterSource {
   def resampleMethod: Option[ResampleMethod] = method.some
 

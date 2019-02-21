@@ -87,7 +87,7 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options.reproject(rasterExtent, crs, targetCRS, reprojectOptions))
+    GDALReprojectRasterSource(uri, reprojectOptions, strategy, options.reproject(rasterExtent, crs, targetCRS, reprojectOptions))
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
     GDALResampleRasterSource(uri, resampleGrid, method, strategy, options.resample(rasterExtent.toGridExtent, resampleGrid))
