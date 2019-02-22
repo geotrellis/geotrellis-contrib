@@ -116,8 +116,8 @@ class GDALWarpOptionsSpec extends FunSpec with RasterMatchers with BetterRasterM
             region = RasterExtent(Extent(-8769160.0, 4257700.0, -8750630.0, 4274460.0), CellSize(22, 22))
           )
 
-      optimizedRawResample.rasterExtent shouldBe rs.rasterExtent
-      originalRawResample.rasterExtent shouldBe rs.rasterExtent
+      optimizedRawResample.rasterExtent shouldBe rs.layerGridExtent
+      originalRawResample.rasterExtent shouldBe rs.layerGridExtent
     }
   }
 }

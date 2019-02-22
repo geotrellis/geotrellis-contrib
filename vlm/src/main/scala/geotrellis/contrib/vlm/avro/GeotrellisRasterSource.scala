@@ -44,7 +44,7 @@ case class GeotrellisRasterSource(
 
   lazy val reader = CollectionLayerReader(uri)
   lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
-  lazy val rasterExtent: RasterExtent =
+  lazy val layerGridExtent: RasterExtent =
     metadata.layout.createAlignedGridExtent(metadata.extent).toRasterExtent()
 
   lazy val resolutions: List[RasterExtent] = GeotrellisRasterSource.getResolutions(reader, layerId.name)

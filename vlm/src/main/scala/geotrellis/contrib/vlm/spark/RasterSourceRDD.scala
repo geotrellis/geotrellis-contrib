@@ -1,11 +1,11 @@
 /*
- * Copyright 2018 Azavea
+ * Copyright 2018-2019 Azavea, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *       http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,18 +14,14 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
-
-import geotrellis.raster._
-import geotrellis.raster.resample._
-import geotrellis.vector._
-import geotrellis.spark._
-import geotrellis.spark.partition._
-import geotrellis.spark.tiling._
-import geotrellis.proj4._
-
-import org.apache.spark._
-import org.apache.spark.rdd._
+package geotrellis.contrib.vlm.spark
+import geotrellis.contrib.vlm.{LayoutTileSource, RasterRegion, RasterSource, RasterSummary, ReadingSource}
+import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
+import geotrellis.raster.{ArrayTile, MultibandTile, NODATA, Tile}
+import geotrellis.spark.tiling.LayoutDefinition
+import geotrellis.spark.{ContextRDD, KeyBounds, MultibandTileLayerRDD, SpatialKey, TileLayerMetadata}
+import org.apache.spark.rdd.RDD
+import org.apache.spark.{Partitioner, SparkContext}
 
 import scala.collection.mutable.ArrayBuilder
 import scala.reflect.ClassTag

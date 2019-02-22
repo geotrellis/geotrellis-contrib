@@ -34,8 +34,8 @@ case class GeoTiffRasterSource(
   @transient lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
 
-  lazy val rasterExtent: RasterExtent = tiff.rasterExtent
-  lazy val resolutions: List[RasterExtent] = rasterExtent :: tiff.overviews.map(_.rasterExtent)
+  lazy val layerGridExtent: RasterExtent = tiff.rasterExtent
+  lazy val resolutions: List[RasterExtent] = layerGridExtent :: tiff.overviews.map(_.rasterExtent)
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = dstCellType.getOrElse(tiff.cellType)
@@ -50,10 +50,10 @@ case class GeoTiffRasterSource(
     GeoTiffRasterSource(uri, Some(targetCellType))
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
+    val bounds = layerGridExtent.gridBoundsFor(extent, clamp = false)
     val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
     val it = geoTiffTile.crop(List(bounds), bands.toArray).map { case (gb, tile) =>
-      Raster(tile, rasterExtent.extentFor(gb, clamp = false))
+      Raster(tile, layerGridExtent.extentFor(gb, clamp = false))
     }
     if (it.hasNext) Some(convertRaster(it.next)) else None
   }
@@ -64,13 +64,13 @@ case class GeoTiffRasterSource(
   }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = true))
+    val bounds = extents.map(layerGridExtent.gridBoundsFor(_, clamp = true))
     readBounds(bounds, bands)
   }
 
   override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
-    val intersectingBounds = bounds.flatMap(_.intersection(this)).toSeq
+    val intersectingBounds = bounds.flatMap(_.intersection(griddedExtent.gridBounds)).toSeq
     geoTiffTile.crop(intersectingBounds, bands.toArray).map { case (gb, tile) =>
       convertRaster(Raster(tile, rasterExtent.extentFor(gb, clamp = true)))
     }

@@ -22,18 +22,20 @@ sealed trait ResampleGrid {
   // this is a by name parameter, as we don't need to call the source in all ResampleGrid types
   def apply(source: => RasterExtent): RasterExtent
 }
+object ResampleGrid {
 
-case class Dimensions(cols: Int, rows: Int) extends ResampleGrid {
-  def apply(source: => RasterExtent): RasterExtent =
-    RasterExtent(source.extent, cols, rows)
-}
+  case class Dimensions(cols: Int, rows: Int) extends ResampleGrid {
+    def apply(source: => RasterExtent): RasterExtent =
+      RasterExtent(source.extent, cols, rows)
+  }
 
-case class TargetGrid(grid: GridExtent) extends ResampleGrid {
-  def apply(source: => RasterExtent): RasterExtent =
-    grid.createAlignedRasterExtent(source.extent)
-}
+  case class TargetGrid(grid: GridExtent) extends ResampleGrid {
+    def apply(source: => RasterExtent): RasterExtent =
+      grid.createAlignedRasterExtent(source.extent)
+  }
 
-case class TargetRegion(region: RasterExtent) extends ResampleGrid {
-  def apply(source: => RasterExtent): RasterExtent =
-    region
+  case class TargetRegion(region: RasterExtent) extends ResampleGrid {
+    def apply(source: => RasterExtent): RasterExtent =
+      region
+  }
 }

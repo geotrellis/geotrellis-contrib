@@ -42,7 +42,7 @@ case class GeotrellisResampleRasterSource(
     baseMetadata.layout.createAlignedGridExtent(baseMetadata.extent).toRasterExtent()
 
   @transient protected lazy val layerId: LayerId =
-    GeotrellisRasterSource.getClosestLayer(resolutions, layerIds, baseLayerId, rasterExtent.cellSize, strategy)
+    GeotrellisRasterSource.getClosestLayer(resolutions, layerIds, baseLayerId, layerGridExtent.cellSize, strategy)
 
   lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
 
@@ -51,14 +51,14 @@ case class GeotrellisResampleRasterSource(
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
   lazy val layerName = baseLayerId.name
-  lazy val rasterExtent: RasterExtent = resampleGrid(baseRasterExtent)
+  lazy val layerGridExtent: RasterExtent = resampleGrid(baseRasterExtent)
   lazy val resolutions: List[RasterExtent] = GeotrellisRasterSource.getResolutions(reader, layerName)
   lazy val layerIds: Seq[LayerId] = GeotrellisRasterSource.getLayerIdsByName(reader, layerName)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] =
     GeotrellisRasterSource.readIntersecting(reader, layerId, metadata, extent, bands)
       .map { raster =>
-        val targetRasterExtent = rasterExtent.createAlignedRasterExtent(extent)
+        val targetRasterExtent = layerGridExtent.createAlignedRasterExtent(extent)
         raster.resample(targetRasterExtent, method)
       }
 

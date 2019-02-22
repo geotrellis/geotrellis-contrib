@@ -16,9 +16,11 @@
 
 package geotrellis.contrib.vlm
 
-import geotrellis.gdal._
+import geotrellis.contrib.vlm.ResampleGrid.{Dimensions, TargetGrid, TargetRegion}
+import geotrellis.contrib.vlm.model.GriddedExtent.LayerGridExtent
+import geotrellis.contrib.vlm.model._
 import geotrellis.vector._
-import geotrellis.raster._
+import geotrellis.raster.{GridBounds => _, _}
 import geotrellis.raster.resample._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.proj4._
@@ -42,21 +44,27 @@ import geotrellis.util.GetComponent
   * @groupdesc reproject Functions to resample raster data in target projection.
   * @groupprio reproject 2
   */
-trait RasterSource extends CellGrid with AutoCloseable with Serializable {
+trait RasterSource extends LayerLike with AutoCloseable with Serializable {
+  //type RSWidening[N] = Widening[N, Long]
+  type RSShrinking[N] = Shrinking[Long, N]
+
+  // TODO: is this necessary?
   def resampleMethod: Option[ResampleMethod]
+
+  // TODO: affirm all RasterSources have a URI...
   def uri: String
+
   def crs: CRS
   def bandCount: Int
-
   def cellType: CellType
 
   /** Cell size at which rasters will be read when using this [[RasterSource]]
     *
     * Note: some re-sampling of underlying raster data may be required to produce this cell size.
     */
-  def cellSize: CellSize = rasterExtent.cellSize
+  def cellSize: CellSize = griddedExtent.cellSize
 
-  def rasterExtent: RasterExtent
+  def griddedExtent: GriddedExtent[Long]
 
   /** All available resolutions for this raster source
     *
@@ -72,16 +80,13 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
     */
   def resolutions: List[RasterExtent]
 
-  def extent: Extent = rasterExtent.extent
+  def extent: Extent = griddedExtent.extent
 
   /** Raster pixel column count */
-  def cols: Int = rasterExtent.cols
+  def cols: Long = griddedExtent.cols
 
   /** Raster pixel row count */
-  def rows: Int = rasterExtent.rows
-
-  /** Raster pixel bounds */
-  def bounds: GridBounds = GridBounds(0, 0, cols - 1, rows - 1)
+  def rows: Long = griddedExtent.rows
 
   /** Reproject to different CRS with explicit sampling reprojectOptions.
     * @see [[geotrellis.raster.reproject.Reproject]]
@@ -154,7 +159,7 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
     * @group read
     */
   @throws[IndexOutOfBoundsException]("if requested bands do not exist")
-  def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]]
+  def read(bounds: GridBounds[Long], bands: Seq[Int]): Option[Raster[MultibandTile]]
 
   /**
     * @group read
@@ -165,7 +170,7 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
   /**
     * @group read
     */
-  def read(bounds: GridBounds): Option[Raster[MultibandTile]] =
+  def read(bounds: GridBounds[Long]): Option[Raster[MultibandTile]] =
     read(bounds, (0 until bandCount))
 
   /**
@@ -194,13 +199,13 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
   /**
     * @group read
     */
-  def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
+  def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
     bounds.toIterator.flatMap(read(_, bands).toIterator)
 
   /**
     * @group read
     */
-  def readBounds(bounds: Traversable[GridBounds]): Iterator[Raster[MultibandTile]] =
+  def readBounds(bounds: Traversable[GridBounds[Long]]): Iterator[Raster[MultibandTile]] =
     bounds.toIterator.flatMap(read(_, (0 until bandCount)).toIterator)
 
   /**
@@ -241,7 +246,7 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
   def convert(targetCellType: CellType): RasterSource =
     convert(ConvertTargetCellType(targetCellType))
 
-  def close = { }
+  def close(): Unit = { }
 }
 
 object RasterSource {

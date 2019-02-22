@@ -67,7 +67,7 @@ package object gdal {
     def resample(gridExtent: => GridExtent, resampleGrid: ResampleGrid): GDALWarpOptions = {
       val rasterExtent = gridExtent.toRasterExtent
       resampleGrid match {
-        case Dimensions(cols, rows) => self.copy(te = None, cellSize = None, dimensions = (cols, rows).some)
+        case ResampleGrid.Dimensions(cols, rows) => self.copy(te = None, cellSize = None, dimensions = (cols, rows).some)
         case _ =>
           val re = {
             val targetRasterExtent = resampleGrid(rasterExtent)

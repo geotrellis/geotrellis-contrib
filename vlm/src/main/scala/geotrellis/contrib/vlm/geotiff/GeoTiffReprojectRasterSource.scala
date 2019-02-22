@@ -17,8 +17,9 @@
 package geotrellis.contrib.vlm.geotiff
 
 import geotrellis.contrib.vlm._
+import geotrellis.contrib.vlm.model.GriddedExtent
 import geotrellis.vector._
-import geotrellis.raster._
+import geotrellis.raster.{GridBounds => _, _}
 import geotrellis.raster.reproject._
 import geotrellis.raster.resample._
 import geotrellis.proj4._
@@ -43,7 +44,7 @@ case class GeoTiffReprojectRasterSource(
   protected lazy val transform = Transform(baseCRS, crs)
   protected lazy val backTransform = Transform(crs, baseCRS)
 
-  override lazy val rasterExtent: RasterExtent = reprojectOptions.targetRasterExtent match {
+  override lazy val gridedExtent: GriddedExtent[Long] = reprojectOptions.targetRasterExtent match {
     case Some(targetRasterExtent) =>
       targetRasterExtent
     case None =>
@@ -51,7 +52,7 @@ case class GeoTiffReprojectRasterSource(
   }
 
   lazy val resolutions: List[RasterExtent] =
-    rasterExtent :: tiff.overviews.map(ovr => ReprojectRasterExtent(ovr.rasterExtent, transform))
+    layerGridExtent :: tiff.overviews.map(ovr => ReprojectRasterExtent(ovr.rasterExtent, transform))
 
   @transient private[vlm] lazy val closestTiffOverview: GeoTiff[MultibandTile] = {
     if (reprojectOptions.targetRasterExtent.isDefined
@@ -59,7 +60,7 @@ case class GeoTiffReprojectRasterSource(
       || reprojectOptions.targetCellSize.isDefined)
     {
       // we're asked to match specific target resolution, estimate what resolution we need in source to sample it
-      val estimatedSource = ReprojectRasterExtent(rasterExtent, backTransform)
+      val estimatedSource = ReprojectRasterExtent(layerGridExtent, backTransform)
       tiff.getClosestOverview(estimatedSource.cellSize, strategy)
     } else {
       tiff.getClosestOverview(baseRasterExtent.cellSize, strategy)
@@ -70,7 +71,7 @@ case class GeoTiffReprojectRasterSource(
   def cellType: CellType = dstCellType.getOrElse(tiff.cellType)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
+    val bounds = layerGridExtent.gridBoundsFor(extent, clamp = false)
     val it = readBounds(List(bounds), bands)
     if (it.hasNext) Some(it.next) else None
   }
@@ -81,17 +82,18 @@ case class GeoTiffReprojectRasterSource(
   }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = true))
+    val bounds = extents.map(layerGridExtent.gridBoundsFor(_, clamp = true))
     readBounds(bounds, bands)
   }
 
-  override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
+  override def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     val geoTiffTile = closestTiffOverview.tile.asInstanceOf[GeoTiffMultibandTile]
     val intersectingWindows = { for {
       queryPixelBounds <- bounds
       targetPixelBounds <- queryPixelBounds.intersection(this)
     } yield {
-      val targetRasterExtent = RasterExtent(rasterExtent.extentFor(targetPixelBounds, clamp = true), targetPixelBounds.width, targetPixelBounds.height)
+      val targetRasterExtent = RasterExtent(
+        layerGridExtent.extentFor(targetPixelBounds, clamp = true), targetPixelBounds.width, targetPixelBounds.height)
       val sourceExtent = targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope
       val sourcePixelBounds = closestTiffOverview.rasterExtent.gridBoundsFor(sourceExtent, clamp = true)
       (sourcePixelBounds, targetRasterExtent)
