@@ -14,18 +14,14 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
-
-import geotrellis.raster._
-import geotrellis.raster.resample._
-import geotrellis.vector._
-import geotrellis.spark._
-import geotrellis.spark.partition._
-import geotrellis.spark.tiling._
-import geotrellis.proj4._
-
-import org.apache.spark._
-import org.apache.spark.rdd._
+package geotrellis.contrib.vlm.spark
+import geotrellis.contrib.vlm.{LayoutTileSource, RasterRegion, RasterSource, ReadingSource}
+import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
+import geotrellis.raster.{ArrayTile, MultibandTile, NODATA, Tile}
+import geotrellis.spark.tiling.LayoutDefinition
+import geotrellis.spark.{ContextRDD, KeyBounds, MultibandTileLayerRDD, SpatialKey, TileLayerMetadata}
+import org.apache.spark.rdd.RDD
+import org.apache.spark.{Partitioner, SparkContext}
 
 import scala.collection.mutable.ArrayBuilder
 import scala.reflect.ClassTag
