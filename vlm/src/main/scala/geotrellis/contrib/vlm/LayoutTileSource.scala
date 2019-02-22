@@ -31,7 +31,7 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
 
   /** Generate RasterRegion for this key */
   def rasterRegionForKey(key: SpatialKey): RasterRegion = {
-    val sourcePixelBounds = source.rasterExtent.gridBoundsFor(key.extent(layout), clamp = false)
+    val sourcePixelBounds = source.rasterExtent.gridBoundsFor(key.extent(layout).bufferByLayout(layout), clamp = true)
     RasterRegion(source, sourcePixelBounds)
   }
 
@@ -43,7 +43,7 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
     * If tile area does not intersect source None will be returned.
     */
   def read(key: SpatialKey, bands: Seq[Int]): Option[MultibandTile] = {
-    val sourcePixelBounds = source.rasterExtent.gridBoundsFor(key.extent(layout))
+    val sourcePixelBounds = source.rasterExtent.gridBoundsFor(key.extent(layout).bufferByLayout(layout), clamp = true)
 
     for {
       bounds <- sourcePixelBounds.intersection(source)
@@ -70,7 +70,7 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
   def readAll(keys: Iterator[SpatialKey], bands: Seq[Int]): Iterator[(SpatialKey, MultibandTile)] =
     for {
       key <- keys
-      sourcePixelBounds = source.rasterExtent.gridBoundsFor(key.extent(layout))
+      sourcePixelBounds = source.rasterExtent.gridBoundsFor(key.extent(layout).bufferByLayout(layout), clamp = true)
       bounds <- sourcePixelBounds.intersection(source)
       raster <- source.read(bounds, bands)
     } yield {
