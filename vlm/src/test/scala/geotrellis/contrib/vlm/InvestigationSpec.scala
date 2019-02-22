@@ -55,11 +55,11 @@ class InvestigationSpec extends FunSpec with TestEnvironment with BetterRasterMa
     println(s"\nThis is the gridBounds for GeoTiff: ${gtSource.gridBounds}")
     println(s"This is the gridBounds for GDAL: ${gdSource.rasterExtent.gridBounds}\n")
 
-    println(s"\nThis is the sourceColOffset for GeoTiff: ${gtSource.tileToLayout(layout).sourceColOffset}")
-    println(s"This is the sourceColOffset for GDAL: ${gdSource.tileToLayout(layout).sourceColOffset}\n")
+    // println(s"\nThis is the sourceColOffset for GeoTiff: ${gtSource.tileToLayout(layout).sourceColOffset}")
+    // println(s"This is the sourceColOffset for GDAL: ${gdSource.tileToLayout(layout).sourceColOffset}\n")
 
-    println(s"\nThis is the sourceRowOffset for GeoTiff: ${gtSource.tileToLayout(layout).sourceRowOffset}")
-    println(s"This is the sourceRowOffset for GDAL: ${gdSource.tileToLayout(layout).sourceRowOffset}\n")
+    // println(s"\nThis is the sourceRowOffset for GeoTiff: ${gtSource.tileToLayout(layout).sourceRowOffset}")
+    //println(s"This is the sourceRowOffset for GDAL: ${gdSource.tileToLayout(layout).sourceRowOffset}\n")
 
     println(s"\nKeys for GeoTiff: ${gtSource.tileToLayout(layout).keys.size}")
     println(s"Keys for GDAL: ${gdSource.tileToLayout(layout).keys.size}\n")

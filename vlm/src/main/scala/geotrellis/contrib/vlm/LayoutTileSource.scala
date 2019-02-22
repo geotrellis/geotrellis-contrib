@@ -29,12 +29,11 @@ import geotrellis.spark.tiling._
 class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) extends AutoCloseable {
   LayoutTileSource.requireGridAligned(source.rasterExtent, layout)
 
-  def sourceColOffset: Long = ((source.extent.xmin - layout.extent.xmin) / layout.cellwidth).toLong
-  def sourceRowOffset: Long = ((layout.extent.ymax - source.extent.ymax) / layout.cellheight).toLong
-
   /** Generate RasterRegion for this key */
-  def rasterRegionForKey(key: SpatialKey): RasterRegion =
-    RasterRegion(source, source.rasterExtent.gridBoundsFor(key.extent(layout)))
+  def rasterRegionForKey(key: SpatialKey): RasterRegion = {
+    val sourcePixelBounds = source.rasterExtent.gridBoundsFor(key.extent(layout), clamp = false)
+    RasterRegion(source, sourcePixelBounds)
+  }
 
   def read(key: SpatialKey): Option[MultibandTile] =
     read(key, 0 until source.bandCount)
