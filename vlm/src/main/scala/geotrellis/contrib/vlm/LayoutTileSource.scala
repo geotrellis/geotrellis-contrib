@@ -17,6 +17,7 @@
 package geotrellis.contrib.vlm
 
 import geotrellis.raster._
+import geotrellis.vector.io._
 import geotrellis.spark.SpatialKey
 import geotrellis.spark.tiling._
 
@@ -29,11 +30,55 @@ import geotrellis.spark.tiling._
 class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) extends AutoCloseable {
   LayoutTileSource.requireGridAligned(source.rasterExtent, layout)
 
-  /** Generate RasterRegion for this key */
-  def rasterRegionForKey(key: SpatialKey): RasterRegion = {
-    val sourcePixelBounds = source.rasterExtent.gridBoundsFor(key.extent(layout).bufferByLayout(layout), clamp = true)
-    RasterRegion(source, sourcePixelBounds)
+  def sourceColOffset: Long = ((source.extent.xmin - layout.extent.xmin) / layout.cellwidth).toLong
+  def sourceRowOffset: Long = ((source.extent.xmin - layout.extent.xmin) / layout.cellwidth).toLong
+
+  def rasterRegionForKey(key: SpatialKey): Option[RasterRegion] = {
+    val col = key.col.toLong
+    val row = key.row.toLong
+    val sourcePixelBounds = GridBounds(
+      colMin = (col * layout.tileCols - sourceColOffset).toInt,
+      rowMin = (row * layout.tileRows - sourceRowOffset).toInt,
+      colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset).toInt,
+      rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset).toInt)
+
+    if (source.gridBounds.intersects(sourcePixelBounds))
+      Some(RasterRegion(source, sourcePixelBounds))
+    else
+      None
   }
+
+  /** Generate RasterRegion for this key */
+  /*
+  def rasterRegionForKey(key: SpatialKey): Option[RasterRegion] = {
+    //println(s"\nKeyExtent: ${key.extent(layout).toPolygon.toWKT()}")
+    //println(s"source.Extent: ${source.extent.toPolygon.toWKT()}\n")
+    val sourcePixelBounds = source.rasterExtent.gridBoundsFor(key.extent(layout), clamp = false)//.bufferByLayout(layout), clamp = true)
+
+    //val keyEx = key.extent(layout)
+    //val distance = (keyEx.ymax - source.extent.ymin) / source.cellSize.height
+    //val distance = (keyEx.ymax - source.extent.ymin)
+    //println(s"\nIntersection: $distance")
+    //val sourcePixelBounds = source.rasterExtent.gridBoundsFor(key.extent(layout).bufferByLayout(layout), clamp = false)
+    val calcGridBounds =
+      GridBounds(
+        (key.col * layout.tileCols - sourceColOffset).toInt,
+        (key.row * layout.tileRows - sourceRowOffset).toInt,
+        ((key.col + 1) * layout.tileCols - 1 - sourceColOffset).toInt,
+        ((key.row + 1) * layout.tileRows - 1 - sourceRowOffset).toInt
+      )
+
+    println(s"\nsourcePixelBounds: $sourcePixelBounds")
+    println(s"calcGridBounds: ${calcGridBounds}\n\n")
+
+    //require(sourcePixelBounds.intersects(source.gridBounds), s"sourcePixelBounds: $sourcePixelBounds, gridBounds: ${source.gridBounds}")
+
+    if (source.gridBounds.intersects(sourcePixelBounds))
+      Some(RasterRegion(source, sourcePixelBounds))
+    else
+      None
+  }
+  */
 
   def read(key: SpatialKey): Option[MultibandTile] =
     read(key, 0 until source.bandCount)
@@ -108,7 +153,13 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
 
   /** All intersecting RasterRegions with their respective keys */
   def keyedRasterRegions(): Iterator[(SpatialKey, RasterRegion)] =
-    keys.toIterator.map(key => (key, rasterRegionForKey(key)))
+    //keys.toIterator.map(key => (key, rasterRegionForKey(key)))
+    keys
+      .toIterator
+      .flatMap { key =>
+          val result = rasterRegionForKey(key)
+          result.map { region => (key, region) }
+      }
 
   def close = source.close()
 }
@@ -122,26 +173,38 @@ object LayoutTileSource {
     import TripleEquals._
     import Tolerance._
 
-    val eps: Double = java.lang.Double.MIN_NORMAL
+    val epsX: Double = math.min(a.cellwidth, b.cellwidth) * 0.01
+    val epsY: Double = math.min(a.cellheight, b.cellheight) * 0.01
 
-    @inline def isWhole(x: Double) = math.floor(x) == x
+    require((a.cellwidth === b.cellwidth +- epsX) && (a.cellheight === b.cellheight +- epsY),
+      s"CellSize differs: ${a.cellSize}, ${b.cellSize}")
 
     @inline def offset(a: Double, b: Double, w: Double): Double = {
       val cols = (a - b) / w
       cols - math.floor(cols)
     }
 
+
+    val deltaX = math.round((a.extent.xmin - b.extent.xmin) / b.cellwidth)
+    val deltaY = math.round((a.extent.ymin - b.extent.ymin) / b.cellheight)
+
+    /**
+     * resultX and resultY represent the pixel bounds of b that is
+     * closest to the a.extent.xmin and a.extent.ymin.
+     */
+
+    val resultX = deltaX * b.cellwidth + b.extent.xmin
+    val resultY = deltaY * b.cellheight + b.extent.ymin
+
     /**
       * TODO: This is ignored at the moment to make it soft and to make GDAL work,
       * we need to reconsider these things to be softer (?)
       */
-    /*require((a.cellwidth === b.cellwidth +- eps) && (a.cellheight === b.cellheight +- eps),
-      s"CellSize differs: ${a.cellSize}, ${b.cellSize}")
 
-    require((a.extent.xmin === b.extent.xmin +- eps) || isWhole((a.extent.xmin - b.extent.xmin) / a.cellwidth),
-      s"x-aligned: offset by ${a.cellSize} ${offset(a.extent.xmin, b.extent.xmin, a.cellwidth)}")
+    require(a.extent.xmin === resultX +- epsX,
+      s"x-aligned: offset by ${a.cellSize} ${offset(a.extent.xmin, resultX, a.cellwidth)}")
 
-    require((a.extent.ymin === b.extent.ymin +- eps) || isWhole((a.extent.ymin - b.extent.ymin) / b.cellheight),
-      s"y-aligned: offset by ${a.cellSize} ${offset(a.extent.ymin, b.extent.ymin, a.cellheight)}")*/
+    require(a.extent.ymin === resultY +- epsY,
+      s"y-aligned: offset by ${a.cellSize} ${offset(a.extent.ymin, resultY, a.cellheight)}")
   }
 }

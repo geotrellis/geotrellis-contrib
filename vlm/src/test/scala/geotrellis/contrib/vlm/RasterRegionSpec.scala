@@ -50,7 +50,7 @@ class RasterRegionSpec extends FunSpec with TestEnvironment with BetterRasterMat
       val refRdd = srcRdd.flatMap { src =>
         // too easy? whats missing
         val tileSource = new LayoutTileSource(src, layout)
-        tileSource.keys.toIterator.map { key => (key, tileSource.rasterRegionForKey(key)) }
+        tileSource.keys.toIterator.map { key => (key, tileSource.rasterRegionForKey(key).get) }
       }
 
       // TADA! Jobs done.

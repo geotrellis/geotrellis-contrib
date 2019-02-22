@@ -31,7 +31,7 @@ import scala.concurrent.ExecutionContext
 
 class InvestigationSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with BeforeAndAfterAll {
   it("should compute the histogram for the layer") {
-    val path = "file:///Users/daunnc/Downloads/issue-116/nlcd_2011_landcover_2011_01_18.tif"
+    val path = "/tmp/nlcd_2011_landcover_2011_01_18.tif"
     // val path = "file:///Users/daunnc/Downloads/issue-116/nlcd_2011_landcover_2011_02_67.tif"
 
     val method = NearestNeighbor
@@ -39,21 +39,21 @@ class InvestigationSpec extends FunSpec with TestEnvironment with BetterRasterMa
     val layout = scheme.levelForZoom(13).layout
 
     val gtSource = GeoTiffReprojectRasterSource(path, WebMercator)
-    val gdSource = GDALReprojectRasterSource(path, WebMercator)
+    //val gdSource = GDALReprojectRasterSource(path, WebMercator)
     //val tiledSource = gdSource.tileToLayout(layout)
     val tiledSource = gtSource.tileToLayout(layout)
 
-    println(s"\n\nThis is the gridBounds of the source: ${tiledSource.source.gridBounds}")
+    //println(s"\n\nThis is the gridBounds of the source: ${tiledSource.source.gridBounds}")
 
-    tiledSource.keyedRasterRegions.toArray
+    //tiledSource.keyedRasterRegions.toArray
 
-    println(s"\nThis is the cols and rows for GeoTiff: ${gtSource.tileToLayout(layout).source.cols}, ${gtSource.tileToLayout(layout).source.rows}")
-    println(s"This is the cols and rows for GDAL: ${gdSource.tileToLayout(layout).source.cols} ${gdSource.tileToLayout(layout).source.rows}\n")
+    //println(s"\nThis is the cols and rows for GeoTiff: ${gtSource.tileToLayout(layout).source.cols}, ${gtSource.tileToLayout(layout).source.rows}")
+    //println(s"This is the cols and rows for GDAL: ${gdSource.tileToLayout(layout).source.cols} ${gdSource.tileToLayout(layout).source.rows}\n")
 
-    assert(gdSource.tileToLayout(layout).keys == gtSource.tileToLayout(layout).keys)
+    //assert(gdSource.tileToLayout(layout).keys == gtSource.tileToLayout(layout).keys)
 
     println(s"\nThis is the gridBounds for GeoTiff: ${gtSource.gridBounds}")
-    println(s"This is the gridBounds for GDAL: ${gdSource.rasterExtent.gridBounds}\n")
+    //println(s"This is the gridBounds for GDAL: ${gdSource.rasterExtent.gridBounds}\n")
 
     // println(s"\nThis is the sourceColOffset for GeoTiff: ${gtSource.tileToLayout(layout).sourceColOffset}")
     // println(s"This is the sourceColOffset for GDAL: ${gdSource.tileToLayout(layout).sourceColOffset}\n")
@@ -62,12 +62,12 @@ class InvestigationSpec extends FunSpec with TestEnvironment with BetterRasterMa
     //println(s"This is the sourceRowOffset for GDAL: ${gdSource.tileToLayout(layout).sourceRowOffset}\n")
 
     println(s"\nKeys for GeoTiff: ${gtSource.tileToLayout(layout).keys.size}")
-    println(s"Keys for GDAL: ${gdSource.tileToLayout(layout).keys.size}\n")
+    //println(s"Keys for GDAL: ${gdSource.tileToLayout(layout).keys.size}\n")
 
     gtSource.tileToLayout(layout).keyedRasterRegions.toArray
-    gdSource.tileToLayout(layout).keyedRasterRegions.toArray
+    //gdSource.tileToLayout(layout).keyedRasterRegions.toArray
 
-    println(s"\nThis is the intersection for GeoTiff: ${gtSource.tileToLayout(layout).source.extent.intersection(layout.extent).get.toPolygon.toWKT()}")
-    println(s"This is the intersection for GDAL: ${gdSource.tileToLayout(layout).source.extent.intersection(layout.extent).get.toPolygon.toWKT()}\n")
+    //println(s"\nThis is the intersection for GeoTiff: ${gtSource.tileToLayout(layout).source.extent.intersection(layout.extent).get.toPolygon.toWKT()}")
+    //println(s"This is the intersection for GDAL: ${gdSource.tileToLayout(layout).source.extent.intersection(layout.extent).get.toPolygon.toWKT()}\n")
   }
 }
