@@ -17,8 +17,8 @@
 package geotrellis.contrib.vlm
 
 import geotrellis.raster._
-import geotrellis.spark.tiling._
 import geotrellis.spark.SpatialKey
+import geotrellis.spark.tiling._
 
 /** Reads tiles by key from a [[RasterSource]] as keyed by a [[LayoutDefinition]]
   * @note It is required that the [[RasterSource]] is pixel aligned with the [[LayoutDefinition]]
@@ -33,16 +33,8 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
   def sourceRowOffset: Long = ((layout.extent.ymax - source.extent.ymax) / layout.cellheight).toLong
 
   /** Generate RasterRegion for this key */
-  def rasterRegionForKey(key: SpatialKey): RasterRegion = {
-    val col = key.col.toLong
-    val row = key.row.toLong
-    val sourcePixelBounds = GridBounds(
-      colMin = (col * layout.tileCols - sourceColOffset).toInt,
-      rowMin = (row * layout.tileRows - sourceRowOffset).toInt,
-      colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset).toInt,
-      rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset).toInt)
-    RasterRegion(source, sourcePixelBounds)
-  }
+  def rasterRegionForKey(key: SpatialKey): RasterRegion =
+    RasterRegion(source, source.rasterExtent.gridBoundsFor(key.extent(layout)))
 
   def read(key: SpatialKey): Option[MultibandTile] =
     read(key, 0 until source.bandCount)
@@ -52,14 +44,7 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
     * If tile area does not intersect source None will be returned.
     */
   def read(key: SpatialKey, bands: Seq[Int]): Option[MultibandTile] = {
-    val col = key.col.toLong
-    val row = key.row.toLong
-    val sourcePixelBounds = GridBounds(
-        colMin = (col * layout.tileCols - sourceColOffset).toInt,
-        rowMin = (row * layout.tileRows - sourceRowOffset).toInt,
-        colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset).toInt,
-        rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset).toInt
-    )
+    val sourcePixelBounds = source.rasterExtent.gridBoundsFor(key.extent(layout))
 
     for {
       bounds <- sourcePixelBounds.intersection(source)
@@ -86,13 +71,7 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
   def readAll(keys: Iterator[SpatialKey], bands: Seq[Int]): Iterator[(SpatialKey, MultibandTile)] =
     for {
       key <- keys
-      col = key.col.toLong
-      row = key.row.toLong
-      sourcePixelBounds = GridBounds(
-        colMin = (col * layout.tileCols - sourceColOffset).toInt,
-        rowMin = (row * layout.tileRows - sourceRowOffset).toInt,
-        colMax = ((col + 1) * layout.tileCols - 1 - sourceColOffset).toInt,
-        rowMax = ((row + 1) * layout.tileRows - 1 - sourceRowOffset).toInt)
+      sourcePixelBounds = source.rasterExtent.gridBoundsFor(key.extent(layout))
       bounds <- sourcePixelBounds.intersection(source)
       raster <- source.read(bounds, bands)
     } yield {
