@@ -17,6 +17,7 @@
 package geotrellis.contrib.vlm
 
 import geotrellis.raster._
+import geotrellis.vector.Extent
 import geotrellis.vector.io._
 import geotrellis.spark.SpatialKey
 import geotrellis.spark.tiling._
@@ -36,6 +37,10 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
   def rasterRegionForKey(key: SpatialKey): Option[RasterRegion] = {
     val col = key.col.toLong
     val row = key.row.toLong
+    /**
+     * We need to do this manually instead of using RasterExtent.gridBoundsFor because
+     * the target pixel area isn't always square.
+     */
     val sourcePixelBounds = GridBounds(
       colMin = (col * layout.tileCols - sourceColOffset).toInt,
       rowMin = (row * layout.tileRows - sourceRowOffset).toInt,
@@ -47,38 +52,6 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
     else
       None
   }
-
-  /** Generate RasterRegion for this key */
-  /*
-  def rasterRegionForKey(key: SpatialKey): Option[RasterRegion] = {
-    //println(s"\nKeyExtent: ${key.extent(layout).toPolygon.toWKT()}")
-    //println(s"source.Extent: ${source.extent.toPolygon.toWKT()}\n")
-    val sourcePixelBounds = source.rasterExtent.gridBoundsFor(key.extent(layout), clamp = false)//.bufferByLayout(layout), clamp = true)
-
-    //val keyEx = key.extent(layout)
-    //val distance = (keyEx.ymax - source.extent.ymin) / source.cellSize.height
-    //val distance = (keyEx.ymax - source.extent.ymin)
-    //println(s"\nIntersection: $distance")
-    //val sourcePixelBounds = source.rasterExtent.gridBoundsFor(key.extent(layout).bufferByLayout(layout), clamp = false)
-    val calcGridBounds =
-      GridBounds(
-        (key.col * layout.tileCols - sourceColOffset).toInt,
-        (key.row * layout.tileRows - sourceRowOffset).toInt,
-        ((key.col + 1) * layout.tileCols - 1 - sourceColOffset).toInt,
-        ((key.row + 1) * layout.tileRows - 1 - sourceRowOffset).toInt
-      )
-
-    println(s"\nsourcePixelBounds: $sourcePixelBounds")
-    println(s"calcGridBounds: ${calcGridBounds}\n\n")
-
-    //require(sourcePixelBounds.intersects(source.gridBounds), s"sourcePixelBounds: $sourcePixelBounds, gridBounds: ${source.gridBounds}")
-
-    if (source.gridBounds.intersects(sourcePixelBounds))
-      Some(RasterRegion(source, sourcePixelBounds))
-    else
-      None
-  }
-  */
 
   def read(key: SpatialKey): Option[MultibandTile] =
     read(key, 0 until source.bandCount)
@@ -155,9 +128,24 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
 
   /** Set of keys that can be read from this tile source */
   def keys: Set[SpatialKey] = {
+    lazy val buffX = layout.cellSize.width * -0.25
+    lazy val buffY = layout.cellSize.height * -0.25
+
     layout.extent.intersection(source.extent) match {
       case Some(intersection) =>
-        layout.mapTransform.keysForGeometry(intersection.toPolygon)
+        /**
+         * Buffered down by a quarter of a pixel size in order to
+         * avoid floating point errors that can occur during
+         * key generation.
+         */
+        val buffered = intersection.copy(
+          intersection.xmin - buffX,
+          intersection.ymin - buffY,
+          intersection.xmax + buffX,
+          intersection.ymax + buffY
+        )
+
+        layout.mapTransform.keysForGeometry(buffered.toPolygon)
       case None =>
         Set.empty[SpatialKey]
     }
@@ -165,7 +153,6 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
 
   /** All intersecting RasterRegions with their respective keys */
   def keyedRasterRegions(): Iterator[(SpatialKey, RasterRegion)] =
-    //keys.toIterator.map(key => (key, rasterRegionForKey(key)))
     keys
       .toIterator
       .flatMap { key =>
