@@ -1,7 +1,24 @@
-package geotrellis.contrib.vlm
+/*
+ * Copyright 2018 Azavea
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-import geotrellis.contrib.vlm.geotiff._
+package geotrellis.contrib.vlm.spark
+
 import geotrellis.contrib.vlm.gdal._
+import geotrellis.contrib.vlm.geotiff._
+import geotrellis.contrib.vlm.{BetterRasterMatchers, GlobalLayout, RasterRegion, RasterSource, Resource, TargetGrid}
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.resample.Bilinear
@@ -9,11 +26,9 @@ import geotrellis.spark._
 import geotrellis.spark.testkit._
 import geotrellis.spark.tiling._
 import geotrellis.vector.Extent
-
-import spire.syntax.cfor._
 import org.apache.spark.rdd._
-
 import org.scalatest._
+import spire.syntax.cfor._
 
 class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
   describe("Should collect GeoTiffRasterSource RasterSummary correct") {

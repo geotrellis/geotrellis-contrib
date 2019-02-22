@@ -14,30 +14,28 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
-
-import geotrellis.contrib.vlm.geotiff._
-import geotrellis.contrib.vlm.gdal._
-import geotrellis.raster._
-import geotrellis.raster.io.geotiff._
-import geotrellis.proj4._
-import geotrellis.spark._
-import geotrellis.spark.io.hadoop._
-import geotrellis.spark.tiling._
-import geotrellis.spark.testkit._
-import geotrellis.gdal._
-import geotrellis.gdal.config._
-
-import org.apache.spark.rdd.RDD
-
-import cats.implicits._
-import cats.effect.{ContextShift, IO}
-import spire.syntax.cfor._
-import org.scalatest._
-import Inspectors._
+package geotrellis.contrib.vlm.spark
 
 import java.io.File
 import java.util.concurrent.Executors
+
+import cats.effect.{ContextShift, IO}
+import cats.implicits._
+import geotrellis.contrib.vlm.gdal._
+import geotrellis.contrib.vlm.geotiff._
+import geotrellis.contrib.vlm.{BetterRasterMatchers, LayoutTileSource, RasterSource, ReadingSource}
+import geotrellis.gdal._
+import geotrellis.proj4._
+import geotrellis.raster._
+import geotrellis.raster.io.geotiff._
+import geotrellis.spark._
+import geotrellis.spark.io.hadoop._
+import geotrellis.spark.testkit._
+import geotrellis.spark.tiling._
+import org.apache.spark.rdd.RDD
+import org.scalatest.Inspectors._
+import org.scalatest._
+import spire.syntax.cfor._
 
 import scala.concurrent.ExecutionContext
 

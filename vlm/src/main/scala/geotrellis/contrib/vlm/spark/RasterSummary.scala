@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
+package geotrellis.contrib.vlm.spark
 
+import com.typesafe.scalalogging.LazyLogging
+import geotrellis.contrib.vlm.{LayoutType, ResampleGrid, TargetGrid}
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellGrid, CellSize, CellType, RasterExtent}
 import geotrellis.spark._
 import geotrellis.spark.tiling.{LayoutDefinition, LayoutLevel, LayoutScheme}
 import geotrellis.util._
 import geotrellis.vector.{Extent, ProjectedExtent}
-
 import org.apache.spark.rdd.RDD
-import com.typesafe.scalalogging.LazyLogging
 
 case class RasterSummary(
   crs: CRS,

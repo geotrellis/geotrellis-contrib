@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
+package geotrellis.contrib.vlm.spark
 
 import geotrellis.spark._
 import geotrellis.spark.io.index.zcurve._
 import geotrellis.util._
-
 import org.apache.spark._
 
 class SpatialPartitioner[K: SpatialComponent](partitions: Int, bits: Int) extends Partitioner {
