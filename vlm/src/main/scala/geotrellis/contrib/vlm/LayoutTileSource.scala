@@ -16,9 +16,11 @@
 
 package geotrellis.contrib.vlm
 
-import geotrellis.raster._
-import geotrellis.spark.tiling._
+import geotrellis.contrib.vlm.model.GridBounds.LayerGridBounds
+import geotrellis.contrib.vlm.model.{GridBounds, GriddedExtent}
+import geotrellis.raster.{GridBounds => _, _}
 import geotrellis.spark.SpatialKey
+import geotrellis.spark.tiling._
 
 /** Reads tiles by key from a [[RasterSource]] as keyed by a [[LayoutDefinition]]
   * @note It is required that the [[RasterSource]] is pixel aligned with the [[LayoutDefinition]]
@@ -27,7 +29,7 @@ import geotrellis.spark.SpatialKey
   * @param layout definition of a tile grid over the pixel grid
   */
 class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) extends AutoCloseable {
-  LayoutTileSource.requireGridAligned(source.rasterExtent, layout)
+  LayoutTileSource.requireGridAligned[Long](source.griddedExtent, GriddedExtent(layout.extent, layout.tileCols, layout.tileRows))
 
   def sourceColOffset: Long = ((source.extent.xmin - layout.extent.xmin) / layout.cellwidth).toLong
   def sourceRowOffset: Long = ((layout.extent.ymax - source.extent.ymax) / layout.cellheight).toLong
@@ -54,15 +56,15 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
   def read(key: SpatialKey, bands: Seq[Int]): Option[MultibandTile] = {
     val col = key.col.toLong
     val row = key.row.toLong
-    val sourcePixelBounds = GridBounds(
-        colMin = (col * layout.tileCols - sourceColOffset).toInt,
-        rowMin = (row * layout.tileRows - sourceRowOffset).toInt,
-        colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset).toInt,
-        rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset).toInt
+    val sourcePixelBounds = LayerGridBounds(
+        colMin = (col * layout.tileCols - sourceColOffset),
+        rowMin = (row * layout.tileRows - sourceRowOffset),
+        colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset),
+        rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset)
     )
 
     for {
-      bounds <- sourcePixelBounds.intersection(source)
+      bounds <- sourcePixelBounds.intersection(source.grid.gridBounds)
       raster <- source.read(bounds, bands)
     } yield {
       if (raster.tile.cols == layout.tileCols && raster.tile.rows == layout.tileRows) {
@@ -72,8 +74,11 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
         // its offset is relative to the raster we wished we had
         val colOffset = bounds.colMin - sourcePixelBounds.colMin
         val rowOffset = bounds.rowMin - sourcePixelBounds.rowMin
+
+        require(colOffset <= Int.MaxValue && rowOffset <= Int.MaxValue, "Computed offsets are outside of RasterBounds")
+
         raster.tile.mapBands { (_, band) =>
-          PaddedTile(band, colOffset, rowOffset, layout.tileCols, layout.tileRows)
+          PaddedTile(band, colOffset.toInt, rowOffset.toInt, layout.tileCols, layout.tileRows)
         }
       }
     }
@@ -89,11 +94,11 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
       col = key.col.toLong
       row = key.row.toLong
       sourcePixelBounds = GridBounds(
-        colMin = (col * layout.tileCols - sourceColOffset).toInt,
-        rowMin = (row * layout.tileRows - sourceRowOffset).toInt,
-        colMax = ((col + 1) * layout.tileCols - 1 - sourceColOffset).toInt,
-        rowMax = ((row + 1) * layout.tileRows - 1 - sourceRowOffset).toInt)
-      bounds <- sourcePixelBounds.intersection(source)
+        colMin = (col * layout.tileCols - sourceColOffset),
+        rowMin = (row * layout.tileRows - sourceRowOffset),
+        colMax = ((col + 1) * layout.tileCols - 1 - sourceColOffset),
+        rowMax = ((row + 1) * layout.tileRows - 1 - sourceRowOffset))
+      bounds <- sourcePixelBounds.intersection(source.grid.gridBounds)
       raster <- source.read(bounds, bands)
     } yield {
       val tile =
@@ -104,8 +109,11 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
           // its offset is relative to the raster we wished we had
           val colOffset = bounds.colMin - sourcePixelBounds.colMin
           val rowOffset = bounds.rowMin - sourcePixelBounds.rowMin
+
+          require(colOffset <= Int.MaxValue && rowOffset <= Int.MaxValue, "Computed offsets are outside of RasterBounds")
+
           raster.tile.mapBands { (_, band) =>
-            PaddedTile(band, colOffset, rowOffset, layout.tileCols, layout.tileRows)
+            PaddedTile(band, colOffset.toInt, rowOffset.toInt, layout.tileCols, layout.tileRows)
           }
         }
       (key, tile)
@@ -132,17 +140,14 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
   def keyedRasterRegions(): Iterator[(SpatialKey, RasterRegion)] =
     keys.toIterator.map(key => (key, rasterRegionForKey(key)))
 
-  def close = source.close()
+  def close(): Unit = source.close()
 }
 
 object LayoutTileSource {
   def apply(source: RasterSource, layout: LayoutDefinition): LayoutTileSource =
     new LayoutTileSource(source, layout)
 
-  private def requireGridAligned(a: GridExtent, b: GridExtent): Unit = {
-    import org.scalactic._
-    import TripleEquals._
-    import Tolerance._
+  private def requireGridAligned[N: Integral](a: GriddedExtent[N], b: GriddedExtent[N]): Unit = {
 
     val eps: Double = java.lang.Double.MIN_NORMAL
 

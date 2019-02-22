@@ -231,7 +231,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
 
     cfor(0)(_ < 11, _ + 1) { _ =>
       val reference = GDALRasterSource(inputPath).reproject(targetCRS, method).tileToLayout(layout, method)
-      val RasterExtent(Extent(axmin, aymin, axmax, aymax), acw, ach, acols, arows) = reference.source.rasterExtent
+      val RasterExtent(Extent(axmin, aymin, axmax, aymax), acw, ach, acols, arows) = reference.source.layerGridExtent
 
       axmin shouldBe exmin +- 1e-5
       aymin shouldBe eymin +- 1e-5

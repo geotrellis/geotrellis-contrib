@@ -21,8 +21,8 @@ import geotrellis.gdal._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
-
 import cats.syntax.option._
+import geotrellis.contrib.vlm.model.Dimensions
 import org.gdal.gdal.Dataset
 
 case class GDALResampleRasterSource(
@@ -38,7 +38,7 @@ case class GDALResampleRasterSource(
 
   lazy val warpOptions: GDALWarpOptions = {
     val res = resampleGrid match {
-      case Dimensions(cols, rows) =>
+      case ResampleGrid.Dimensions(cols, rows) =>
         GDALWarpOptions(
           dimensions = (cols, rows).some,
           resampleMethod = resampleMethod

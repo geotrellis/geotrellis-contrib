@@ -16,18 +16,18 @@
 
 package geotrellis.contrib.vlm.gdal
 
+import java.net.MalformedURLException
+
 import geotrellis.contrib.vlm._
+import geotrellis.contrib.vlm.model.{GridBounds, GriddedExtent, OverflowException, Widening}
 import geotrellis.gdal._
 import geotrellis.proj4._
-import geotrellis.raster._
 import geotrellis.raster.io.geotiff.OverviewStrategy
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
+import geotrellis.raster.{GridBounds => LegacyGridBounds, _}
 import geotrellis.vector._
-
 import org.gdal.gdal.Dataset
-
-import java.net.MalformedURLException
 
 trait GDALBaseRasterSource extends RasterSource {
   val vsiPath: String = if (VSIPath.isVSIFormatted(uri)) uri else try {
@@ -49,18 +49,21 @@ trait GDALBaseRasterSource extends RasterSource {
   // current dataset
   @transient lazy val dataset: Dataset = GDAL.fromGDALWarpOptions(uri, options :: Nil, baseDataset)
 
-  lazy val bandCount: Int = dataset.getRasterCount
+  override lazy val bandCount: Int = dataset.getRasterCount
 
-  lazy val crs: CRS = dataset.crs.getOrElse(CRS.fromEpsgCode(4326))
+  override lazy val crs: CRS = dataset.crs.getOrElse(CRS.fromEpsgCode(4326))
 
   private lazy val reader: GDALReader = GDALReader(dataset)
 
   // noDataValue from the previous step
   lazy val noDataValue: Option[Double] = baseDataset.getNoDataValue
 
-  lazy val cellType: CellType = dataset.cellType
+  override lazy val cellType: CellType = dataset.cellType
 
-  lazy val rasterExtent: RasterExtent = dataset.rasterExtent
+  override lazy val griddedExtent: GriddedExtent[Long] = {
+    val re = dataset.rasterExtent
+    GriddedExtent(re.extent, re.cols, re.rows)
+  }
 
   /** Resolutions of available overviews in GDAL Dataset
     *
@@ -69,45 +72,51 @@ trait GDALBaseRasterSource extends RasterSource {
     */
   lazy val resolutions: List[RasterExtent] = {
     val band = dataset.GetRasterBand(1)
-    rasterExtent :: (0 until band.GetOverviewCount).toList.map { idx =>
+    val base = griddedExtent.toLegacyRasterExtent
+    base :: (0 until band.GetOverviewCount).toList.map { idx =>
       val ovr = band.GetOverview(idx)
       RasterExtent(extent, cols = ovr.getXSize, rows = ovr.getYSize)
     }
   }
 
-  override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
+  override def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
+    implicit val s = implicitly[RSShrinking[Int]]
     bounds
       .toIterator
-      .flatMap { gb => gridBounds.intersection(gb) }
+      .flatMap { gb => grid.gridBounds.intersection(gb) }
       .map { gb =>
-        val tile = reader.read(gb, bands = bands)
-        val extent = rasterExtent.extentFor(gb)
+        val lgb = gb.toLegacyGridBounds
+        val tile = reader.read(lgb, bands = bands)
+        val extent = griddedExtent.extentFor(gb)
         Raster(tile, extent)
       }
   }
 
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options.reproject(rasterExtent, crs, targetCRS, reprojectOptions))
+  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource = {
+    val rr = griddedExtent.toLegacyRasterExtent
+    val opt = options.reproject(rr, crs, targetCRS, reprojectOptions)
+    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, opt)
+  }
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options.resample(rasterExtent.toGridExtent, resampleGrid))
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options.resample(griddedExtent.toLegacyGridExtent, resampleGrid))
   }
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
+    val bounds = griddedExtent.gridBoundsFor(extent, clamp = false)
     read(bounds, bands)
   }
 
-  def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val it = readBounds(List(bounds).flatMap(_.intersection(this)), bands)
+  def read(bounds: GridBounds[Long], bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+    val it = readBounds(List(bounds).flatMap(_.intersection(griddedExtent.gridBounds)), bands)
     if (it.hasNext) Some(it.next) else None
   }
 
   override def readExtents(extents: Traversable[Extent]): Iterator[Raster[MultibandTile]] = {
     // TODO: clamp = true when we have PaddedTile ?
-    val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = false))
+    val bounds = extents.map(griddedExtent.gridBoundsFor(_, clamp = false))
     readBounds(bounds, 0 until bandCount)
   }
 
-  override def close = dataset.delete
+  override def close(): Unit = dataset.delete()
 }

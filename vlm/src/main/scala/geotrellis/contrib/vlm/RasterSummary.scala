@@ -22,9 +22,9 @@ import geotrellis.spark._
 import geotrellis.spark.tiling.{LayoutDefinition, LayoutLevel, LayoutScheme}
 import geotrellis.util._
 import geotrellis.vector.{Extent, ProjectedExtent}
-
 import org.apache.spark.rdd.RDD
 import com.typesafe.scalalogging.LazyLogging
+import geotrellis.contrib.vlm.ResampleGrid.TargetGrid
 
 case class RasterSummary(
   crs: CRS,
@@ -51,7 +51,7 @@ case class RasterSummary(
   def layoutDefinition(scheme: LayoutScheme): LayoutDefinition = scheme.levelFor(extent, cellSize).layout
 
   def combine(other: RasterSummary): RasterSummary = {
-    require(other.crs == crs, s"Can't combine LayerExtent for different CRS: $crs, ${other.crs}")
+    require(other.crs == crs, s"Can't combine LayerGridExtent for different CRS: $crs, ${other.crs}")
     val smallestCellSize = if (cellSize.resolution < other.cellSize.resolution) cellSize else other.cellSize
     RasterSummary(
       crs,

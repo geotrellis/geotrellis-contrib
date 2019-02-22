@@ -27,17 +27,16 @@ import geotrellis.spark.tiling._
 import geotrellis.spark.testkit._
 import geotrellis.gdal._
 import geotrellis.gdal.config._
-
 import org.apache.spark.rdd.RDD
-
 import cats.implicits._
 import cats.effect.{ContextShift, IO}
 import spire.syntax.cfor._
 import org.scalatest._
 import Inspectors._
-
 import java.io.File
 import java.util.concurrent.Executors
+
+import geotrellis.contrib.vlm.spark.RasterSourceRDD
 
 import scala.concurrent.ExecutionContext
 

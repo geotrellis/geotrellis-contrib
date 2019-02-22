@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Azavea
+ * Copyright 2018-2019 Azavea
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
+package geotrellis.contrib.vlm.spark
 
 import geotrellis.spark._
 import geotrellis.spark.io.index.zcurve._
 import geotrellis.util._
-
 import org.apache.spark._
 
 class SpatialPartitioner[K: SpatialComponent](partitions: Int, bits: Int) extends Partitioner {

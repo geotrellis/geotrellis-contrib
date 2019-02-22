@@ -16,41 +16,47 @@
 
 package geotrellis.contrib.vlm
 
+import geotrellis.contrib.vlm.model.{GridBounds, ProjectedRasterLike}
 import geotrellis.proj4.CRS
-import geotrellis.vector.{Extent, ProjectedExtent}
-import geotrellis.raster._
+import geotrellis.raster.{GridBounds => _, _}
+import geotrellis.vector.Extent
 
-/** Reference to a pixel region in a [[RasterSource]] that may be read at a later time.
-  * @note It is required that the [[RasterSource]] intersects with the given [[GridBounds]].
-  *
-  * @param source raster source that can be used to read this region.
-  * @param bounds pixel bounds relative to the source, maybe not be fully contained by the source bounds.
-  */
-case class RasterRegion(
-  source: RasterSource,
-  bounds: GridBounds
-) extends CellGrid with Serializable {
-  require(bounds.intersects(source.gridBounds), s"The given bounds: $bounds must intersect the given source: $source")
-  @transient lazy val raster: Option[Raster[MultibandTile]] =
-    for {
-      intersection <- source.gridBounds.intersection(bounds)
-      raster <- source.read(intersection)
-    } yield {
-      if (raster.tile.cols == cols && raster.tile.rows == rows)
-        raster
-      else {
-        val colOffset = math.abs(bounds.colMin - intersection.colMin)
-        val rowOffset = math.abs(bounds.rowMin - intersection.rowMin)
 
-        raster.mapTile { _.mapBands { (_, band) => PaddedTile(band, colOffset, rowOffset, cols, rows) } }
+trait RasterRegion extends ProjectedRasterLike {
+  def raster: Option[Raster[MultibandTile]]
+}
+
+object RasterRegion {
+  /** Reference to a pixel region in a [[RasterSource]] that may be read at a later time.
+    * @note It is required that the [[RasterSource]] intersects with the given [[geotrellis.contrib.vlm.model.GridBounds]].
+    *
+    * @param source raster source that can be used to read this region.
+    * @param bounds pixel bounds relative to the source, maybe not be fully contained by the source bounds.
+    */
+  def apply(source: RasterSource, bounds: GridBounds[Int]): RasterRegion =
+    ConcreteRasterRegion(source, bounds)
+
+  case class ConcreteRasterRegion(source: RasterSource, bounds: GridBounds[Int]) extends RasterRegion {
+    require(source.grid.gridBounds.intersects(bounds), s"The given bounds: $bounds must intersect the given source: $source")
+    @transient lazy val raster: Option[Raster[MultibandTile]] =
+      for {
+        intersection <- source.grid.gridBounds.intersection(bounds)
+        raster <- source.read(intersection)
+      } yield {
+        if (raster.tile.cols == cols && raster.tile.rows == rows)
+          raster
+        else {
+          val colOffset = math.abs(bounds.colMin - intersection.colMin)
+          val rowOffset = math.abs(bounds.rowMin - intersection.rowMin)
+          require(colOffset <= Int.MaxValue && rowOffset <= Int.MaxValue, "Computed offsets are outside of RasterBounds")
+          raster.mapTile { _.mapBands { (_, band) => PaddedTile(band, colOffset.toInt, rowOffset.toInt, cols, rows) } }
+        }
       }
-    }
 
-  def cols: Int = bounds.width
-  def rows: Int = bounds.height
-  def extent: Extent = source.rasterExtent.extentFor(bounds, clamp = false)
-  def crs: CRS = source.crs
-  def cellType: CellType = source.cellType
-  def rasterExtent: RasterExtent = RasterExtent(extent, cols, rows)
-  def projectedExtent: ProjectedExtent = ProjectedExtent(extent, crs)
+    override def cols: Int = bounds.width
+    override def rows: Int = bounds.height
+    override def extent: Extent = source.griddedExtent.extentFor(bounds, clamp = false)
+    override def crs: CRS = source.crs
+    override def cellType: CellType = source.cellType
+  }
 }

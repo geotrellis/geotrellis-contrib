@@ -38,7 +38,7 @@ class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with
     val sourceTiff = GeoTiffReader.readMultiband(uri)
     
     val expectedRasterExtent = {
-      val re = ReprojectRasterExtent(rasterSource.rasterExtent, Transform(rasterSource.crs, LatLng))
+      val re = ReprojectRasterExtent(rasterSource.layerGridExtent, Transform(rasterSource.crs, LatLng))
       // stretch target raster extent slightly to avoid default case in ReprojectRasterExtent
       RasterExtent(re.extent, CellSize(re.cellheight * 1.1, re.cellwidth * 1.1))
     }
