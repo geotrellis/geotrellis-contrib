@@ -39,53 +39,6 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
   // usually we align pixels
   val source: GDALRasterSource = GDALRasterSource(uri, GDALWarpOptions(alignTargetPixels = false))
 
-  it("issue-116") {
-    import geotrellis.contrib.vlm.geotiff.GeoTiffRasterSource
-    import geotrellis.proj4.{CRS, WebMercator}
-
-    // the target CRS
-    val crs: CRS = WebMercator
-
-    val tmsLevels: Array[LayoutDefinition] = {
-      val scheme = ZoomedLayoutScheme(crs, 256)
-      for (zoom <- 0 to 64) yield scheme.levelForZoom(zoom).layout
-    }.toArray
-
-    // gb: GridBounds(0,0,255,255)
-    // bounds: GridBounds(37805,58279,38060,58534)
-    // sourcePixelBounds: GridBounds(37805,58279,38060,58534)
-    // gb: GridBounds(0,0,255,255)
-    // bounds: GridBounds(75866,116557,76121,116812)
-    // sourcePixelBounds: GridBounds(75866,116557,76121,116812)
-    // 25, 9997251, 12165241
-    // 26, 19994503, 24330482
-    val path = "/Users/daunnc/Downloads/issue-116/ortho_ebee_tc_flight229_27may2015_sainsbury_COG.tif"
-    val subsetBands = List(0, 1, 2)
-
-    def gen(z: Int, x: Int, y: Int)(name: String = "tile"): Unit = {
-      val layoutDefinition = tmsLevels(z)
-
-      val result = GeoTiffRasterSource(path)
-        .reproject(WebMercator)
-        .tileToLayout(layoutDefinition, NearestNeighbor)
-        .read(SpatialKey(x, y), subsetBands) map { tile =>
-        tile.mapBands((n: Int, t: Tile) => t.toArrayTile)
-      }
-
-      result.foreach { mbtile =>
-        mbtile.band(0).renderPng().write(s"/Users/daunnc/Downloads/$name-0.png")
-        mbtile.band(1).renderPng().write(s"/Users/daunnc/Downloads/$name-1.png")
-        mbtile.band(2).renderPng().write(s"/Users/daunnc/Downloads/$name-2.png")
-
-        mbtile.renderPng().write(s"/Users/daunnc/Downloads/$name-mb.png")
-      }
-    }
-
-    gen(21, 624827, 760327)("tile21-test-ext-gr") // should be good one
-    gen(22, 1249657, 1520657)("tile22-test-ext-gr") // no extra strip
-    gen(18, 78102, 95039)("tile18-test-ext-gr") // a funny case that produces artifacts in RF
-  }
-
   it("should be able to read upper left corner") {
     val bounds = GridBounds(0, 0, 10, 10)
     val chip: Raster[MultibandTile] = source.read(bounds).get
