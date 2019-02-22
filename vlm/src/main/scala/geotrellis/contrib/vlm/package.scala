@@ -30,8 +30,6 @@ import java.nio.file.Paths
 import java.net.{URI, URL}
 import java.nio.charset.Charset
 
-import geotrellis.spark.tiling.LayoutDefinition
-import geotrellis.vector.Extent
 
 package object vlm {
   private[vlm] def getByteReader(uri: String): StreamingByteReader = {
@@ -69,16 +67,6 @@ package object vlm {
         throw new IllegalArgumentException(s"Unable to read scheme $scheme at $uri")
     }
     new StreamingByteReader(rr)
-  }
-
-  implicit class withExtentMethods(self: Extent) {
-    def bufferByLayout(layout: LayoutDefinition): Extent =
-      Extent(
-        self.xmin + layout.cellwidth / 2,
-        self.ymin + layout.cellheight / 2,
-        self.xmax - layout.cellwidth / 2,
-        self.ymax - layout.cellheight / 2
-      )
   }
 
   implicit class rasterExtentMethods(self: RasterExtent) {

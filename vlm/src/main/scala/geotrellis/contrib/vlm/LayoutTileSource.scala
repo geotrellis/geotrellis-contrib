@@ -31,7 +31,7 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
   LayoutTileSource.requireGridAligned(source.rasterExtent, layout)
 
   def sourceColOffset: Long = ((source.extent.xmin - layout.extent.xmin) / layout.cellwidth).toLong
-  def sourceRowOffset: Long = ((source.extent.xmin - layout.extent.xmin) / layout.cellwidth).toLong
+  def sourceRowOffset: Long = ((layout.extent.ymax - source.extent.ymax) / layout.cellheight).toLong
 
   def rasterRegionForKey(key: SpatialKey): Option[RasterRegion] = {
     val col = key.col.toLong
@@ -88,7 +88,13 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
     * If tile area does not intersect source None will be returned.
     */
   def read(key: SpatialKey, bands: Seq[Int]): Option[MultibandTile] = {
-    val sourcePixelBounds = source.rasterExtent.gridBoundsFor(key.extent(layout).bufferByLayout(layout), clamp = true)
+    val col = key.col.toLong
+    val row = key.row.toLong
+    val sourcePixelBounds = GridBounds(
+      colMin = (col * layout.tileCols - sourceColOffset).toInt,
+      rowMin = (row * layout.tileRows - sourceRowOffset).toInt,
+      colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset).toInt,
+      rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset).toInt)
 
     for {
       bounds <- sourcePixelBounds.intersection(source)
@@ -115,7 +121,13 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
   def readAll(keys: Iterator[SpatialKey], bands: Seq[Int]): Iterator[(SpatialKey, MultibandTile)] =
     for {
       key <- keys
-      sourcePixelBounds = source.rasterExtent.gridBoundsFor(key.extent(layout).bufferByLayout(layout), clamp = true)
+      col = key.col.toLong
+      row = key.row.toLong
+      sourcePixelBounds = GridBounds(
+        colMin = (col * layout.tileCols - sourceColOffset).toInt,
+        rowMin = (row * layout.tileRows - sourceRowOffset).toInt,
+        colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset).toInt,
+        rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset).toInt)
       bounds <- sourcePixelBounds.intersection(source)
       raster <- source.read(bounds, bands)
     } yield {
