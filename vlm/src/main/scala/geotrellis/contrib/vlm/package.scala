@@ -24,13 +24,12 @@ import geotrellis.raster.reproject.ReprojectRasterExtent
 import geotrellis.spark.io.http.util.HttpRangeReader
 import geotrellis.spark.io.s3.util.S3RangeReader
 import geotrellis.spark.io.s3.AmazonS3Client
-
 import org.apache.http.client.utils.URLEncodedUtils
 import com.amazonaws.services.s3.{AmazonS3ClientBuilder, AmazonS3URI}
-
 import java.nio.file.Paths
 import java.net.{URI, URL}
 import java.nio.charset.Charset
+
 
 package object vlm {
   private[vlm] def getByteReader(uri: String): StreamingByteReader = {
