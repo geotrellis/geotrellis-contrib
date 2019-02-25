@@ -212,6 +212,21 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
   def tileToLayout(layout: LayoutDefinition, resampleMethod: ResampleMethod = NearestNeighbor): LayoutTileSource =
     LayoutTileSource(resampleToGrid(layout, resampleMethod), layout)
 
+  private[vlm] def targetCellType: Option[TargetCellType]
+
+  protected lazy val convertRaster: Raster[MultibandTile] => Raster[MultibandTile] =
+    targetCellType match {
+      case Some(target) =>
+        (raster: Raster[MultibandTile]) => target(raster)
+      case None =>
+        (raster: Raster[MultibandTile]) => raster
+    }
+
+  def convert(targetCellType: TargetCellType): RasterSource
+
+  def convert(targetCellType: CellType): RasterSource =
+    convert(ConvertTargetCellType(targetCellType))
+
   def close = { }
 }
 

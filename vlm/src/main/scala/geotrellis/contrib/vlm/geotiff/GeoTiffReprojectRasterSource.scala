@@ -29,7 +29,8 @@ case class GeoTiffReprojectRasterSource(
   uri: String,
   crs: CRS,
   reprojectOptions: Reproject.Options = Reproject.Options.DEFAULT,
-  strategy: OverviewStrategy = AutoHigherResolution
+  strategy: OverviewStrategy = AutoHigherResolution,
+  private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource { self =>
   def resampleMethod: Option[ResampleMethod] = Some(reprojectOptions.method)
 
@@ -109,12 +110,15 @@ case class GeoTiffReprojectRasterSource(
         reprojectOptions.method,
         reprojectOptions.errorThreshold
       )
-    }
+    }.map { convertRaster }
   }
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy)
+    GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, targetCellType)
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GeoTiffReprojectRasterSource(uri, crs, reprojectOptions.copy(method = method, targetRasterExtent = Some(resampleGrid(self.rasterExtent))), strategy)
+    GeoTiffReprojectRasterSource(uri, crs, reprojectOptions.copy(method = method, targetRasterExtent = Some(resampleGrid(self.rasterExtent))), strategy, targetCellType)
+
+  def convert(targetCellType: TargetCellType): RasterSource =
+    GeoTiffReprojectRasterSource(uri, crs, reprojectOptions, strategy, Some(targetCellType))
 }

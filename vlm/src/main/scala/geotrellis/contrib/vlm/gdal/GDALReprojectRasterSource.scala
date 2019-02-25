@@ -18,6 +18,7 @@ package geotrellis.contrib.vlm.gdal
 
 import geotrellis.gdal._
 import geotrellis.proj4._
+import geotrellis.contrib.vlm.{RasterSource, TargetCellType}
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
@@ -29,7 +30,8 @@ case class GDALReprojectRasterSource(
   uri: String,
   reprojectOptions: Reproject.Options = Reproject.Options.DEFAULT,
   strategy: OverviewStrategy = AutoHigherResolution,
-  options: GDALWarpOptions = GDALWarpOptions()
+  options: GDALWarpOptions = GDALWarpOptions(),
+  private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends GDALBaseRasterSource {
   val targetCRS: CRS = options.targetCRS.get
 
@@ -64,6 +66,11 @@ case class GDALReprojectRasterSource(
       srcNoData      = noDataValue.map(_.toString).toList,
       ovr            = strategy.some
     )
+  }
+
+  override def convert(targetCellType: TargetCellType): RasterSource = {
+    val convertOptions = GDALBaseRasterSource.createConvertOptions(targetCellType, noDataValue)
+    GDALReprojectRasterSource(uri, reprojectOptions, strategy, warpOptions combine convertOptions, Some(targetCellType))
   }
 }
 

@@ -35,7 +35,12 @@ import geotrellis.raster.{MultibandTile, Tile}
   * @param layerId source layer from above catalog
   * @param bandCount number of bands for each tile in above layer
   */
-case class GeotrellisRasterSource(uri: String, layerId: LayerId, bandCount: Int = 1) extends RasterSource {
+case class GeotrellisRasterSource(
+  uri: String,
+  layerId: LayerId,
+  bandCount: Int = 1,
+  private[vlm] val targetCellType: Option[TargetCellType] = None
+) extends RasterSource {
 
   lazy val reader = CollectionLayerReader(uri)
   lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
@@ -49,7 +54,7 @@ case class GeotrellisRasterSource(uri: String, layerId: LayerId, bandCount: Int 
   def resampleMethod: Option[ResampleMethod] = None
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    GeotrellisRasterSource.read(reader, layerId, metadata, extent, bands)
+    GeotrellisRasterSource.read(reader, layerId, metadata, extent, bands).map { convertRaster }
   }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
@@ -66,12 +71,15 @@ case class GeotrellisRasterSource(uri: String, layerId: LayerId, bandCount: Int 
   }
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeotrellisReprojectRasterSource = {
-    GeotrellisReprojectRasterSource(uri, layerId, bandCount, targetCRS, reprojectOptions, strategy)
+    GeotrellisReprojectRasterSource(uri, layerId, bandCount, targetCRS, reprojectOptions, strategy, targetCellType)
   }
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
-    GeotrellisResampleRasterSource(uri, layerId, bandCount, resampleGrid, method, strategy)
+    GeotrellisResampleRasterSource(uri, layerId, bandCount, resampleGrid, method, strategy, targetCellType)
   }
+
+  def convert(targetCellType: TargetCellType): RasterSource =
+    GeotrellisRasterSource(uri, layerId, bandCount, Some(targetCellType))
 }
 
 
