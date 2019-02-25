@@ -55,7 +55,7 @@ case class GeoTiffRasterSource(
     val it = geoTiffTile.crop(List(bounds), bands.toArray).map { case (gb, tile) =>
       Raster(tile, rasterExtent.extentFor(gb, clamp = false))
     }
-    if (it.hasNext) Some(it.next) else None
+    if (it.hasNext) Some(convertRaster(it.next)) else None
   }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
