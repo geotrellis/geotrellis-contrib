@@ -44,6 +44,13 @@ trait GDALBaseRasterSource extends RasterSource {
   /** options to override some values on transformation steps, should be used carefully as these params can change the behaviour significantly */
   private[gdal] val options: GDALWarpOptions
 
+  // generatea vrt before the current options application
+  @transient private[vlm] lazy val baseDataset: Dataset = GDAL.fromGDALWarpOptions(uri, Nil)
+  // current dataset
+  @transient private[vlm] lazy val dataset: Dataset = GDAL.fromGDALWarpOptions(uri, options :: Nil, baseDataset)
+
+  lazy val bandCount: Int = dataset.getRasterCount
+
   /** options from previous transformation steps */
   private[gdal] val baseWarpList: List[GDALWarpOptions]
 
@@ -52,21 +59,6 @@ trait GDALBaseRasterSource extends RasterSource {
 
   /** the list of transformation options including the current one */
   lazy private[gdal] val warpList: List[GDALWarpOptions] = baseWarpList :+ warpOptions
-
-  // generate a vrt before the current options application
-  @transient private[vlm] lazy val fromBaseWarpList: Dataset = {
-    val (ds, history) = GDAL.fromGDALWarpOptionsH(uri, baseWarpList)
-    parentDatasets ++= history
-    ds
-  }
-  // current dataset
-  @transient private[vlm] lazy val dataset: Dataset = {
-    val (ds, history) = GDAL.fromGDALWarpOptionsH(uri, warpList, fromBaseWarpList)
-    parentDatasets ++= history
-    ds
-  }
-
-  lazy val bandCount: Int = dataset.getRasterCount
 
   lazy val crs: CRS = dataset.crs.getOrElse(CRS.fromEpsgCode(4326))
 

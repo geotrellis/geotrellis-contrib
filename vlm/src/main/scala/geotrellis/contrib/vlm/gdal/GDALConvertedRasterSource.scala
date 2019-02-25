@@ -198,13 +198,4 @@ case class GDALConvertedRasterSource(
     } else
       None
   }
-
-  override def convert(cellType: CellType, strategy: OverviewStrategy): RasterSource =
-    GDALConvertedRasterSource(uri, cellType, strategy, options, warpList, parentSteps = stepCollection)
-
-  override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, warpList, parentSteps = stepCollection)
-
-  override def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options, warpList, parentSteps = stepCollection)
 }

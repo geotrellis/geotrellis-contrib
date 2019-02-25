@@ -22,6 +22,8 @@ import geotrellis.raster._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 
+import org.gdal.gdal.Dataset
+
 import cats.syntax.option._
 
 case class GDALResampleRasterSource(
