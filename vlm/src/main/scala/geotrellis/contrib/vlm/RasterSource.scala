@@ -216,9 +216,9 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
 
   protected lazy val convertRaster: Raster[MultibandTile] => Raster[MultibandTile] =
     targetCellType match {
-      case Some(target) =>
+      case Some(target: ConvertTargetCellType) =>
         (raster: Raster[MultibandTile]) => target(raster)
-      case None =>
+      case _ =>
         (raster: Raster[MultibandTile]) => raster
     }
 
