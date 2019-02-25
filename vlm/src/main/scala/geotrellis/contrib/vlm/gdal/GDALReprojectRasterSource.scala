@@ -70,7 +70,8 @@ case class GDALReprojectRasterSource(
 
   override def convert(targetCellType: TargetCellType): RasterSource = {
     val convertOptions = GDALBaseRasterSource.createConvertOptions(targetCellType, noDataValue)
-    GDALReprojectRasterSource(uri, reprojectOptions, strategy, warpOptions combine convertOptions, Some(targetCellType))
+    val targetOptions = (convertOptions :+ warpOptions).reduce { _ combine _ }
+    GDALReprojectRasterSource(uri, reprojectOptions, strategy, targetOptions, Some(targetCellType))
   }
 }
 
