@@ -82,7 +82,7 @@ trait GDALBaseRasterSource extends RasterSource {
       .map { gb =>
         val tile = reader.read(gb, bands = bands)
         val extent = rasterExtent.extentFor(gb)
-        Raster(tile, extent)
+        convertRaster(Raster(tile, extent))
       }
   }
 
