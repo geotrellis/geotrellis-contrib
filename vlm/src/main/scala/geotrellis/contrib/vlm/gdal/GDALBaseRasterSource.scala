@@ -93,6 +93,31 @@ trait GDALBaseRasterSource extends RasterSource {
     GDALResampleRasterSource(uri, resampleGrid, method, strategy, options.resample(rasterExtent.toGridExtent, resampleGrid))
   }
 
+  /** Converts the contents of the GDALRasterSource to the [[TargetCellType]].
+   *
+   *  Note:
+   *
+   *  GDAL handles Byte data differently than GeoTrellis. Unlike GeoTrellis,
+   *  GDAL treats all Byte data as Unsigned Bytes. Thus, the output from
+   *  converting to a Signed Byte CellType can result in unexpected results.
+   *  When given values to convert to Byte, GDAL takes the following steps:
+   *
+   *  1. Checks to see if the values falls in [0, 255].
+   *  2. If the value falls outside of that range, it'll clamp it so that
+   *  it falls within it. For example: -1 would become 0 and 275 would turn
+   *  into 255.
+   *  3. If the value falls within that range and is a floating point, then
+   *  GDAL will round it up. For example: 122.492 would become 122 and 64.1
+   *  would become 64.
+   *
+   *  Thus, it is recommended that one avoids converting to Byte without first
+   *  ensuring that no data will be lost.
+   *
+   *  Note:
+   *
+   *  It is not currently possible to convet to the [[BitCellType]] using GDAL.
+   *  @group convert
+   */
   def convert(targetCellType: TargetCellType): RasterSource = {
     val convertOptions = GDALBaseRasterSource.createConvertOptions(targetCellType, noDataValue)
     val targetOptions = (convertOptions :+ options).reduce { _ combine _ }

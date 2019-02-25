@@ -224,6 +224,14 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
 
   def convert(targetCellType: TargetCellType): RasterSource
 
+  /** Converts the values within the RasterSource from one [[CellType]] to another.
+     *
+     *  Note:
+     *
+     *  [[GDALRasterSource]] differs in how it converts data from the other RasterSources.
+     *  Please see the convert docs for [[GDALRasterSource]] for more information.
+     *  @group convert
+     */
   def convert(targetCellType: CellType): RasterSource =
     convert(ConvertTargetCellType(targetCellType))
 
