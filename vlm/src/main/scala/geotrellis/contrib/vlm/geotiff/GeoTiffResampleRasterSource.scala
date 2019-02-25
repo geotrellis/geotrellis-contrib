@@ -50,7 +50,14 @@ case class GeoTiffResampleRasterSource(
     }
   }
 
-  private[geotiff] val options = parentOptions.copy(rasterExtent = Some(rasterExtent))
+  private[geotiff] val options =
+    parentOptions
+      .copy(
+        rasterExtent = Some(rasterExtent),
+        readExtentMethod = Some(read),
+        readBoundsMethod = Some(readBounds),
+        readExtentsMethod = Some(readExtents)
+      )
 
   @transient protected lazy val closestTiffOverview: GeoTiff[MultibandTile] =
     tiff.getClosestOverview(rasterExtent.cellSize, strategy)

@@ -55,7 +55,8 @@ case class GeotrellisResampleRasterSource(
   private[avro] val options: RasterViewOptions =
     parentOptions.copy(
       rasterExtent = Some(rasterExtent),
-      readMethod = Some(read)
+      readMethod = Some(read),
+      readExtentMethod = Some(read)
     )
 
   lazy val layerName = baseLayerId.name

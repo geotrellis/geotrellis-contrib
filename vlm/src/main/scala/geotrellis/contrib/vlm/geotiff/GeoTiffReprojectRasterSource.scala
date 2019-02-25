@@ -53,7 +53,11 @@ case class GeoTiffReprojectRasterSource(
   private[geotiff] val options =
     parentOptions.copy(
       crs = Some(crs),
-      rasterExtent = Some(rasterExtent)
+      rasterExtent = Some(rasterExtent),
+      readMethod = Some(read),
+      readExtentMethod = Some(read),
+      readBoundsMethod = Some(readBounds),
+      readExtentsMethod = Some(readExtents)
     )
 
   @transient private[vlm] lazy val closestTiffOverview: GeoTiff[MultibandTile] = {

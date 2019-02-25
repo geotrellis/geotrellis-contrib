@@ -44,8 +44,12 @@ case class GeoTiffConvertedRasterSource(
   def resampleMethod: Option[ResampleMethod] = None
 
   override def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
-    val it = readBounds(List(bounds), bands)
+    val it =
+      parentOptions.readExtentsMethod match {
+        case Some(readMethod) => readMethod(List(extent), bands)
+        case None => readExtents(List(extent), bands)
+      }
+
     if (it.hasNext) {
       val raster = it.next
 
@@ -57,7 +61,12 @@ case class GeoTiffConvertedRasterSource(
   }
 
   override def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val it = readBounds(List(bounds), bands)
+    val it =
+      parentOptions.readBoundsMethod match {
+        case Some(readMethod) => readMethod(List(bounds), bands)
+        case None => readBounds(List(bounds), bands)
+      }
+
     if (it.hasNext) {
       val raster = it.next
 
@@ -68,18 +77,24 @@ case class GeoTiffConvertedRasterSource(
       None
   }
 
-  override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = true))
-    readBounds(bounds, bands)
-  }
-
-  override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
-    val intersectingBounds = bounds.flatMap(_.intersection(this)).toSeq
-    geoTiffTile.crop(intersectingBounds, bands.toArray).map { case (gb, tile) =>
-      Raster(tile, rasterExtent.extentFor(gb, clamp = true))
+  override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
+    parentOptions.readExtentsMethod match {
+      case Some(readMethod) => readMethod(extents, bands).map { _.mapTile { _.convert(cellType) } }
+      case None =>
+        val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = true))
+        readBounds(bounds, bands)
     }
-  }
+
+  override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
+    parentOptions.readBoundsMethod match {
+      case Some(readMethod) => readMethod(bounds, bands).map { _.mapTile { _.convert(cellType) } }
+      case None =>
+        val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
+        val intersectingBounds = bounds.flatMap(_.intersection(this)).toSeq
+        geoTiffTile.crop(intersectingBounds, bands.toArray).map { case (gb, tile) =>
+          Raster(tile.convert(cellType), rasterExtent.extentFor(gb, clamp = true))
+        }
+    }
 
   override def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
     GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, options, stepCollection)

@@ -58,7 +58,8 @@ case class GeotrellisReprojectRasterSource(
     parentOptions.copy(
       crs = Some(crs),
       rasterExtent = Some(rasterExtent),
-      readMethod = Some(read)
+      readMethod = Some(read),
+      readExtentMethod = Some(read)
   )
 
   override lazy val resolutions: List[RasterExtent] =
