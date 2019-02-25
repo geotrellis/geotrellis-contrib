@@ -62,6 +62,7 @@ case class GDALResampleRasterSource(
 
   override def convert(targetCellType: TargetCellType): RasterSource = {
     val convertOptions = GDALBaseRasterSource.createConvertOptions(targetCellType, noDataValue)
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, warpOptions combine convertOptions, Some(targetCellType))
+    val targetOptions = (convertOptions :+ warpOptions).reduce { _ combine _ }
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, targetOptions, Some(targetCellType))
   }
 }
