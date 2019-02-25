@@ -32,7 +32,8 @@ case class GeotrellisResampleRasterSource(
   bandCount: Int,
   resampleGrid: ResampleGrid,
   method: ResampleMethod = NearestNeighbor,
-  strategy: OverviewStrategy = AutoHigherResolution
+  strategy: OverviewStrategy = AutoHigherResolution,
+  private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource { self =>
   lazy val reader = CollectionLayerReader(uri)
 
@@ -67,10 +68,13 @@ case class GeotrellisResampleRasterSource(
   }
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeotrellisReprojectRasterSource =
-    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, targetCRS, reprojectOptions, strategy)
+    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, targetCRS, reprojectOptions, strategy, targetCellType)
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GeotrellisResampleRasterSource(uri, baseLayerId, bandCount, resampleGrid, method, strategy)
+    GeotrellisResampleRasterSource(uri, baseLayerId, bandCount, resampleGrid, method, strategy, targetCellType)
+
+  def convert(targetCellType: TargetCellType): RasterSource =
+    GeotrellisResampleRasterSource(uri, baseLayerId, bandCount, resampleGrid, method, strategy, Some(targetCellType))
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
     extents.toIterator.flatMap(extent => read(extent, bands))

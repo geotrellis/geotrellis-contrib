@@ -32,7 +32,8 @@ case class GeotrellisReprojectRasterSource(
   bandCount: Int,
   crs: CRS,
   reprojectOptions: Reproject.Options = Reproject.Options.DEFAULT,
-  strategy: OverviewStrategy = AutoHigherResolution
+  strategy: OverviewStrategy = AutoHigherResolution,
+  private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource { self =>
   lazy val reader = CollectionLayerReader(uri)
 
@@ -83,7 +84,7 @@ case class GeotrellisReprojectRasterSource(
       sourceExtent = targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope
       raster <- GeotrellisRasterSource.readIntersecting(reader, layerId, metadata, sourceExtent, bands)
     } yield {
-      raster.reproject(targetRasterExtent, transform, backTransform, reprojectOptions)
+      convertRaster(raster.reproject(targetRasterExtent, transform, backTransform, reprojectOptions))
     }
   }
 
@@ -99,10 +100,13 @@ case class GeotrellisReprojectRasterSource(
     bounds.toIterator.flatMap(bounds => read(bounds, bands))
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, targetCRS, reprojectOptions, strategy)
+    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, targetCRS, reprojectOptions, strategy, targetCellType)
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
     val resampledReprojectOptions = reprojectOptions.copy(method = method, targetRasterExtent = Some(resampleGrid(self.rasterExtent)))
-    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, crs, resampledReprojectOptions, strategy)
+    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, crs, resampledReprojectOptions, strategy, targetCellType)
   }
+
+  def convert(targetCellType: TargetCellType): RasterSource =
+    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, crs, reprojectOptions, strategy, Some(targetCellType))
 }

@@ -29,7 +29,8 @@ case class GDALResampleRasterSource(
   resampleGrid: ResampleGrid,
   method: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
-  options: GDALWarpOptions = GDALWarpOptions()
+  options: GDALWarpOptions = GDALWarpOptions(),
+  private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends GDALBaseRasterSource {
   def resampleMethod: Option[ResampleMethod] = method.some
 
@@ -57,5 +58,10 @@ case class GDALResampleRasterSource(
     }
 
     options combine res
+  }
+
+  override def convert(targetCellType: TargetCellType): RasterSource = {
+    val convertOptions = GDALBaseRasterSource.createConvertOptions(targetCellType, noDataValue)
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, warpOptions combine convertOptions, Some(targetCellType))
   }
 }

@@ -29,7 +29,8 @@ case class GeoTiffResampleRasterSource(
   uri: String,
   resampleGrid: ResampleGrid,
   method: ResampleMethod = NearestNeighbor,
-  strategy: OverviewStrategy = AutoHigherResolution
+  strategy: OverviewStrategy = AutoHigherResolution,
+  private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource { self =>
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
@@ -54,7 +55,7 @@ case class GeoTiffResampleRasterSource(
     tiff.getClosestOverview(rasterExtent.cellSize, strategy)
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
-    new GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy) {
+    new GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, targetCellType) {
       override lazy val rasterExtent: RasterExtent = reprojectOptions.targetRasterExtent match {
         case Some(targetRasterExtent) => targetRasterExtent
         case None => ReprojectRasterExtent(self.rasterExtent, this.transform, this.reprojectOptions)
@@ -62,7 +63,10 @@ case class GeoTiffResampleRasterSource(
     }
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy)
+    GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, targetCellType)
+
+  def convert(targetCellType: TargetCellType): RasterSource =
+    GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, Some(targetCellType))
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)

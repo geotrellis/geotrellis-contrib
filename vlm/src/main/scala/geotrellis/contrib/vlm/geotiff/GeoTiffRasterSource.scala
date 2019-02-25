@@ -25,7 +25,10 @@ import geotrellis.raster.resample.ResampleMethod
 import geotrellis.raster.io.geotiff.{GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
-case class GeoTiffRasterSource(uri: String) extends RasterSource {
+case class GeoTiffRasterSource(
+  uri: String,
+  private[vlm] val targetCellType: Option[TargetCellType] = None
+) extends RasterSource {
   def resampleMethod: Option[ResampleMethod] = None
 
   @transient lazy val tiff: MultibandGeoTiff =
@@ -38,10 +41,13 @@ case class GeoTiffRasterSource(uri: String) extends RasterSource {
   def cellType: CellType = tiff.cellType
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
-    GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy)
+    GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, targetCellType)
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): GeoTiffResampleRasterSource =
-    GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy)
+    GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, targetCellType)
+
+  def convert(targetCellType: TargetCellType): GeoTiffRasterSource =
+    GeoTiffRasterSource(uri, Some(targetCellType))
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
@@ -66,7 +72,7 @@ case class GeoTiffRasterSource(uri: String) extends RasterSource {
     val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
     val intersectingBounds = bounds.flatMap(_.intersection(this)).toSeq
     geoTiffTile.crop(intersectingBounds, bands.toArray).map { case (gb, tile) =>
-      Raster(tile, rasterExtent.extentFor(gb, clamp = true))
+      convertRaster(Raster(tile, rasterExtent.extentFor(gb, clamp = true)))
     }
   }
 }
