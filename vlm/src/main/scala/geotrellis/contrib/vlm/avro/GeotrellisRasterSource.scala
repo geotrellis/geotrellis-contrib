@@ -50,7 +50,7 @@ case class GeotrellisRasterSource(
   lazy val resolutions: List[RasterExtent] = GeotrellisRasterSource.getResolutions(reader, layerId.name)
 
   def crs: CRS = metadata.crs
-  def cellType: CellType = metadata.cellType
+  def cellType: CellType = dstCellType.getOrElse(metadata.cellType)
   def resampleMethod: Option[ResampleMethod] = None
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {

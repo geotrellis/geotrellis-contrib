@@ -47,7 +47,7 @@ case class GeotrellisResampleRasterSource(
   lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
 
   def crs: CRS = metadata.crs
-  def cellType: CellType = metadata.cellType
+  def cellType: CellType = dstCellType.getOrElse(metadata.cellType)
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
   lazy val layerName = baseLayerId.name

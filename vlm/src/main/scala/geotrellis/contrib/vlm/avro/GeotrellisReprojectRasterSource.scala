@@ -39,7 +39,7 @@ case class GeotrellisReprojectRasterSource(
 
   lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
 
-  def cellType: CellType = metadata.cellType
+  def cellType: CellType = dstCellType.getOrElse(metadata.cellType)
   def resampleMethod: Option[ResampleMethod] = Some(reprojectOptions.method)
 
   protected lazy val baseCRS: CRS = baseMetadata.crs
