@@ -19,8 +19,9 @@ package geotrellis.contrib.vlm
 import geotrellis.raster.{Raster, CellType, MultibandTile}
 
 sealed trait TargetCellType {
-  // this is a by name parameter, as we don't need to call the source in all ResampleGrid types
-  def apply(source: => Raster[MultibandTile]): Raster[MultibandTile]
+  def cellType: CellType
+
+  def apply(output: => Raster[MultibandTile]): Raster[MultibandTile]
 }
 
 case class ConvertTargetCellType(cellType: CellType) extends TargetCellType {
