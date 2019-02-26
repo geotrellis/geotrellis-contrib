@@ -39,7 +39,7 @@ case class GeoTiffResampleRasterSource(
 
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount
-  def cellType: CellType = tiff.cellType
+  def cellType: CellType = dstCellType.getOrElse(tiff.cellType)
 
   override lazy val rasterExtent: RasterExtent = resampleGrid(tiff.rasterExtent)
   lazy val resolutions: List[RasterExtent] = {

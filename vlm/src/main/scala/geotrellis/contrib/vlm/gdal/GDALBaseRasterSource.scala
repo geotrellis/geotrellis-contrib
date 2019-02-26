@@ -58,7 +58,7 @@ trait GDALBaseRasterSource extends RasterSource {
   // noDataValue from the previous step
   lazy val noDataValue: Option[Double] = baseDataset.getNoDataValue
 
-  lazy val cellType: CellType = dataset.cellType
+  lazy val cellType: CellType = dstCellType.getOrElse(dataset.cellType)
 
   lazy val rasterExtent: RasterExtent = dataset.rasterExtent
 

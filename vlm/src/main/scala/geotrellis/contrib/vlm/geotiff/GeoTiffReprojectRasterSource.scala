@@ -67,7 +67,7 @@ case class GeoTiffReprojectRasterSource(
   }
 
   def bandCount: Int = tiff.bandCount
-  def cellType: CellType = tiff.cellType
+  def cellType: CellType = dstCellType.getOrElse(tiff.cellType)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)

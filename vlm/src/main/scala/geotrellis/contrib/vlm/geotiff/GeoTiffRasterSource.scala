@@ -38,7 +38,7 @@ case class GeoTiffRasterSource(
   lazy val resolutions: List[RasterExtent] = rasterExtent :: tiff.overviews.map(_.rasterExtent)
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount
-  def cellType: CellType = tiff.cellType
+  def cellType: CellType = dstCellType.getOrElse(tiff.cellType)
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
     GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, targetCellType)
