@@ -62,7 +62,7 @@ object TestCatalog {
       val layout = LayoutDefinition(rasterExtent, tileSize = 256)
 
       val rdd: MultibandTileLayerRDD[SpatialKey] =
-        RasterSourceRDD(List(rs), layout)
+        RasterSourceRDD(List(rs.resampleToGrid(layout)), layout)
           .withContext( tiledd =>
             // the tiles are actually `PaddedTile`, this forces them to be ArrayTile
             tiledd.mapValues { mb: MultibandTile => ArrayMultibandTile(mb.bands.map(_.toArrayTile))}
@@ -85,7 +85,7 @@ object TestCatalog {
       val layout = LayoutDefinition(rasterExtent, tileSize = 256)
 
       val rdd: TileLayerRDD[SpatialKey] =
-        RasterSourceRDD(List(rs), layout)
+        RasterSourceRDD(List(rs.resampleToGrid(layout)), layout)
           .withContext( tiledd =>
             tiledd.mapValues { mb: MultibandTile =>
               ArrayMultibandTile(mb.bands.map(_.toArrayTile)).band(0)  // Get only first band
