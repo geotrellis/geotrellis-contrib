@@ -84,6 +84,23 @@ lazy val vlm = project
       """.stripMargin
   )
 
+lazy val summary = project
+  .settings(commonSettings)
+  .settings(
+    organization := "com.azavea.geotrellis",
+    name := "geotrellis-contrib-summary",
+    version := "0.0.1",
+    libraryDependencies ++= Seq(
+      geotrellisRaster,
+      geotrellisVector,
+      simulacrum,
+      scalatest % Test
+    ),
+    Test / fork := true,
+    Test / parallelExecution := false,
+    Test / testOptions += Tests.Argument("-oD")
+  )
+
 lazy val benchmark = (project in file("benchmark"))
   .settings(commonSettings: _*)
   .settings( publish / skip := true)
