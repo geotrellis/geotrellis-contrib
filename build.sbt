@@ -89,7 +89,7 @@ lazy val summary = project
   .settings(
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-summary",
-    version := "0.0.1",
+    version := "0.0.2",
     libraryDependencies ++= Seq(
       geotrellisRaster,
       geotrellisVector,

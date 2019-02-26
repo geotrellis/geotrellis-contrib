@@ -2,6 +2,7 @@ package geotrellis.contrib.polygonal
 
 import geotrellis.vector._
 import geotrellis.raster._
+import geotrellis.raster.rasterize.Rasterizer
 import cats._
 
 object Implicits {
@@ -14,10 +15,13 @@ object Implicits {
       import CellAccumulator.ops._
       var result: R = feature.data
       val geom = feature.geom
-      self.rasterExtent.foreach(geom) { (col, row) =>
+
+      val options = Rasterizer.Options(includePartial =  true, sampleType = PixelIsArea)
+      Rasterizer.foreachCellByGeometry(geom, self.rasterExtent, options)  { (col: Int, row: Int) =>
         val v = self.tile.getDouble(col, row)
         if (isData(v)) result = result.add(v)
       }
+
       Feature(geom, result)
     }
   }
