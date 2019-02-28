@@ -24,11 +24,17 @@ import geotrellis.raster.reproject.ReprojectRasterExtent
 import geotrellis.spark.io.http.util.HttpRangeReader
 import geotrellis.spark.io.s3.util.S3RangeReader
 import geotrellis.spark.io.s3.AmazonS3Client
+import geotrellis.vector._
+import geotrellis.raster._
+
 import org.apache.http.client.utils.URLEncodedUtils
 import com.amazonaws.services.s3.{AmazonS3ClientBuilder, AmazonS3URI}
+
 import java.nio.file.Paths
 import java.net.{URI, URL}
 import java.nio.charset.Charset
+
+import com.azavea.gdal.GDALWarp
 
 
 package object vlm {
@@ -67,6 +73,111 @@ package object vlm {
         throw new IllegalArgumentException(s"Unable to read scheme $scheme at $uri")
     }
     new StreamingByteReader(rr)
+  }
+
+  implicit class tokenMethods(val token: Long) extends AnyVal {
+
+    def getProjection(): Option[String] = {
+      val crs = Array.ofDim[Byte](1 << 12)
+      GDALWarp.get_crs_wkt(token, 0, crs)
+      Some(new String(crs, "UTF-8"))
+    }
+
+    def rasterExtent(): RasterExtent = {
+      val transform = Array.ofDim[Double](6)
+      val width_height = Array.ofDim[Int](2)
+      GDALWarp.get_transform(token, 0, transform)
+      GDALWarp.get_width_height(token, 0, width_height)
+
+      val xmin = transform(0)
+      val ymin = transform(3)
+      val xmax = xmin + math.abs(transform(1)) * width_height(0)
+      val ymax = ymin + math.abs(transform(5)) * width_height(1)
+      val e = Extent(xmin, ymin, xmax, ymax)
+
+      RasterExtent(e,
+        math.abs(transform(1)), math.abs(transform(5)),
+        width_height(0), width_height(1))
+    }
+
+    def resolutions: List[RasterExtent] = {
+      val N = 1 << 8;
+      val widths = Array.ofDim[Int](N)
+      val heights = Array.ofDim[Int](N)
+      val extent = token.extent
+      GDALWarp.get_overview_widths_heights(token, 0, widths, heights)
+      widths.zip(heights).flatMap({ case (w, h) =>
+        if (w > 0 && h > 0) Some(RasterExtent(extent, cols = w, rows = h))
+        else None
+      }).toList
+    }
+
+    def extent(): Extent = token.rasterExtent.extent
+
+    def bandCount(): Int = {
+      val count = Array.ofDim[Int](1)
+      GDALWarp.get_band_count(token, 0, count)
+      count(0)
+    }
+
+    def crs(): CRS = {
+      val crs = Array.ofDim[Byte](1 << 12)
+      GDALWarp.get_crs_wkt(token, 0, crs)
+      CRS.fromWKT(new String(crs, "UTF-8"))
+    }
+
+    def noDataValue(): Option[Double] = {
+      val nodata = Array.ofDim[Double](1)
+      val success = Array.ofDim[Int](1)
+      GDALWarp.get_band_nodata(token, 0, 1, nodata, success)
+      if (success(0) == 0)
+        None
+      else
+        Some(nodata(0))
+    }
+
+    def dataType(): Int = {
+      val dataType = Array.ofDim[Int](1)
+      GDALWarp.get_band_data_type(token, 0, 1, dataType)
+      dataType(0)
+    }
+
+    def cellSize(): CellSize = {
+      val transform = Array.ofDim[Double](6)
+      GDALWarp.get_transform(token, 0, transform)
+      CellSize(transform(1), transform(5))
+    }
+
+    def cellType(): CellType = {
+      token.dataType match {
+        case GDALWarp.GDT_Byte => ByteCellType
+        case GDALWarp.GDT_UInt16 => UShortCellType
+        case GDALWarp.GDT_Int16 => ShortCellType
+        case GDALWarp.GDT_UInt32 => throw new Exception("Unsupported data type")
+        case GDALWarp.GDT_Int32 => IntCellType
+        case GDALWarp.GDT_Float32 => FloatCellType
+        case GDALWarp.GDT_Float64 => DoubleCellType
+        case GDALWarp.GDT_CInt16 => throw new Exception("Unsupported data type")
+        case GDALWarp.GDT_CInt32 => throw new Exception("Unsupported data type")
+        case GDALWarp.GDT_CFloat32 => throw new Exception("Unsupported data type")
+        case GDALWarp.GDT_CFloat64 => throw new Exception("Unsupported data type")
+        case _ => throw new Exception("Unknown data type")
+      }
+    }
+
+    def readTile(gb: GridBounds, band: Int): Tile = {
+      val xmin = gb.colMin
+      val xmax = gb.colMax
+      val ymin = gb.rowMin
+      val ymax = gb.rowMax
+      val srcWindow: Array[Int] = Array(xmin, ymin, xmax - xmin, ymax - ymin)
+      val dstWindow: Array[Int] = Array(xmax - xmin, ymax - ymin)
+      val bytes = Array.ofDim[Byte](dstWindow(0) * dstWindow(1) * cellType.bytes)
+
+      GDALWarp.get_data(token, 0, srcWindow, dstWindow, band, dataType, bytes)
+      ArrayTile.fromBytes(bytes, cellType, xmax - xmin, ymax - ymin)
+    }
+
   }
 
   implicit class rasterExtentMethods(self: RasterExtent) {
