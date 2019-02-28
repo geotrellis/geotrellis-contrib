@@ -26,6 +26,8 @@ import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import cats.syntax.option._
 import org.gdal.osr.SpatialReference
 
+import geotrellis.contrib.vlm._
+
 case class GDALReprojectRasterSource(
   uri: String,
   reprojectOptions: Reproject.Options = Reproject.Options.DEFAULT,
