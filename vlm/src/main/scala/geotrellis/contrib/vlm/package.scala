@@ -78,7 +78,7 @@ package object vlm {
   implicit class tokenMethods(val token: Long) extends AnyVal {
 
     def getProjection(): Option[String] = {
-      val crs = Array.ofDim[Byte](1 << 12)
+      val crs = Array.ofDim[Byte](1 << 16)
       GDALWarp.get_crs_wkt(token, 0, crs)
       Some(new String(crs, "UTF-8"))
     }
@@ -89,11 +89,15 @@ package object vlm {
       GDALWarp.get_transform(token, 0, transform)
       GDALWarp.get_width_height(token, 0, width_height)
 
-      val xmin = transform(0)
-      val ymin = transform(3)
-      val xmax = xmin + math.abs(transform(1)) * width_height(0)
-      val ymax = ymin + math.abs(transform(5)) * width_height(1)
-      val e = Extent(xmin, ymin, xmax, ymax)
+      val x1 = transform(0)
+      val y1 = transform(3)
+      val x2 = x1 + transform(1) * width_height(0)
+      val y2 = y1 + transform(5) * width_height(1)
+      val e = Extent(
+        math.min(x1, x2),
+        math.min(y1, y2),
+        math.max(x1, x2),
+        math.max(y1, y2))
 
       RasterExtent(e,
         math.abs(transform(1)), math.abs(transform(5)),
@@ -121,9 +125,10 @@ package object vlm {
     }
 
     def crs(): CRS = {
-      val crs = Array.ofDim[Byte](1 << 12)
-      GDALWarp.get_crs_wkt(token, 0, crs)
-      CRS.fromWKT(new String(crs, "UTF-8"))
+      val crs = Array.ofDim[Byte](1 << 16)
+      GDALWarp.get_crs_proj4(token, 0, crs)
+      val proj4String: String = new String(crs, "UTF-8")
+      CRS.fromString(proj4String.trim)
     }
 
     def noDataValue(): Option[Double] = {
@@ -149,14 +154,15 @@ package object vlm {
     }
 
     def cellType(): CellType = {
+      val nd = noDataValue
       token.dataType match {
-        case GDALWarp.GDT_Byte => ByteCellType
+        case GDALWarp.GDT_Byte => ByteCells.withNoData(nd.map(_.toByte))
         case GDALWarp.GDT_UInt16 => UShortCellType
-        case GDALWarp.GDT_Int16 => ShortCellType
+        case GDALWarp.GDT_Int16 => ShortCells.withNoData(nd.map(_.toShort))
         case GDALWarp.GDT_UInt32 => throw new Exception("Unsupported data type")
-        case GDALWarp.GDT_Int32 => IntCellType
-        case GDALWarp.GDT_Float32 => FloatCellType
-        case GDALWarp.GDT_Float64 => DoubleCellType
+        case GDALWarp.GDT_Int32 => IntCells.withNoData(nd.map(_.toInt))
+        case GDALWarp.GDT_Float32 => FloatCells.withNoData(nd.map(_.toFloat))
+        case GDALWarp.GDT_Float64 => DoubleCells.withNoData(nd)
         case GDALWarp.GDT_CInt16 => throw new Exception("Unsupported data type")
         case GDALWarp.GDT_CInt32 => throw new Exception("Unsupported data type")
         case GDALWarp.GDT_CFloat32 => throw new Exception("Unsupported data type")
@@ -170,12 +176,12 @@ package object vlm {
       val xmax = gb.colMax
       val ymin = gb.rowMin
       val ymax = gb.rowMax
-      val srcWindow: Array[Int] = Array(xmin, ymin, xmax - xmin, ymax - ymin)
-      val dstWindow: Array[Int] = Array(xmax - xmin, ymax - ymin)
+      val srcWindow: Array[Int] = Array(xmin, ymin, xmax - xmin, ymax - ymin) // sic
+      val dstWindow: Array[Int] = Array(srcWindow(2) + 1, srcWindow(3) + 1) // sic
       val bytes = Array.ofDim[Byte](dstWindow(0) * dstWindow(1) * cellType.bytes)
 
       GDALWarp.get_data(token, 0, srcWindow, dstWindow, band, dataType, bytes)
-      ArrayTile.fromBytes(bytes, cellType, xmax - xmin, ymax - ymin)
+      ArrayTile.fromBytes(bytes, cellType, dstWindow(0), dstWindow(1))
     }
 
   }
