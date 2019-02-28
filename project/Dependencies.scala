@@ -54,4 +54,6 @@ object Dependencies {
   val hadoopClient        = "org.apache.hadoop"           % "hadoop-client"            % Version.hadoop
 
   val squants = "org.typelevel" %% "squants" % "1.3.0"
+
+  val warpwrap = "com.azavea.gdal" %% "gdalwarp" % "33" from "file:///tmp/gdalwarp.jar"
 }
