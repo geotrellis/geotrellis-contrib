@@ -25,11 +25,17 @@ import geotrellis.spark._
 import geotrellis.spark.testkit._
 import geotrellis.spark.tiling._
 import geotrellis.vector.Extent
+
+import com.azavea.gdal.GDALWarp
+
 import org.apache.spark.rdd._
 import org.scalatest._
 import spire.syntax.cfor._
 
+
 class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
+  GDALWarp.init(1<<8, 1<<2)
+
   describe("Should collect GeoTiffRasterSource RasterSummary correct") {
     it("should collect summary for a raw source") {
       val inputPath = Resource.path("img/aspect-tiled.tif")

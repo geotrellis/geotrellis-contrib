@@ -91,7 +91,7 @@ lazy val vlm = project
     ),
     Test / fork := true,
     Test / parallelExecution := false,
-    Test / testOptions += Tests.Argument("-oDF"),
+    Test / testOptions += Tests.Argument("-oDF")
   )
   .settings(
     initialCommands in console :=

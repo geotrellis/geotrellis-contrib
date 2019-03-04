@@ -36,6 +36,8 @@ import org.scalatest._
 class GDALWarpOptionsSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
   import GDALWarpOptionsSpec._
 
+  GDALWarp.init(1<<8, 1<<2)
+
   val filePath = Resource.path("img/aspect-tiled.tif")
   def filePathByIndex(i: Int): String = Resource.path(s"img/aspect-tiled-$i.tif")
 
@@ -83,8 +85,6 @@ class GDALWarpOptionsSpec extends FunSpec with RasterMatchers with BetterRasterM
   }
 
   describe("GDALWarp transformations") {
-    GDALWarp.init(1<<8, 1<<2)
-
     it("optimized transformation should behave in a same way as a list of warp applications") {
       val base = filePath
 

@@ -41,10 +41,11 @@ import java.net.MalformedURLException
 
 class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
 
+  GDALWarp.init(1<<8, 1<<2)
+
   val uri = Resource.path("img/aspect-tiled.tif")
 
   describe("GDALRasterSource") {
-    GDALWarp.init(1<<8, 1<<2)
 
     // we are going to use this source for resampling into weird resolutions, let's check it
     // usually we align pixels
@@ -88,8 +89,9 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
       val actual: Raster[MultibandTile] =
         resampledSource.read(GridBounds(0, 0, resampledSource.cols - 1, resampledSource.rows - 1)).get
 
-      // withGeoTiffClue(actual, expected, resampledSource.crs)  {
-      //   assertRastersEqual(actual, expected)
+      withGeoTiffClue(actual, expected, resampledSource.crs) {
+        assertRastersEqual(actual, expected)
+      }
     }
 
     it("should not read past file edges") {
@@ -161,11 +163,11 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
         val grouped: List[(Raster[MultibandTile], Raster[MultibandTile])] =
           sortedActual.zip(sortedExpected)
 
-        // grouped.foreach { case (actualTile, expectedTile) =>
-        //   withGeoTiffClue(actualTile, expectedTile, source.crs) {
-        //     assertRastersEqual(actualTile, expectedTile)
-        //   }
-        // }
+        grouped.foreach { case (actualTile, expectedTile) =>
+          withGeoTiffClue(actualTile, expectedTile, source.crs) {
+            assertRastersEqual(actualTile, expectedTile)
+          }
+        }
       }
     }
   }

@@ -99,9 +99,9 @@ class GDALReprojectRasterSourceSpec extends FunSpec with RasterMatchers with Bet
           actual.rasterExtent.cellwidth should be (expected.rasterExtent.cellwidth +- 1e-5)
           actual.rasterExtent.cellheight should be (expected.rasterExtent.cellheight +- 1e-5)
 
-          // withGeoTiffClue(actual, expected, LatLng)  {
-          //   assertRastersEqual(actual, expected)
-          // }
+          withGeoTiffClue(actual, expected, LatLng)  {
+            assertRastersEqual(actual, expected)
+          }
         }
       }
     }
