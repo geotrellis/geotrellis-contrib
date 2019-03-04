@@ -36,10 +36,13 @@ import spire.syntax.cfor._
 import org.scalatest._
 import Inspectors._
 
+import com.azavea.gdal.GDALWarp
+
 import java.io.File
 import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
+
 
 class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with BeforeAndAfterAll {
   val filePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
@@ -53,6 +56,8 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
   val reprojectedSource = rasterSource.reprojectToGrid(targetCRS, layout)
 
   describe("reading in GeoTiffs as RDDs") {
+    GDALWarp.init(1<<8, 1<<2)
+
     it("should have the right number of tiles") {
       val expectedKeys =
         layout
@@ -300,6 +305,8 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
   }
 
   describe("RasterSourceRDD.read") {
+    GDALWarp.init(1<<8, 1<<2)
+
     val floatingScheme = FloatingLayoutScheme(500, 270)
     val floatingLayout = floatingScheme.levelFor(rasterSource.extent, rasterSource.cellSize).layout
 

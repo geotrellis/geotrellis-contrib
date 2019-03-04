@@ -176,8 +176,8 @@ package object vlm {
       val xmax = gb.colMax
       val ymin = gb.rowMin
       val ymax = gb.rowMax
-      val srcWindow: Array[Int] = Array(xmin, ymin, xmax - xmin, ymax - ymin) // sic
-      val dstWindow: Array[Int] = Array(srcWindow(2) + 1, srcWindow(3) + 1) // sic
+      val srcWindow: Array[Int] = Array(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1)
+      val dstWindow: Array[Int] = Array(srcWindow(2), srcWindow(3))
       val bytes = Array.ofDim[Byte](dstWindow(0) * dstWindow(1) * cellType.bytes)
 
       GDALWarp.get_data(token, 0, srcWindow, dstWindow, band, dataType, bytes)
