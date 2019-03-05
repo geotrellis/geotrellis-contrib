@@ -4,7 +4,7 @@ import geotrellis.contrib.vlm.geotiff._
 import geotrellis.contrib.vlm.gdal._
 import geotrellis.proj4._
 import geotrellis.raster._
-import geotrellis.raster.resample.Bilinear
+import geotrellis.raster.resample.{Bilinear, NearestNeighbor}
 import geotrellis.spark._
 import geotrellis.spark.testkit._
 import geotrellis.spark.tiling._
@@ -17,6 +17,57 @@ import org.scalatest._
 
 class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
   describe("Should collect GeoTiffRasterSource RasterSummary correct") {
+
+    it("issue-116") {
+      import geotrellis.contrib.vlm.geotiff.GeoTiffRasterSource
+      import geotrellis.proj4.{CRS, WebMercator}
+
+      // the target CRS
+      val crs: CRS = WebMercator
+
+      val tmsLevels: Array[LayoutDefinition] = {
+        val scheme = ZoomedLayoutScheme(crs, 256)
+        for (zoom <- 0 to 64) yield scheme.levelForZoom(zoom).layout
+      }.toArray
+
+      val path = Resource.path("img/issue-116-cog.tif")
+      val subsetBands = List(0, 1, 2)
+
+      def gen(z: Int, x: Int, y: Int)(name: String = "tile"): MultibandTile = {
+        val layoutDefinition = tmsLevels(z)
+
+        val result =
+          GeoTiffRasterSource(path)
+            .reproject(WebMercator)
+            .tileToLayout(layoutDefinition, NearestNeighbor)
+            .read(SpatialKey(x, y), subsetBands) map { tile =>
+              tile.mapBands((n: Int, t: Tile) => t.toArrayTile)
+            }
+
+        result.get
+
+        /*result.foreach { mbtile =>
+          mbtile.band(0).renderPng().write(s"/Users/daunnc/Downloads/$name-0.png")
+          mbtile.band(1).renderPng().write(s"/Users/daunnc/Downloads/$name-1.png")
+          mbtile.band(2).renderPng().write(s"/Users/daunnc/Downloads/$name-2.png")
+
+          mbtile.renderPng().write(s"/Users/daunnc/Downloads/$name-mb.png")
+        }*/
+      }
+
+      val good = gen(21, 624827, 760327)("tile21-test-ext3") // should be good one
+      val bad = gen(22, 1249657, 1520657)("tile22-test-ext3") // no extra strip
+
+      val gt = good.band(0)
+      (1 until gt.rows).foreach { r =>
+        gt.getDouble(gt.cols - 1, r) shouldNot be(0)
+      }
+      val bt = bad.band(0)
+      (1 until bt.rows).foreach { r =>
+        bt.getDouble(bt.cols - 1, r) shouldNot be(0d)
+      }
+    }
+
     it("should collect summary for a raw source") {
       val inputPath = Resource.path("img/aspect-tiled.tif")
       val files = inputPath :: Nil
