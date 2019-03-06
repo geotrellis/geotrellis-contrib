@@ -17,7 +17,6 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm._
-import geotrellis.gdal._
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.OverviewStrategy
@@ -25,9 +24,12 @@ import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.vector._
 
+import geotrellis.gdal.{GDALWarpOptions, VSIPath}
+
 import com.azavea.gdal.GDALWarp
 
 import java.net.MalformedURLException
+
 
 trait GDALBaseRasterSource extends RasterSource {
   val vsiPath: String = if (VSIPath.isVSIFormatted(uri)) uri else try {

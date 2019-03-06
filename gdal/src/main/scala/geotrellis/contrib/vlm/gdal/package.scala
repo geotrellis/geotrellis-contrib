@@ -16,13 +16,15 @@
 
 package geotrellis.contrib.vlm
 
-import geotrellis.gdal._
 import geotrellis.raster._
 import geotrellis.proj4.CRS
 import geotrellis.raster.reproject.Reproject.{Options => ReprojectOptions}
 import geotrellis.vector.Extent
 
+import geotrellis.gdal.GDALWarpOptions
+
 import cats.syntax.option._
+
 
 package object gdal {
 

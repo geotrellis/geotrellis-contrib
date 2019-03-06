@@ -17,7 +17,6 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm._
-import geotrellis.gdal._
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.AutoHigherResolution

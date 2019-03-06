@@ -17,12 +17,14 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm._
-import geotrellis.gdal._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 
+import geotrellis.gdal.GDALWarpOptions
+
 import cats.syntax.option._
+
 
 case class GDALResampleRasterSource(
   uri: String,
