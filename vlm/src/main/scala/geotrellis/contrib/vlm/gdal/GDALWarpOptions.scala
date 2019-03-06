@@ -23,7 +23,6 @@ import geotrellis.proj4.CRS
 import geotrellis.vector.Extent
 
 import cats.implicits._
-import org.gdal.gdal.WarpOptions
 
 import scala.collection.JavaConverters._
 
@@ -195,9 +194,6 @@ case class GDALWarpOptions(
     { if(doo.nonEmpty) { "-doo" +: doo.map { case (k, v) => s"$k=$v" } } else Nil } :::
     { if(srcFile.nonEmpty) { "-srcfile" +: srcFile } else Nil } ::: dstFile.toList.flatMap { df => List("-dstfile", s"$df") }
   }
-
-  def toWarpOptions: WarpOptions =
-    new WarpOptions(new java.util.Vector(toWarpOptionsList.asJava))
 
   def combine(that: GDALWarpOptions): GDALWarpOptions = {
     if (that == this) this
