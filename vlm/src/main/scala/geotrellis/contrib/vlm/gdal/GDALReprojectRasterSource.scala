@@ -16,7 +16,6 @@
 
 package geotrellis.contrib.vlm.gdal
 
-import geotrellis.gdal._
 import geotrellis.proj4._
 import geotrellis.contrib.vlm.{RasterSource, TargetCellType}
 import geotrellis.raster.reproject.Reproject
@@ -26,7 +25,10 @@ import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import cats.syntax.option._
 import org.gdal.osr.SpatialReference
 
+import geotrellis.gdal.{GDALWarpOptions, GDALSpatialReference}
+
 import geotrellis.contrib.vlm._
+
 
 case class GDALReprojectRasterSource(
   uri: String,
