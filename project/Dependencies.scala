@@ -30,7 +30,7 @@ object Version {
 }
 
 object Dependencies {
-  // val gdal                    = "org.gdal"                     % "gdal"                      % Version.gdal
+  val gdalBindings            = "org.gdal"                     % "gdal"                      % Version.gdal
   val geotrellisGdal          = "com.azavea.geotrellis"       %% "geotrellis-gdal"           % Version.geotrellisGdal
   val geotrellisSpark         = "org.locationtech.geotrellis" %% "geotrellis-spark"          % Version.geotrellis
   val geotrellisSparkTestKit  = "org.locationtech.geotrellis" %% "geotrellis-spark-testkit"  % Version.geotrellis

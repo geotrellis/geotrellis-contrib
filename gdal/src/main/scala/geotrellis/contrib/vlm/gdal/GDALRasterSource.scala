@@ -19,8 +19,6 @@ package geotrellis.contrib.vlm.gdal
 import geotrellis.contrib.vlm.TargetCellType
 import geotrellis.raster.resample.ResampleMethod
 
-import geotrellis.gdal.GDALWarpOptions
-
 
 case class GDALRasterSource(
   uri: String,
