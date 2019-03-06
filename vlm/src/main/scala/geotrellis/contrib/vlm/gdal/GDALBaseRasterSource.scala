@@ -24,7 +24,7 @@ import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.vector._
 
-import geotrellis.gdal.{GDALWarpOptions, VSIPath}
+import geotrellis.gdal.GDALWarpOptions
 
 import com.azavea.gdal.GDALWarp
 
