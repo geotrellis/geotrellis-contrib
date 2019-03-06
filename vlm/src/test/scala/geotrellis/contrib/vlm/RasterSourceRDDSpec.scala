@@ -25,7 +25,6 @@ import geotrellis.spark._
 import geotrellis.spark.io.hadoop._
 import geotrellis.spark.tiling._
 import geotrellis.spark.testkit._
-//import geotrellis.gdal.config._
 
 import org.apache.spark.rdd.RDD
 

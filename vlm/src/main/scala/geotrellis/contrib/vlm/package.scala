@@ -17,7 +17,7 @@
 package geotrellis.contrib
 
 import geotrellis.util.{FileRangeReader, StreamingByteReader}
-import geotrellis.proj4.{CRS, Transform}
+import geotrellis.proj4.{CRS, LatLng, Transform}
 import geotrellis.raster.{GridExtent, RasterExtent}
 import geotrellis.raster.reproject.Reproject.Options
 import geotrellis.raster.reproject.ReprojectRasterExtent
@@ -127,8 +127,9 @@ package object vlm {
     def crs(): CRS = {
       val crs = Array.ofDim[Byte](1 << 16)
       GDALWarp.get_crs_proj4(token, 0, crs)
-      val proj4String: String = new String(crs, "UTF-8")
-      CRS.fromString(proj4String.trim)
+      val proj4String: String = new String(crs, "UTF-8").trim
+      if (proj4String.length > 0) CRS.fromString(proj4String.trim)
+      else LatLng
     }
 
     def noDataValue(): Option[Double] = {

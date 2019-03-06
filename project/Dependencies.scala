@@ -21,7 +21,6 @@ import scala.util.Properties
 
 object Version {
   val geotrellis     = "2.2.0"
-  val geotrellisGdal = "0.18.5"
   val gdal           = Properties.envOrElse("GDAL_VERSION", "2.4.0")
   val scala          = "2.11.12"
   val crossScala     = Seq(scala, "2.12.8")
@@ -30,8 +29,7 @@ object Version {
 }
 
 object Dependencies {
-  // val gdal                    = "org.gdal"                     % "gdal"                      % Version.gdal
-  val geotrellisGdal          = "com.azavea.geotrellis"       %% "geotrellis-gdal"           % Version.geotrellisGdal
+  val gdal                    = "org.gdal"                     % "gdal"                      % Version.gdal
   val geotrellisSpark         = "org.locationtech.geotrellis" %% "geotrellis-spark"          % Version.geotrellis
   val geotrellisSparkTestKit  = "org.locationtech.geotrellis" %% "geotrellis-spark-testkit"  % Version.geotrellis
   val geotrellisS3            = "org.locationtech.geotrellis" %% "geotrellis-s3"             % Version.geotrellis
