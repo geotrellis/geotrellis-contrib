@@ -38,6 +38,8 @@ import com.azavea.gdal.GDALWarp
 
 
 package object vlm {
+  val acceptableDatasets = Set(GDALWarp.SOURCE, GDALWarp.WARPED)
+
   private[vlm] def getByteReader(uri: String): StreamingByteReader = {
     val javaURI = new URI(uri)
     val noQueryParams = URLEncodedUtils.parse(uri, Charset.forName("UTF-8")).isEmpty
@@ -77,17 +79,23 @@ package object vlm {
 
   implicit class tokenMethods(val token: Long) extends AnyVal {
 
-    def getProjection(): Option[String] = {
+    def getProjection: Option[String] = getProjection(GDALWarp.WARPED)
+
+    def getProjection(dataset: Int): Option[String] = {
+      require(acceptableDatasets contains dataset)
       val crs = Array.ofDim[Byte](1 << 16)
-      GDALWarp.get_crs_wkt(token, 0, crs)
+      GDALWarp.get_crs_wkt(token, dataset, 0, crs)
       Some(new String(crs, "UTF-8"))
     }
 
-    def rasterExtent(): RasterExtent = {
+    def rasterExtent: RasterExtent = rasterExtent(GDALWarp.WARPED)
+
+    def rasterExtent(dataset: Int): RasterExtent = {
+      require(acceptableDatasets contains dataset)
       val transform = Array.ofDim[Double](6)
       val width_height = Array.ofDim[Int](2)
-      GDALWarp.get_transform(token, 0, transform)
-      GDALWarp.get_width_height(token, 0, width_height)
+      GDALWarp.get_transform(token, dataset, 0, transform)
+      GDALWarp.get_width_height(token, dataset, 0, width_height)
 
       val x1 = transform(0)
       val y1 = transform(3)
@@ -104,61 +112,87 @@ package object vlm {
         width_height(0), width_height(1))
     }
 
-    def resolutions: List[RasterExtent] = {
+    def resolutions: List[RasterExtent] = resolutions(GDALWarp.WARPED)
+
+    def resolutions(dataset: Int): List[RasterExtent] = {
+      require(acceptableDatasets contains dataset)
       val N = 1 << 8;
       val widths = Array.ofDim[Int](N)
       val heights = Array.ofDim[Int](N)
-      val extent = token.extent
-      GDALWarp.get_overview_widths_heights(token, 0, widths, heights)
+      val extent = token.extent(dataset)
+      GDALWarp.get_overview_widths_heights(token, dataset, 0, widths, heights)
       widths.zip(heights).flatMap({ case (w, h) =>
         if (w > 0 && h > 0) Some(RasterExtent(extent, cols = w, rows = h))
         else None
       }).toList
     }
 
-    def extent(): Extent = token.rasterExtent.extent
+    def extent: Extent = extent(GDALWarp.WARPED)
 
-    def bandCount(): Int = {
+    def extent(dataset: Int): Extent = {
+      require(acceptableDatasets contains dataset)
+      token.rasterExtent(dataset).extent
+    }
+
+    def bandCount: Int = bandCount(GDALWarp.WARPED)
+
+    def bandCount(dataset: Int): Int = {
+      require(acceptableDatasets contains dataset)
       val count = Array.ofDim[Int](1)
-      GDALWarp.get_band_count(token, 0, count)
+      GDALWarp.get_band_count(token, dataset, 0, count)
       count(0)
     }
 
-    def crs(): CRS = {
+    def crs: CRS = crs(GDALWarp.WARPED)
+
+    def crs(dataset: Int): CRS = {
+      require(acceptableDatasets contains dataset)
       val crs = Array.ofDim[Byte](1 << 16)
-      GDALWarp.get_crs_proj4(token, 0, crs)
+      GDALWarp.get_crs_proj4(token, dataset, 0, crs)
       val proj4String: String = new String(crs, "UTF-8").trim
       if (proj4String.length > 0) CRS.fromString(proj4String.trim)
       else LatLng
     }
 
-    def noDataValue(): Option[Double] = {
+    def noDataValue: Option[Double] = noDataValue(GDALWarp.WARPED)
+
+    def noDataValue(dataset: Int): Option[Double] = {
+      require(acceptableDatasets contains dataset)
       val nodata = Array.ofDim[Double](1)
       val success = Array.ofDim[Int](1)
-      GDALWarp.get_band_nodata(token, 0, 1, nodata, success)
+      GDALWarp.get_band_nodata(token, dataset, 0, 1, nodata, success)
       if (success(0) == 0)
         None
       else
         Some(nodata(0))
     }
 
-    def dataType(): Int = {
+    def dataType: Int = dataType(GDALWarp.WARPED)
+
+    def dataType(dataset: Int): Int = {
+      require(acceptableDatasets contains dataset)
       val dataType = Array.ofDim[Int](1)
-      GDALWarp.get_band_data_type(token, 0, 1, dataType)
+      GDALWarp.get_band_data_type(token, dataset, 0, 1, dataType)
       dataType(0)
     }
 
-    def cellSize(): CellSize = {
+    def cellSize: CellSize = cellSize(GDALWarp.WARPED)
+
+    def cellSize(dataset: Int): CellSize = {
+      require(acceptableDatasets contains dataset)
       val transform = Array.ofDim[Double](6)
-      GDALWarp.get_transform(token, 0, transform)
+      GDALWarp.get_transform(token, dataset, 0, transform)
       CellSize(transform(1), transform(5))
     }
 
-    def cellType(): CellType = {
-      val nd = noDataValue
-      token.dataType match {
+    def cellType: CellType = cellType(GDALWarp.WARPED)
+
+    def cellType(dataset: Int): CellType = {
+      require(acceptableDatasets contains dataset)
+      val nd = noDataValue(dataset)
+      token.dataType(dataset) match {
         case GDALWarp.GDT_Byte => ByteCells.withNoData(nd.map(_.toByte))
-        case GDALWarp.GDT_UInt16 => UShortCellType
+        case GDALWarp.GDT_UInt16 => UShortCells.withNoData(nd.map(_.toShort))
         case GDALWarp.GDT_Int16 => ShortCells.withNoData(nd.map(_.toShort))
         case GDALWarp.GDT_UInt32 => throw new Exception("Unsupported data type")
         case GDALWarp.GDT_Int32 => IntCells.withNoData(nd.map(_.toInt))
@@ -172,17 +206,20 @@ package object vlm {
       }
     }
 
-    def readTile(gb: GridBounds, band: Int): Tile = {
+    def readTile(gb: GridBounds, band: Int, dataset: Int = GDALWarp.WARPED): Tile = {
+      require(acceptableDatasets contains dataset)
       val xmin = gb.colMin
       val xmax = gb.colMax
       val ymin = gb.rowMin
       val ymax = gb.rowMax
       val srcWindow: Array[Int] = Array(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1)
       val dstWindow: Array[Int] = Array(srcWindow(2), srcWindow(3))
-      val bytes = Array.ofDim[Byte](dstWindow(0) * dstWindow(1) * cellType.bytes)
+      val ct = token.cellType(dataset)
+      val dt = token.dataType(dataset)
+      val bytes = Array.ofDim[Byte](dstWindow(0) * dstWindow(1) * ct.bytes)
 
-      GDALWarp.get_data(token, 0, srcWindow, dstWindow, band, dataType, bytes)
-      ArrayTile.fromBytes(bytes, cellType, dstWindow(0), dstWindow(1))
+      GDALWarp.get_data(token, dataset, 0, srcWindow, dstWindow, band, dt, bytes)
+      ArrayTile.fromBytes(bytes, ct, dstWindow(0), dstWindow(1))
     }
 
   }
