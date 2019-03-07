@@ -100,8 +100,16 @@ case class GeoTiffReprojectRasterSource(
     geoTiffTile.crop(intersectingWindows.keys.toSeq, bands.toArray).map { case (sourcePixelBounds, tile) =>
       val targetRasterExtent = intersectingWindows(sourcePixelBounds)
       val sourceRaster = Raster(tile, closestTiffOverview.rasterExtent.extentFor(sourcePixelBounds, clamp = true))
+
+
+      println(s"baseCRS: ${baseCRS.toProj4String}")
+      println(s"crs: ${crs.toProj4String}")
+      println(s"targetRasterExtent: ${targetRasterExtent}")
+      println(s"reprojectOptions.method: ${reprojectOptions.method}")
+      println(s"reprojectOptions.errorThreshold: ${reprojectOptions.errorThreshold}")
+
       val rr = implicitly[RasterRegionReproject[MultibandTile]]
-      rr.regionReproject(
+      val res = rr.regionReproject(
         sourceRaster,
         baseCRS,
         crs,
@@ -110,6 +118,13 @@ case class GeoTiffReprojectRasterSource(
         reprojectOptions.method,
         reprojectOptions.errorThreshold
       )
+
+      val bt = res.tile.band(0)
+      (1 until bt.rows).foreach { r =>
+        println(bt.getDouble(bt.cols - 1, r))
+      }
+
+      res
     }.map { convertRaster }
   }
 

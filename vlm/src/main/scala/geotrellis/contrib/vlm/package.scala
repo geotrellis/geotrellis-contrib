@@ -18,7 +18,7 @@ package geotrellis.contrib
 
 import geotrellis.util.{FileRangeReader, StreamingByteReader}
 import geotrellis.proj4.{CRS, Transform}
-import geotrellis.raster.{GridExtent, RasterExtent}
+import geotrellis.raster.{GridBounds, GridExtent, RasterExtent}
 import geotrellis.raster.reproject.Reproject.Options
 import geotrellis.raster.reproject.ReprojectRasterExtent
 import geotrellis.spark.io.http.util.HttpRangeReader
@@ -81,5 +81,14 @@ package object vlm {
       reproject(src, dest, Options.DEFAULT)
 
     def toGridExtent: GridExtent = GridExtent(self.extent, self.cellheight, self.cellwidth)
+  }
+
+  implicit class gridBoundsMethods(self: GridBounds) {
+    def buffer(buf: Int): GridBounds = GridBounds(
+      colMin = self.colMin - buf,
+      rowMin = self.rowMin - buf,
+      colMax = self.colMax + buf,
+      rowMax = self.rowMax + buf
+    )
   }
 }

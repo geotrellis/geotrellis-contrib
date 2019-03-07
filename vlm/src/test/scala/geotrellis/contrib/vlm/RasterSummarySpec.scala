@@ -4,19 +4,63 @@ import geotrellis.contrib.vlm.geotiff._
 import geotrellis.contrib.vlm.gdal._
 import geotrellis.proj4._
 import geotrellis.raster._
+import geotrellis.raster.io.geotiff.GeoTiff
+import geotrellis.raster.io.geotiff.reader.GeoTiffReader
+import geotrellis.raster.reproject.RasterRegionReproject
 import geotrellis.raster.resample.{Bilinear, NearestNeighbor}
 import geotrellis.spark._
 import geotrellis.spark.testkit._
 import geotrellis.spark.tiling._
 import geotrellis.vector.Extent
-
 import spire.syntax.cfor._
 import org.apache.spark.rdd._
-
 import org.scalatest._
 
 class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
   describe("Should collect GeoTiffRasterSource RasterSummary correct") {
+
+    it("region reproject for issue-116") {
+      val path = Resource.path("img/issue-116-cog.tif")
+      val tiff = GeoTiffReader.readMultiband(path)
+      val sourceRaster = tiff.raster
+
+      println(s"sourceRaster.rasterExtent: ${sourceRaster.rasterExtent}")
+
+      val baseCRS = CRS.fromString("+proj=utm +zone=18 +datum=WGS84 +units=m +no_defs")
+      val crs = CRS.fromString("+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs")
+      val targetRasterExtent =
+        GridExtent(
+          Extent(-8097499.91081818, 5508186.023029299, -8097490.356189644, 5508195.577657836),
+          0.037322767719160765, 0.037322767719160765
+        ).toRasterExtent
+      val method = NearestNeighbor
+      val errorThreshold = 0.125
+
+      // GeoTiff(sourceRaster, baseCRS).write("/tmp/issue-116-chip.tiff")
+
+      val rr = implicitly[RasterRegionReproject[MultibandTile]]
+      val res = rr.regionReproject(
+        sourceRaster,
+        baseCRS,
+        crs,
+        targetRasterExtent,
+        targetRasterExtent.extent.toPolygon,
+        method,
+        errorThreshold
+      )
+
+      //
+      // why there are zeros and no nodata
+      //
+      GeoTiff(res, crs).write("/tmp/issue-116-chip-result.tiff")
+
+      val bt = res.tile.band(0)
+      (1 until bt.rows).foreach { r =>
+        println(bt.getDouble(bt.cols - 1, r))
+      }
+
+      res
+    }
 
     it("issue-116") {
       import geotrellis.contrib.vlm.geotiff.GeoTiffRasterSource
@@ -55,13 +99,13 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
         }*/
       }
 
-      val good = gen(21, 624827, 760327)("tile21-test-ext3") // should be good one
+      // val good = gen(21, 624827, 760327)("tile21-test-ext3") // should be good one
       val bad = gen(22, 1249657, 1520657)("tile22-test-ext3") // no extra strip
 
-      val gt = good.band(0)
+      /*val gt = good.band(0)
       (1 until gt.rows).foreach { r =>
         gt.getDouble(gt.cols - 1, r) shouldNot be(0)
-      }
+      }*/
       val bt = bad.band(0)
       (1 until bt.rows).foreach { r =>
         bt.getDouble(bt.cols - 1, r) shouldNot be(0d)
