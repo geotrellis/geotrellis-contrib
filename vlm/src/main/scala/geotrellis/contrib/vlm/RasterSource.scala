@@ -43,7 +43,6 @@ import geotrellis.util.GetComponent
   * @groupprio reproject 2
   */
 trait RasterSource extends CellGrid with AutoCloseable with Serializable {
-  def resampleMethod: Option[ResampleMethod]
   def uri: String
   def crs: CRS
   def bandCount: Int
