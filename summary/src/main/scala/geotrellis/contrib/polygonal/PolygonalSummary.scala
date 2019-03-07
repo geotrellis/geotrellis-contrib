@@ -1,50 +1,85 @@
 package geotrellis.contrib.polygonal
 
 import cats.Monoid
-import geotrellis.vector._
-import simulacrum._
-import geotrellis.raster.rasterize.Rasterizer
 import geotrellis.raster._
+import geotrellis.vector._
+import geotrellis.raster.rasterize.Rasterizer
+import geotrellis.util.{GetComponent, MethodExtensions}
+import spire.syntax.cfor._
 
-@typeclass trait PolygonalSummary[T] {
+object PolygonalSummary {
+  final val DefaultOptions = Rasterizer.Options(includePartial = true, sampleType = PixelIsArea)
 
-  /** Polygonal summary over for pixels under geomery.
-   * Monoid.empty will be used to get the initial value of the accumulator.
-   * Rasterizer.Options are to consider pixels as areas and to include partial intersections.
-   *
-   * @param self Raster-like type containing pixel data
-   * @param feature Geometry for area of summery
-   * @param options Rasterizer options determine which pixels are judged to be intersecting the geometry.
-   */
-  def polygonalSummary[G <: Geometry, R: CellAccumulator: Monoid](self: T, geometry: G): Feature[G, R] =
-    polygonalSummary(self, geometry, Rasterizer.Options(includePartial =  true, sampleType = PixelIsArea))
+  def apply[A, R](
+    raster: A,
+    geometry: Geometry,
+    acc: R,
+    options: Rasterizer.Options
+  )(implicit
+    cellRegister: CellVisitor[A, R],
+    getRasterExtent: GetComponent[A, RasterExtent]
+  ): R = {
+    val rasterExtent: RasterExtent = getRasterExtent.get(raster)
+    val rasterArea: Polygon = rasterExtent.extent.toPolygon
+    var result = acc
 
-  /** Polygonal summary over for pixels under geomery.
-   * Monoid.empty will be used to get the initial value of the accumulator.
-   *
-   * @param self Raster-like type containing pixel data
-   * @param feature Geometry for area of summery
-   * @param options Rasterizer options determine which pixels are judged to be intersecting the geometry.
-   */
-  def polygonalSummary[G <: Geometry, R: CellAccumulator: Monoid](self: T, geometry: G, options: Rasterizer.Options): Feature[G, R] =
-    polygonalSummary(self, Feature(geometry, Monoid[R].empty), options)
+    geometry match {
+      case area: TwoDimensions if (rasterArea.coveredBy(area)) =>
+        cfor(0)(_ < rasterExtent.cols, _ + 1) { col =>
+          cfor(0)(_ < rasterExtent.rows, _ + 1) { row =>
+            result = cellRegister.register(raster, col, row, result)
+          }
+        }
 
-  /** Polygonal summary over for pixels under geomery.
-   * The feature data value will be used as a starting point of the accumulator.
-   * Rasterizer.Options are to consider pixels as areas and to include partial intersections.
-   *
-   * @param self Raster-like type containing pixel data
-   * @param feature Geometry for area of summery
-   */
-  def polygonalSummary[G <: Geometry, R: CellAccumulator: Monoid](self: T, feature: Feature[G, R]): Feature[G, R] =
-    polygonalSummary(self, feature, Rasterizer.Options(includePartial =  true, sampleType = PixelIsArea))
+      case _ =>
+        Rasterizer.foreachCellByGeometry(geometry, rasterExtent, options)  { (col: Int, row: Int) =>
+          result = cellRegister.register(raster, col, row, result)
+        }
+    }
 
-  /** Polygonal summary over for pixels under geomery.
-   * The feature data value will be used as a starting point of the accumulator.
-   *
-   * @param self Raster-like type containing pixel data
-   * @param feature Geometry for area of summery
-   * @param options Rasterizer options determine which pixels are judged to be intersecting the geometry.
-   */
-  def polygonalSummary[G <: Geometry, R: CellAccumulator: Monoid](self: T, feature: Feature[G, R], options: Rasterizer.Options): Feature[G, R]
+    result
+  }
+
+  trait PolygonalSummaryMethods[A] extends MethodExtensions[A] {
+
+    def polygonalSummary[R](
+      geometry: Geometry,
+      emptyResult: R,
+      options: Rasterizer.Options
+    )(implicit
+      ev0: CellVisitor[A, R],
+      ev1: GetComponent[A, RasterExtent]
+    ): R = PolygonalSummary(self, geometry, emptyResult, options)
+
+    def polygonalSummary[R](
+      geometry: Geometry,
+      emptyResult: R
+    )(implicit
+      ev0: CellVisitor[A, R],
+      ev1: GetComponent[A, RasterExtent]
+    ): R = PolygonalSummary(self, geometry, emptyResult, PolygonalSummary.DefaultOptions)
+
+    def polygonalSummary[R](
+      geometry: Geometry,
+      options: Rasterizer.Options
+    )(implicit
+      ev0: CellVisitor[A, R],
+      ev1: GetComponent[A, RasterExtent],
+      ev2: Monoid[R]
+    ): R = PolygonalSummary(self, geometry, Monoid[R].empty, options)
+
+    def polygonalSummary[R](
+      geometry: Geometry
+    )(implicit
+      ev0: CellVisitor[A, R],
+      ev1: GetComponent[A, RasterExtent],
+      ev2: Monoid[R]
+    ): R = PolygonalSummary(self, geometry, Monoid[R].empty, PolygonalSummary.DefaultOptions)
+  }
+
+  trait ToPolygonalSummaryMethods {
+    implicit class withPolygonalSummaryMethods[A](val self: A) extends PolygonalSummaryMethods[A]
+  }
+
+  object ops extends ToPolygonalSummaryMethods
 }

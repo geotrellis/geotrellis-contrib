@@ -3,25 +3,22 @@ package geotrellis.contrib.polygonal
 import geotrellis.vector._
 import geotrellis.raster._
 import geotrellis.raster.rasterize.Rasterizer
+import geotrellis.raster.histogram.StreamingHistogram
+import geotrellis.util.GetComponent
 import cats._
 
-object Implicits {
-  implicit val poloygonalSummaryForRasterTile: PolygonalSummary[Raster[Tile]] = new PolygonalSummary[Raster[Tile]] {
-    def polygonalSummary[G <: Geometry, R: CellAccumulator: Monoid](
-      self: Raster[Tile],
-      feature: Feature[G, R],
-      options: Rasterizer.Options
-    ): Feature[G, R] = {
-      import CellAccumulator.ops._
-      var result: R = feature.data
-      val geom = feature.geom
-
-      Rasterizer.foreachCellByGeometry(geom, self.rasterExtent, options)  { (col: Int, row: Int) =>
-        val v = self.tile.getDouble(col, row)
-        if (isData(v)) result = result.add(v)
-      }
-
-      Feature(geom, result)
+trait Implicits {
+  implicit val rasterSinglebandHistogramVisitor = new CellVisitor[Raster[Tile], StreamingHistogram] {
+    override def register(raster: Raster[Tile], col: Int, row: Int, acc: StreamingHistogram): StreamingHistogram = {
+      val v = raster.tile.getDouble(col, row)
+      acc.countItem(v, count = 1)
+      acc
     }
   }
+
+  implicit def rasterHasRasterExtent[T <: CellGrid] = new GetComponent[Raster[T], RasterExtent] {
+    override def get: Raster[T] => RasterExtent = _.rasterExtent
+  }
 }
+
+object Implicits extends Implicits
