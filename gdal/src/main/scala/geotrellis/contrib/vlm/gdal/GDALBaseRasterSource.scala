@@ -44,9 +44,6 @@ trait GDALBaseRasterSource extends RasterSource {
   /** options to override some values on transformation steps, should be used carefully as these params can change the behaviour significantly */
   val options: GDALWarpOptions
 
-  // generate a vrt before the current options application
-  @transient lazy val baseDataset: Long = GDALWarp.get_token(uri, Array.empty[String])
-
   // current dataset
   @transient lazy val dataset: Long = GDALWarp.get_token(uri, (options).toWarpOptionsList.toArray)
 
@@ -57,7 +54,7 @@ trait GDALBaseRasterSource extends RasterSource {
   // private lazy val reader: GDALReader = GDALReader(dataset)
 
   // noDataValue from the previous step
-  lazy val noDataValue: Option[Double] = baseDataset.noDataValue
+  lazy val noDataValue: Option[Double] = dataset.noDataValue(GDALWarp.SOURCE)
 
   lazy val dataType: Int = dataset.dataType
 
