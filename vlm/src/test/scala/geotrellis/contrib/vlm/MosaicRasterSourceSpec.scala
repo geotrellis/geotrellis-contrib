@@ -8,8 +8,6 @@ import geotrellis.raster.{IntArrayTile, MultibandTile, Raster}
 import geotrellis.vector.Extent
 import org.scalatest._
 
-import geotrellis.raster.render._
-
 class MosaicRasterSourceSpec extends FunSpec with Matchers {
 
   describe("union operations") {
@@ -63,8 +61,6 @@ class MosaicRasterSourceSpec extends FunSpec with Matchers {
         extentRead
       )
       val result = mosaicRasterSource.read(extentRead, Seq(0))
-      println(s"Expectation is: ${expectation.tile.band(0).asciiDraw}")
-      println(s"Result tile is: ${result.get.tile.band(0).asciiDraw}")
       result shouldBe Some(expectation)
     }
 
@@ -78,8 +74,6 @@ class MosaicRasterSourceSpec extends FunSpec with Matchers {
         mosaicRasterSource.rasterExtent.extent
       )
       val result = mosaicRasterSource.read(mosaicRasterSource.bounds, Seq(0))
-      println(s"Result is: ${result.get.tile.band(0).asciiDraw}")
-      println(s"Expectation is: ${expectation.tile.band(0).asciiDraw}")
       result shouldBe Some(expectation)
     }
   }

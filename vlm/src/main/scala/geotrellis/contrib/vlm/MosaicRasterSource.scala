@@ -21,10 +21,12 @@ import cats.implicits._
 import cats.data.NonEmptyList
 import geotrellis.vector._
 import geotrellis.raster._
+import geotrellis.raster.merge.Implicits._
 import geotrellis.raster.resample._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.proj4.{CRS, WebMercator}
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
+import geotrellis.raster.render._
 import geotrellis.spark.tiling.LayoutDefinition
 import geotrellis.util.GetComponent
 
@@ -34,7 +36,6 @@ import geotrellis.util.GetComponent
   *
   */
 trait MosaicRasterSource extends RasterSource {
-
   /**
     * The underlying [[RasterSource]]s that you'll use for data access
     */
@@ -52,8 +53,13 @@ trait MosaicRasterSource extends RasterSource {
   // Orphan instance for semigroups for rasters, so we can combine
   // Option[Raster[_]]s later
   implicit val rasterSemigroup: Semigroup[Raster[MultibandTile]] = new Semigroup[Raster[MultibandTile]] {
-    def combine(l: Raster[MultibandTile], r: Raster[MultibandTile]) =
-      Raster(l.tile merge r.tile, l.extent combine r.extent)
+    def combine(l: Raster[MultibandTile], r: Raster[MultibandTile]) = {
+      println(s"Left raster extent: ${l.extent}")
+      println(s"Right raster extent: ${r.extent}")
+      println(s"Left tile: ${l.tile.band(0).asciiDraw}")
+      println(s"Right tile: ${r.tile.band(0).asciiDraw}")
+      l merge r
+    }
   }
 
   /**
