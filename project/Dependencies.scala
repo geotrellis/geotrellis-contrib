@@ -42,7 +42,7 @@ object Dependencies {
   val scalatest           = "org.scalatest"              %% "scalatest"                % "3.0.5"
   val scalactic           = "org.scalactic"              %% "scalactic"                % "3.0.5"
   val simulacrum          = "com.github.mpilquist"       %% "simulacrum"               % "0.15.0"
-
+  val comonsIO            = "commons-io"                  %"commons-io"                % "2.4"
 
   val catsCore            = "org.typelevel"              %% "cats-core"                % "1.4.0"
   val catsEffect          = "org.typelevel"              %% "cats-effect"              % "1.0.0"
