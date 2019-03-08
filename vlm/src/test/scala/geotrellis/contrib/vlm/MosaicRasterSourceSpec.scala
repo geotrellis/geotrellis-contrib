@@ -4,7 +4,7 @@ import geotrellis.contrib.vlm.geotiff._
 
 import cats.data.NonEmptyList
 import geotrellis.proj4.{LatLng, WebMercator}
-import geotrellis.raster.{IntArrayTile, MultibandTile, Raster}
+import geotrellis.raster.{IntConstantNoDataArrayTile, MultibandTile, Raster}
 import geotrellis.vector.Extent
 import org.scalatest._
 
@@ -53,28 +53,31 @@ class MosaicRasterSourceSpec extends FunSpec with Matchers {
     it("should read an extent overlapping both tiles") {
       val extentRead = Extent(0, 0, 1.5, 1)
       val expectation = Raster(
-        MultibandTile(IntArrayTile(Array(0, 1, 2, 3, 0, 1,
-                                         4, 5, 6, 7, 4, 5,
-                                         8, 9, 10, 11, 8, 9,
-                                         12, 13, 14, 15, 12, 13),
-                                   6, 4)),
+        MultibandTile(
+          IntConstantNoDataArrayTile(Array(1, 2, 3, 4, 1, 2,
+                                           5, 6, 7, 8, 5, 6,
+                                           9, 10, 11, 12, 9, 10,
+                                           13, 14, 15, 16, 13, 14),
+                                     6, 4)),
         extentRead
       )
-      val result = mosaicRasterSource.read(extentRead, Seq(0))
-      result shouldBe Some(expectation)
+      val result = mosaicRasterSource.read(extentRead, Seq(0)).get
+      result shouldEqual expectation
     }
 
     it("should get the expected tile from a gridbounds-based read") {
       val expectation = Raster(
-        MultibandTile(IntArrayTile(Array(0, 1, 2, 3, 0, 1, 2, 3,
-                                         4, 5, 6, 7, 4, 5, 6, 7,
-                                         8, 9, 10, 11, 8, 9, 10, 11,
-                                         12, 13, 14, 15, 12, 13, 14, 15),
-                                   8, 4)),
-        mosaicRasterSource.rasterExtent.extent
+        MultibandTile(
+          IntConstantNoDataArrayTile(Array(1, 2, 3, 4, 1, 2, 3, 4,
+                                           5, 6, 7, 8, 5, 6, 7, 8,
+                                           9, 10, 11, 12, 9, 10, 11, 12,
+                                           13, 14, 15, 16, 13, 14, 15, 16),
+                                     8, 4)),
+          mosaicRasterSource.rasterExtent.extent
       )
-      val result = mosaicRasterSource.read(mosaicRasterSource.bounds, Seq(0))
-      result shouldBe Some(expectation)
+      val result = mosaicRasterSource.read(mosaicRasterSource.bounds, Seq(0)).get
+      result shouldEqual expectation
+      result.extent shouldEqual expectation.extent
     }
   }
 }

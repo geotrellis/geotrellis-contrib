@@ -40,12 +40,10 @@ trait MosaicRasterSource extends RasterSource {
   // Option[Raster[_]]s later
   implicit val rasterSemigroup: Semigroup[Raster[MultibandTile]] = new Semigroup[Raster[MultibandTile]] {
     def combine(l: Raster[MultibandTile], r: Raster[MultibandTile]) = {
-      println(s"Left raster extent: ${l.extent}")
-      println(s"Right raster extent: ${r.extent}")
-      println(s"Left tile: ${l.tile.band(0).asciiDraw}")
-      println(s"Right tile: ${r.tile.band(0).asciiDraw}")
-      val result = l merge r
-      println(s"Result (l merge r) extent: ${result.extent}")
+      val targetRE = RasterExtent(
+        l.rasterExtent.extent combine r.rasterExtent.extent,
+        l.rasterExtent.cellSize)
+      val result = l.resample(targetRE) merge r.resample(targetRE)
       result
     }
   }
