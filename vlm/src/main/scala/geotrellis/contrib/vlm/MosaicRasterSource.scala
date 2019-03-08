@@ -38,15 +38,16 @@ import geotrellis.util.GetComponent
 trait MosaicRasterSource extends RasterSource {
   // Orphan instance for semigroups for rasters, so we can combine
   // Option[Raster[_]]s later
-  implicit val rasterSemigroup: Semigroup[Raster[MultibandTile]] = new Semigroup[Raster[MultibandTile]] {
-    def combine(l: Raster[MultibandTile], r: Raster[MultibandTile]) = {
-      val targetRE = RasterExtent(
-        l.rasterExtent.extent combine r.rasterExtent.extent,
-        l.rasterExtent.cellSize)
-      val result = l.resample(targetRE) merge r.resample(targetRE)
-      result
+  implicit val rasterSemigroup: Semigroup[Raster[MultibandTile]] =
+    new Semigroup[Raster[MultibandTile]] {
+      def combine(l: Raster[MultibandTile], r: Raster[MultibandTile]) = {
+        val targetRE = RasterExtent(
+          l.rasterExtent.extent combine r.rasterExtent.extent,
+          l.rasterExtent.cellSize)
+        val result = l.resample(targetRE) merge r.resample(targetRE)
+        result
+      }
     }
-  }
 
   /**
     * The underlying [[RasterSource]]s that you'll use for data access
@@ -107,7 +108,8 @@ trait MosaicRasterSource extends RasterSource {
     *
     * @see [[geotrellis.contrib.vlm.RasterSource.reproject]]
     */
-  def reproject(crs: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource = MosaicRasterSource(
+  def reproject(crs: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy)
+      : RasterSource = MosaicRasterSource(
     sources map { _.reproject(crs, reprojectOptions, strategy) },
     crs
   )
@@ -122,7 +124,8 @@ trait MosaicRasterSource extends RasterSource {
     rasters.reduce
   }
 
-  def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource = MosaicRasterSource(
+  def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy)
+      : RasterSource = MosaicRasterSource(
     sources map { _.reproject(commonCrs).resample(resampleGrid, method, strategy) },
     commonCrs
   )
