@@ -42,12 +42,13 @@ lazy val commonSettings = Seq(
   bintrayOrganization := Some("azavea"),
   bintrayRepository := "geotrellis",
   bintrayPackageLabels := Seq("gis", "raster", "vector"),
+  bintrayReleaseOnPublish := false,
   publishTo := {
     val bintrayPublishTo = publishTo.value
     val nexus = "http://nexus.internal.azavea.com"
 
     if (isSnapshot.value) {
-      Some("snapshots" at nexus + "/repository/azavea-internal")
+      Some("snapshots" at nexus + "/repository/azavea-snapshots")
     } else {
       bintrayPublishTo
     }
