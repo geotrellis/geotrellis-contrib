@@ -36,6 +36,20 @@ import geotrellis.util.GetComponent
   *
   */
 trait MosaicRasterSource extends RasterSource {
+  // Orphan instance for semigroups for rasters, so we can combine
+  // Option[Raster[_]]s later
+  implicit val rasterSemigroup: Semigroup[Raster[MultibandTile]] = new Semigroup[Raster[MultibandTile]] {
+    def combine(l: Raster[MultibandTile], r: Raster[MultibandTile]) = {
+      println(s"Left raster extent: ${l.extent}")
+      println(s"Right raster extent: ${r.extent}")
+      println(s"Left tile: ${l.tile.band(0).asciiDraw}")
+      println(s"Right tile: ${r.tile.band(0).asciiDraw}")
+      val result = l merge r
+      println(s"Result (l merge r) extent: ${result.extent}")
+      result
+    }
+  }
+
   /**
     * The underlying [[RasterSource]]s that you'll use for data access
     */
@@ -49,18 +63,6 @@ trait MosaicRasterSource extends RasterSource {
     * having to make sure at compile time that you're threading CRSes through everywhere correctly.
     */
   val commonCrs: CRS
-
-  // Orphan instance for semigroups for rasters, so we can combine
-  // Option[Raster[_]]s later
-  implicit val rasterSemigroup: Semigroup[Raster[MultibandTile]] = new Semigroup[Raster[MultibandTile]] {
-    def combine(l: Raster[MultibandTile], r: Raster[MultibandTile]) = {
-      println(s"Left raster extent: ${l.extent}")
-      println(s"Right raster extent: ${r.extent}")
-      println(s"Left tile: ${l.tile.band(0).asciiDraw}")
-      println(s"Right tile: ${r.tile.band(0).asciiDraw}")
-      l merge r
-    }
-  }
 
   /**
     * Uri is required only for compatibility with RasterSource.
@@ -114,12 +116,12 @@ trait MosaicRasterSource extends RasterSource {
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val rasters = sources map { _.reproject(commonCrs).read(extent, bands) }
-    rasters.tail.foldLeft(rasters.head)(_ combine _)
+    rasters.reduce
   }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val rasters = sources map { _.reproject(commonCrs).read(bounds, bands) }
-    rasters.tail.foldLeft(rasters.head)(_ combine _)
+    rasters.reduce
   }
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource = MosaicRasterSource(
