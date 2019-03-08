@@ -28,21 +28,22 @@ import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.spark.tiling.LayoutDefinition
 import geotrellis.util.GetComponent
 
-/** Single threaded instance of a reader for reading windows out of collections
+/**
+  * Single threaded instance of a reader for reading windows out of collections
   * of rasters
   *
   */
 trait MosaicRasterSource extends RasterSource {
 
   /**
-    * The underlying RasterSources that you'll use for data access
+    * The underlying [[RasterSource]]s that you'll use for data access
     */
   val sources: NonEmptyList[RasterSource]
 
   /**
-    * The commonCrs to reproject all RasterSources to anytime we need information about their data
+    * The commonCrs to reproject all [[RasterSource]]s to anytime we need information about their data
     *
-    * Since MosaicRasterSources represent collections of RasterSources, we don't know in advance
+    * Since MosaicRasterSources represent collections of [[RasterSource]]s, we don't know in advance
     * whether they'll have the same CRS. commonCrs allows specifying the CRS on read instead of
     * having to make sure at compile time that you're threading CRSes through everywhere correctly.
     */
@@ -55,7 +56,8 @@ trait MosaicRasterSource extends RasterSource {
       Raster(l.tile merge r.tile, l.extent combine r.extent)
   }
 
-  /** Uri is required only for compatibility with RasterSource.
+  /**
+    * Uri is required only for compatibility with RasterSource.
     *
     * It doesn't make sense to access "the" URI for a collection, so this throws an exception.
     */
@@ -68,6 +70,13 @@ trait MosaicRasterSource extends RasterSource {
 
   def crs: CRS = commonCrs
 
+  /**
+    * The bandCount of the first [[RasterSource]] in sources
+    *
+    * If this value is larger than the bandCount of later [[RasterSource]]s in sources,
+    * reads of all bands will fail. It is a client's responsibility to construct
+    * mosaics that can be read.
+    */
   def bandCount: Int = sources.head.bandCount
 
   def cellType: CellType = sources.head.cellType
@@ -77,7 +86,8 @@ trait MosaicRasterSource extends RasterSource {
     extents.tail.foldLeft(extents.head) { _ combine _ }
   }
 
-  /** All available resolutions for all RasterSources in this MosaicRasterSource
+  /**
+    * All available resolutions for all RasterSources in this MosaicRasterSource
     *
     * @see [[geotrellis.contrib.vlm.RasterSource.resolutions]]
     */
@@ -92,7 +102,7 @@ trait MosaicRasterSource extends RasterSource {
     * @see [[geotrellis.contrib.vlm.RasterSource.reproject]]
     */
   def reproject(crs: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource = MosaicRasterSource(
-    this.sources map { _.reproject(crs, reprojectOptions, strategy) },
+    sources map { _.reproject(crs, reprojectOptions, strategy) },
     crs
   )
 
@@ -110,6 +120,13 @@ trait MosaicRasterSource extends RasterSource {
     sources map { _.reproject(commonCrs).resample(resampleGrid, method, strategy) },
     commonCrs
   )
+
+  def convert(targetCellType: TargetCellType): RasterSource = {
+    MosaicRasterSource(
+      sources map { _.convert(targetCellType) },
+      commonCrs
+    )
+  }
 }
 
 private object MosaicRasterSource {
@@ -118,5 +135,6 @@ private object MosaicRasterSource {
   def apply(_sources: NonEmptyList[RasterSource], _commonCrs: CRS) = new MosaicRasterSource {
     val sources = _sources
     val commonCrs = _commonCrs
+    private[vlm] def targetCellType = _sources.head.targetCellType
   }
 }
