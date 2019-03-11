@@ -1,26 +1,52 @@
-sudo: false
-language: scala
-addons:
-  hostname: localhost
-jdk:
-  - oraclejdk8
-scala:
-  - "2.11.12"
-  - "2.12.8"
-before_install:
-  - docker pull daunnc/openjdk-gdal:2.4.0
-services:
-  - docker
-cache:
-  directories:
-    - $HOME/.ivy2
-    - $HOME/.sbt
-script:
-  - .travis/build-and-test-docker.sh
-notifications:
-  email:
-    recipients:
-      - echeipesh@gmail.com
-      - gr.pomadchin@gmail.com
-before_deploy:
-- export VERSION_SUFFIX="-${TRAVIS_COMMIT:0:7}"
+matrix:
+  include:
+     - sudo: false
+       language: scala
+       addons:
+       hostname: localhost
+       jdk:
+         - oraclejdk8
+       scala:
+         - "2.11.12"
+       before_install:
+         - docker pull daunnc/openjdk-gdal:2.4.0
+       services:
+         - docker
+       cache:
+         directories:
+           - $HOME/.ivy2
+           - $HOME/.sbt
+       script:
+         - .travis/build-and-test-docker.sh
+       notifications:
+         email:
+           recipients:
+             - echeipesh@gmail.com
+             - gr.pomadchin@gmail.com
+       before_deploy:
+         - export VERSION_SUFFIX="-${TRAVIS_COMMIT:0:7}"
+     - sudo: false
+       language: scala
+       addons:
+       hostname: localhost
+       jdk:
+         - oraclejdk8
+       scala:
+         - "2.12.8"
+       before_install:
+         - docker pull daunnc/openjdk-gdal:2.4.0
+       services:
+         - docker
+       cache:
+         directories:
+           - $HOME/.ivy2
+           - $HOME/.sbt
+       script:
+         - .travis/build-and-test-docker.sh
+       notifications:
+         email:
+           recipients:
+             - echeipesh@gmail.com
+             - gr.pomadchin@gmail.com
+       before_deploy:
+         - export VERSION_SUFFIX="-${TRAVIS_COMMIT:0:7}"
