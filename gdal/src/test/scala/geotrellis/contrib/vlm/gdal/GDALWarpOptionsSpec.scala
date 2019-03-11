@@ -25,9 +25,13 @@ import geotrellis.raster.reproject.Reproject.{Options => ReprojectOptions}
 import geotrellis.vector.Extent
 import geotrellis.raster.testkit._
 
+import org.gdal.gdal._
+
 import com.azavea.gdal.GDALWarp
 
 import cats.implicits._
+
+import scala.collection.JavaConverters._
 
 import org.scalatest._
 
@@ -79,39 +83,79 @@ class GDALWarpOptionsSpec extends FunSpec with RasterMatchers with BetterRasterM
           CRS.fromString("+proj=lcc +lat_1=36.16666666666666 +lat_2=34.33333333333334 +lat_0=33.75 +lon_0=-79 +x_0=609601.22 +y_0=0 +datum=NAD83 +units=m +no_defs "),
           WebMercator,
           ReprojectOptions.DEFAULT.copy(targetCellSize = CellSize(10, 10).some)
-        )
+      )
+        .resample(
+          GridExtent(Extent(-8769160.0, 4257700.0, -8750630.0, 4274460.0), 10, 10).toRasterExtent,
+          TargetRegion(GridExtent(Extent(-8769160.0, 4257700.0, -8750630.0, 4274460.0), 22, 22).toRasterExtent)
+      )
     rasterSourceFromUriOptions(uri, opts)
   }
 
   describe("GDALWarp transformations") {
+    def datasetToRasterExtent(ds: Dataset): RasterExtent = {
+      val transform = ds.GetGeoTransform
+      val width = ds.GetRasterXSize
+      val height = ds.GetRasterYSize
+      val x1 = transform(0)
+      val y1 = transform(3)
+      val x2 = x1 + transform(1) * width
+      val y2 = y1 + transform(5) * height
+      val e = Extent(
+        math.min(x1, x2),
+        math.min(y1, y2),
+        math.max(x1, x2),
+        math.max(y1, y2))
+
+      RasterExtent(e,
+        math.abs(transform(1)), math.abs(transform(5)),
+        width, height)
+    }
+
     it("optimized transformation should behave in a same way as a list of warp applications") {
       val base = filePath
-
-      val originalReproject = rasterSourceFromUriOptions(base, reprojectOptions)
-      val originalResample = rasterSourceFromUriOptions(base, reprojectOptions.combine(resampleOptions))
 
       val optimizedReproject = dsreprojectOpt(base)
       val optimizedResample = dsresampleOpt(base)
 
-      originalReproject.rasterExtent shouldBe optimizedReproject.rasterExtent
-      originalResample.rasterExtent shouldBe optimizedResample.rasterExtent
+      val (originalReproject, originalResample) = {
+        val reprojectWarpAppOptions = new WarpOptions(new java.util.Vector(reprojectOptions.toWarpOptionsList.asJava)) // This is probably a leak
+        val resampleWarpAppOptions = new WarpOptions(new java.util.Vector(resampleOptions.toWarpOptionsList.asJava)) // So is this
+        val underlying = org.gdal.gdal.gdal.Open(filePath, org.gdal.gdalconst.gdalconstConstants.GA_ReadOnly)
+        val originalReproject = org.gdal.gdal.gdal.Warp("/dev/null", Array(underlying), reprojectWarpAppOptions)
+        val originalResample = org.gdal.gdal.gdal.Warp("/dev/null", Array(originalReproject), resampleWarpAppOptions)
+        (originalReproject, originalResample)
+      }
+
+      datasetToRasterExtent(originalReproject) shouldBe optimizedReproject.rasterExtent
+      datasetToRasterExtent(originalResample) shouldBe optimizedResample.rasterExtent
     }
 
     it("raster sources optimized transformations should behave in a same way as a single warp application") {
       val base = filePath
+
       val optimizedRawResample = dsresampleOpt(base)
-      val originalRawResample = rasterSourceFromUriOptions(base, reprojectOptions.combine(resampleOptions))
+
+      val originalRawResample = {
+        val reprojectWarpAppOptions = new WarpOptions(new java.util.Vector(reprojectOptions.toWarpOptionsList.asJava)) // ditto
+        val resampleWarpAppOptions = new WarpOptions(new java.util.Vector(resampleOptions.toWarpOptionsList.asJava)) // ditto
+        val underlying = org.gdal.gdal.gdal.Open(filePath, org.gdal.gdalconst.gdalconstConstants.GA_ReadOnly)
+        val reprojected = org.gdal.gdal.gdal.Warp("/dev/null", Array(underlying), reprojectWarpAppOptions)
+        org.gdal.gdal.gdal.Warp("/dev/null", Array(reprojected), resampleWarpAppOptions)
+      }
 
       val rs =
         GDALRasterSource(filePath)
           .reproject(
-          targetCRS        = WebMercator,
+            targetCRS        = WebMercator,
             reprojectOptions = ReprojectOptions.DEFAULT.copy(targetCellSize = CellSize(10, 10).some),
             strategy         = AutoHigherResolution
         )
+          .resampleToRegion(
+            region = RasterExtent(Extent(-8769160.0, 4257700.0, -8750630.0, 4274460.0), CellSize(22, 22))
+        )
 
       optimizedRawResample.rasterExtent shouldBe rs.rasterExtent
-      originalRawResample.rasterExtent shouldBe rs.rasterExtent
+      datasetToRasterExtent(originalRawResample) shouldBe rs.rasterExtent
     }
   }
 
