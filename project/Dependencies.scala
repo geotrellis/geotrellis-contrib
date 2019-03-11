@@ -60,5 +60,5 @@ object Dependencies {
 
   val squants = "org.typelevel" %% "squants" % "1.3.0"
 
-  val warpwrap = "com.azavea.gdal" % "gdal-warp-bindings" % "33.b1d353"
+  val warpwrap = "com.azavea.gdal" % "gdal-warp-bindings" % "33.2464e2"
 }
