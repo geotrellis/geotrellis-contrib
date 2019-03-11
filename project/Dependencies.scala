@@ -38,6 +38,8 @@ object Dependencies {
   val geotrellisUtil          = "org.locationtech.geotrellis" %% "geotrellis-util"           % Version.geotrellis
   val geotrellisShapefile     = "org.locationtech.geotrellis" %% "geotrellis-shapefile"      % Version.geotrellis
 
+  val gdal                = "org.gdal"                    % "gdal"                     % Properties.envOrElse("GDAL_VERSION", "2.4.0")
+
   val pureconfig          = "com.github.pureconfig"      %% "pureconfig"               % "0.9.1"
   val logging             = "com.typesafe.scala-logging" %% "scala-logging"            % "3.9.0"
   val scalatest           = "org.scalatest"              %% "scalatest"                % "3.0.5"

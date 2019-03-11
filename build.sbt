@@ -68,7 +68,8 @@ lazy val vlm = project
       sparkCore % Provided,
       sparkSQL % Test,
       geotrellisSparkTestKit % Test,
-      scalatest % Test
+      scalatest % Test,
+      gdal % Test
     ),
     Test / fork := true,
     Test / parallelExecution := false,
