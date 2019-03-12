@@ -26,6 +26,7 @@ import geotrellis.spark.io.s3.util.S3RangeReader
 import geotrellis.spark.io.s3.AmazonS3Client
 import geotrellis.vector._
 import geotrellis.raster._
+import geotrellis.contrib.vlm.gdal.{GDALUtils, GDALDataType}
 
 import org.apache.http.client.utils.URLEncodedUtils
 import com.amazonaws.services.s3.{AmazonS3ClientBuilder, AmazonS3URI}
@@ -190,28 +191,13 @@ package object vlm {
     def cellType(dataset: Int): CellType = {
       require(acceptableDatasets contains dataset)
       val nd = noDataValue(dataset)
-      token.dataType(dataset) match {
-        case GDALWarp.GDT_Byte => ByteCells.withNoData(nd.map(_.toByte))
-        case GDALWarp.GDT_UInt16 => UShortCells.withNoData(nd.map(_.toShort))
-        case GDALWarp.GDT_Int16 => ShortCells.withNoData(nd.map(_.toShort))
-        case GDALWarp.GDT_UInt32 => throw new Exception("Unsupported data type")
-        case GDALWarp.GDT_Int32 => IntCells.withNoData(nd.map(_.toInt))
-        case GDALWarp.GDT_Float32 => FloatCells.withNoData(nd.map(_.toFloat))
-        case GDALWarp.GDT_Float64 => DoubleCells.withNoData(nd)
-        case GDALWarp.GDT_CInt16 => throw new Exception("Unsupported data type")
-        case GDALWarp.GDT_CInt32 => throw new Exception("Unsupported data type")
-        case GDALWarp.GDT_CFloat32 => throw new Exception("Unsupported data type")
-        case GDALWarp.GDT_CFloat64 => throw new Exception("Unsupported data type")
-        case _ => throw new Exception("Unknown data type")
-      }
+      val dt = GDALDataType.intToGDALDataType(token.dataType(dataset))
+      GDALUtils.dataTypeToCellType(dt, nd)
     }
 
     def readTile(gb: GridBounds, band: Int, dataset: Int = GDALWarp.WARPED): Tile = {
       require(acceptableDatasets contains dataset)
-      val xmin = gb.colMin
-      val xmax = gb.colMax
-      val ymin = gb.rowMin
-      val ymax = gb.rowMax
+      val GridBounds(xmin, ymin, xmax, ymax) = gb
       val srcWindow: Array[Int] = Array(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1)
       val dstWindow: Array[Int] = Array(srcWindow(2), srcWindow(3))
       val ct = token.cellType(dataset)

@@ -74,7 +74,7 @@ trait GDALBaseRasterSource extends RasterSource {
       .toIterator
       .flatMap { gb => gridBounds.intersection(gb) }
       .map { gb =>
-      val tile = MultibandTile(bands.map({ band => dataset.readTile(gb, band + 1) }))
+        val tile = MultibandTile(bands.map({ band => dataset.readTile(gb, band + 1) }))
         val extent = rasterExtent.extentFor(gb)
         convertRaster(Raster(tile, extent))
       }
