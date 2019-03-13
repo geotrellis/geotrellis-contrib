@@ -138,7 +138,7 @@ trait MosaicRasterSource extends RasterSource {
   }
 }
 
-private object MosaicRasterSource {
+object MosaicRasterSource {
   /** Create a MosaicRasterSource with sources and bands set from the provided parameters
     */
   def apply(_sources: NonEmptyList[RasterSource], _commonCrs: CRS) = new MosaicRasterSource {
