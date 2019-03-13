@@ -144,6 +144,5 @@ object MosaicRasterSource {
   def apply(_sources: NonEmptyList[RasterSource], _commonCrs: CRS) = new MosaicRasterSource {
     val sources = _sources
     val commonCrs = _commonCrs
-    private[vlm] def targetCellType = _sources.head.targetCellType
   }
 }
