@@ -91,8 +91,8 @@ object GDALUtils {
       case TypeFloat64 =>
         noDataValue match {
           case Some(nd) if isData(nd) => DoubleUserDefinedNoDataCellType(nd)
-          case Some(nd) => FloatConstantNoDataCellType
-          case _ => FloatCellType
+          case Some(nd) => DoubleConstantNoDataCellType
+          case _ => DoubleCellType
         }
       case UnknownType =>
         throw new UnsupportedOperationException(s"Datatype ${datatype} is not supported.")
