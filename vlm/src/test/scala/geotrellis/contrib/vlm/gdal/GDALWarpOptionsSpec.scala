@@ -39,7 +39,7 @@ import org.scalatest._
 class GDALWarpOptionsSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
   import GDALWarpOptionsSpec._
 
-  GDALWarp.init(1<<8, 1<<2)
+  org.gdal.gdal.gdal.AllRegister()
 
   val filePath = Resource.path("img/aspect-tiled.tif")
   def filePathByIndex(i: Int): String = Resource.path(s"img/aspect-tiled-$i.tif")

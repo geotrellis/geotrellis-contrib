@@ -19,7 +19,6 @@ import org.scalatest._
 
 
 class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
-  GDALWarp.init(1<<8, 1<<2)
 
   describe("Should collect GeoTiffRasterSource RasterSummary correct") {
     it("should collect summary for a raw source") {

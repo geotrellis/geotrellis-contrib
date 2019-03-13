@@ -35,7 +35,7 @@ trait GDALBaseRasterSource extends RasterSource {
   } catch {
     case _: Throwable =>
       throw new MalformedURLException(
-        s"Invalid URI passed into the GDALRasterSource constructor: ${uri}." +
+          s"Invalid URI passed into the GDALRasterSource constructor: ${uri}." +
           s"Check geotrellis.contrib.vlm.gdal.VSIPath constrains, " +
           s"or pass VSI formatted String into the GDALRasterSource constructor manually."
       )
@@ -139,6 +139,7 @@ trait GDALBaseRasterSource extends RasterSource {
 }
 
 object GDALBaseRasterSource {
+
   def createConvertOptions(targetCellType: TargetCellType, noDataValue: Option[Double]): List[GDALWarpOptions] =
     targetCellType match {
       case ConvertTargetCellType(target) =>

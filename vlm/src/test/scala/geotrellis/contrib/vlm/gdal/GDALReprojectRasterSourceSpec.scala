@@ -45,7 +45,6 @@ class GDALReprojectRasterSourceSpec extends FunSpec with RasterMatchers with Bet
     * */
 
   describe("Reprojecting a RasterSource") {
-    GDALWarp.init(1<<8, 1<<2)
 
     val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
 
