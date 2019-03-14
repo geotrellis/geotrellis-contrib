@@ -30,6 +30,9 @@ import java.net.MalformedURLException
 
 
 trait GDALBaseRasterSource extends RasterSource {
+  val ANSI_RESET = "\u001B[0m"
+  val ANSI_BLUE = "\u001B[34m"
+
   val vsiPath: String = if (VSIPath.isVSIFormatted(uri)) uri else try {
     VSIPath(uri).vsiPath
   } catch {
@@ -45,7 +48,17 @@ trait GDALBaseRasterSource extends RasterSource {
   val options: GDALWarpOptions
 
   // current dataset
-  @transient lazy val dataset: Long = GDALWarp.get_token(uri, (options).toWarpOptionsList.toArray)
+  @transient lazy val dataset: Long = {
+    val gdalPath = {
+      if (VSIPath.isVSIFormatted(uri))
+        uri
+      else
+        VSIPath(uri).vsiPath
+    }
+    val token = GDALWarp.get_token(gdalPath, (options).toWarpOptionsList.toArray)
+    System.err.println(ANSI_BLUE + s"$uri@$token" + ANSI_RESET) // XXX
+    token
+  }
 
   lazy val bandCount: Int = dataset.bandCount
 
