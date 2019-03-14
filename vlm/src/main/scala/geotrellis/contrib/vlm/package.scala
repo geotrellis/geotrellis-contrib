@@ -40,6 +40,7 @@ import com.azavea.gdal.GDALWarp
 
 package object vlm {
   val acceptableDatasets = Set(GDALWarp.SOURCE, GDALWarp.WARPED)
+  val numberOfAttempts = 1 << 20
 
   private[vlm] def getByteReader(uri: String): StreamingByteReader = {
     val javaURI = new URI(uri)
@@ -85,7 +86,8 @@ package object vlm {
     def getProjection(dataset: Int): Option[String] = {
       require(acceptableDatasets contains dataset)
       val crs = Array.ofDim[Byte](1 << 16)
-      GDALWarp.get_crs_wkt(token, dataset, 0, crs)
+      if (!GDALWarp.get_crs_wkt(token, dataset, numberOfAttempts, crs))
+        throw new Exception("get_crs_wkt")
       Some(new String(crs, "UTF-8"))
     }
 
@@ -95,8 +97,9 @@ package object vlm {
       require(acceptableDatasets contains dataset)
       val transform = Array.ofDim[Double](6)
       val width_height = Array.ofDim[Int](2)
-      GDALWarp.get_transform(token, dataset, 0, transform)
-      GDALWarp.get_width_height(token, dataset, 0, width_height)
+      if (!GDALWarp.get_transform(token, dataset, numberOfAttempts, transform) ||
+          !GDALWarp.get_width_height(token, dataset, numberOfAttempts, width_height))
+        throw new Exception("get_transform or get_widht_height")
 
       val x1 = transform(0)
       val y1 = transform(3)
@@ -121,7 +124,9 @@ package object vlm {
       val widths = Array.ofDim[Int](N)
       val heights = Array.ofDim[Int](N)
       val extent = token.extent(dataset)
-      GDALWarp.get_overview_widths_heights(token, dataset, 0, widths, heights)
+
+      if (!GDALWarp.get_overview_widths_heights(token, dataset, numberOfAttempts, widths, heights))
+        throw new Exception("get_overview_widths_heights")
       widths.zip(heights).flatMap({ case (w, h) =>
         if (w > 0 && h > 0) Some(RasterExtent(extent, cols = w, rows = h))
         else None
@@ -140,7 +145,8 @@ package object vlm {
     def bandCount(dataset: Int): Int = {
       require(acceptableDatasets contains dataset)
       val count = Array.ofDim[Int](1)
-      GDALWarp.get_band_count(token, dataset, 0, count)
+      if (!GDALWarp.get_band_count(token, dataset, numberOfAttempts, count))
+        throw new Exception("get_band_count")
       count(0)
     }
 
@@ -149,7 +155,8 @@ package object vlm {
     def crs(dataset: Int): CRS = {
       require(acceptableDatasets contains dataset)
       val crs = Array.ofDim[Byte](1 << 16)
-      GDALWarp.get_crs_proj4(token, dataset, 0, crs)
+      if (!GDALWarp.get_crs_proj4(token, dataset, numberOfAttempts, crs))
+        throw new Exception("get_crs_proj4")
       val proj4String: String = new String(crs, "UTF-8").trim
       if (proj4String.length > 0) CRS.fromString(proj4String.trim)
       else LatLng
@@ -161,7 +168,8 @@ package object vlm {
       require(acceptableDatasets contains dataset)
       val nodata = Array.ofDim[Double](1)
       val success = Array.ofDim[Int](1)
-      GDALWarp.get_band_nodata(token, dataset, 0, 1, nodata, success)
+      if (!GDALWarp.get_band_nodata(token, dataset, numberOfAttempts, 1, nodata, success))
+        throw new Exception("get_band_nodata")
       if (success(0) == 0)
         None
       else
@@ -173,7 +181,8 @@ package object vlm {
     def dataType(dataset: Int): Int = {
       require(acceptableDatasets contains dataset)
       val dataType = Array.ofDim[Int](1)
-      GDALWarp.get_band_data_type(token, dataset, 0, 1, dataType)
+      if (!GDALWarp.get_band_data_type(token, dataset, numberOfAttempts, 1, dataType))
+        throw new Exception("get_band_data_type")
       dataType(0)
     }
 
@@ -182,7 +191,7 @@ package object vlm {
     def cellSize(dataset: Int): CellSize = {
       require(acceptableDatasets contains dataset)
       val transform = Array.ofDim[Double](6)
-      GDALWarp.get_transform(token, dataset, 0, transform)
+      GDALWarp.get_transform(token, dataset, numberOfAttempts, transform)
       CellSize(transform(1), transform(5))
     }
 
@@ -204,7 +213,8 @@ package object vlm {
       val dt = token.dataType(dataset)
       val bytes = Array.ofDim[Byte](dstWindow(0) * dstWindow(1) * ct.bytes)
 
-      GDALWarp.get_data(token, dataset, 0, srcWindow, dstWindow, band, dt, bytes)
+      if (!GDALWarp.get_data(token, dataset, numberOfAttempts, srcWindow, dstWindow, band, dt, bytes))
+        throw new Exception("get_data")
       ArrayTile.fromBytes(bytes, ct, dstWindow(0), dstWindow(1))
     }
 
