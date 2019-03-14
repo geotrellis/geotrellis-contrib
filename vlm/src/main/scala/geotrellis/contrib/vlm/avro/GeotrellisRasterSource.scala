@@ -58,7 +58,7 @@ case class GeotrellisRasterSource(
   }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val extent: Extent = metadata.extentFor(bounds)
+    val extent = rasterExtent.extentFor(bounds).buffer(- cellSize.resolution / 4)
     read(extent, bands)
   }
 

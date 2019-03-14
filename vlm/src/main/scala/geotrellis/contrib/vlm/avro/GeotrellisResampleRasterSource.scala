@@ -44,7 +44,8 @@ case class GeotrellisResampleRasterSource(
   @transient protected lazy val layerId: LayerId =
     GeotrellisRasterSource.getClosestLayer(resolutions, layerIds, baseLayerId, rasterExtent.cellSize, strategy)
 
-  lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
+  /** This metadata returns data in its owm projection and resolution */
+  protected lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
 
   def crs: CRS = metadata.crs
   def cellType: CellType = dstCellType.getOrElse(metadata.cellType)
@@ -63,7 +64,7 @@ case class GeotrellisResampleRasterSource(
       }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val extent: Extent = metadata.extentFor(bounds)
+    val extent = rasterExtent.extentFor(bounds).buffer(- cellSize.resolution / 4)
     read(extent, bands)
   }
 

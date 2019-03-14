@@ -37,7 +37,8 @@ case class GeotrellisReprojectRasterSource(
 ) extends RasterSource { self =>
   lazy val reader = CollectionLayerReader(uri)
 
-  lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
+  /** This metadata returns data in its owm projection and resolution */
+  protected lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
 
   def cellType: CellType = dstCellType.getOrElse(metadata.cellType)
   def resampleMethod: Option[ResampleMethod] = Some(reprojectOptions.method)
@@ -89,7 +90,7 @@ case class GeotrellisReprojectRasterSource(
   }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val extent: Extent = metadata.extentFor(bounds)
+    val extent = rasterExtent.extentFor(bounds).buffer(- cellSize.resolution / 4)
     read(extent, bands)
   }
 
