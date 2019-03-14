@@ -26,6 +26,8 @@ import geotrellis.vector._
 
 import com.azavea.gdal.GDALWarp
 
+import scala.util.Properties
+
 import java.net.MalformedURLException
 
 
@@ -56,7 +58,11 @@ trait GDALBaseRasterSource extends RasterSource {
         VSIPath(uri).vsiPath
     }
     val token = GDALWarp.get_token(gdalPath, (options).toWarpOptionsList.toArray)
-    System.err.println(ANSI_BLUE + s"$uri@$token" + ANSI_RESET) // XXX
+    Properties.envOrNone("GEOTRELLIS_CONTRIB_TOKEN") match { // XXX
+      case Some(_) =>
+        System.err.println(ANSI_BLUE + s"$uri@$token" + ANSI_RESET)
+      case None =>
+    }
     token
   }
 
