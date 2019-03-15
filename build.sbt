@@ -53,8 +53,12 @@ lazy val root = Project("geotrellis-contrib", file(".")).
       """
   )
 
+lazy val IntegrationTest = config("it") extend Test
+
 lazy val vlm = project
   .settings(commonSettings)
+  .configs(IntegrationTest)
+  .settings(Defaults.itSettings)
   .settings(
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-vlm",
