@@ -57,26 +57,23 @@ case class GeotrellisRasterSource(
     GeotrellisRasterSource.read(reader, layerId, metadata, extent, bands).map { convertRaster }
   }
 
-  def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val extent = rasterExtent.extentFor(bounds).buffer(- cellSize.resolution / 4)
-    read(extent, bands)
-  }
+  def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] =
+    bounds
+      .intersection(this)
+      .map(rasterExtent.extentFor(_).buffer(- cellSize.width / 2, - cellSize.height / 2))
+      .flatMap(read(_, bands))
 
-  override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    extents.toIterator.flatMap(extent => read(extent, bands))
-  }
+  override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
+    extents.toIterator.flatMap(read(_, bands))
 
-  override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    bounds.toIterator.flatMap(bounds => read(bounds, bands))
-  }
+  override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
+    bounds.toIterator.flatMap(_.intersection(this).flatMap(read(_, bands)))
 
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeotrellisReprojectRasterSource = {
+  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeotrellisReprojectRasterSource =
     GeotrellisReprojectRasterSource(uri, layerId, bandCount, targetCRS, reprojectOptions, strategy, targetCellType)
-  }
 
-  def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
+  def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
     GeotrellisResampleRasterSource(uri, layerId, bandCount, resampleGrid, method, strategy, targetCellType)
-  }
 
   def convert(targetCellType: TargetCellType): RasterSource =
     GeotrellisRasterSource(uri, layerId, bandCount, Some(targetCellType))

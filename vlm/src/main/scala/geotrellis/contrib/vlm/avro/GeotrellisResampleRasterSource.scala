@@ -44,8 +44,7 @@ case class GeotrellisResampleRasterSource(
   @transient protected lazy val layerId: LayerId =
     GeotrellisRasterSource.getClosestLayer(resolutions, layerIds, baseLayerId, rasterExtent.cellSize, strategy)
 
-  /** This metadata returns data in its owm projection and resolution */
-  protected lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
+  lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
 
   def crs: CRS = metadata.crs
   def cellType: CellType = dstCellType.getOrElse(metadata.cellType)
@@ -64,8 +63,10 @@ case class GeotrellisResampleRasterSource(
       }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val extent = rasterExtent.extentFor(bounds).buffer(- cellSize.resolution / 4)
-    read(extent, bands)
+    bounds
+      .intersection(this)
+      .map(rasterExtent.extentFor(_).buffer(- cellSize.width / 2, - cellSize.height / 2))
+      .flatMap(read(_, bands))
   }
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeotrellisReprojectRasterSource =
@@ -78,8 +79,8 @@ case class GeotrellisResampleRasterSource(
     GeotrellisResampleRasterSource(uri, baseLayerId, bandCount, resampleGrid, method, strategy, Some(targetCellType))
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
-    extents.toIterator.flatMap(extent => read(extent, bands))
+    extents.toIterator.flatMap(read(_, bands))
 
   override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
-    bounds.toIterator.flatMap(bounds => read(bounds, bands))
+    bounds.toIterator.flatMap(_.intersection(this).flatMap(read(_, bands)))
 }

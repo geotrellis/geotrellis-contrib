@@ -89,16 +89,17 @@ case class GeotrellisReprojectRasterSource(
     }
   }
 
-  def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val extent = rasterExtent.extentFor(bounds).buffer(- cellSize.resolution / 4)
-    read(extent, bands)
-  }
+  def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] =
+    bounds
+      .intersection(this)
+      .map(rasterExtent.extentFor(_).buffer(- cellSize.width / 2, - cellSize.height / 2))
+      .flatMap(read(_, bands))
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
-    extents.toIterator.flatMap(extent => read(extent, bands))
+    extents.toIterator.flatMap(read(_, bands))
 
   override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
-    bounds.toIterator.flatMap(bounds => read(bounds, bands))
+    bounds.toIterator.flatMap(_.intersection(this).flatMap(read(_, bands)))
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
     GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, targetCRS, reprojectOptions, strategy, targetCellType)

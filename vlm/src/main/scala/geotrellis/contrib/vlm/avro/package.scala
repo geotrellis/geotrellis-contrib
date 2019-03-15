@@ -16,4 +16,16 @@
 
 package geotrellis.contrib.vlm
 
-package object avro extends Implicits
+import geotrellis.vector.Extent
+
+package object avro extends Implicits {
+  implicit class ExtentMethods(val extent: Extent) extends AnyVal {
+    def buffer(width: Double, height: Double): Extent =
+      Extent(
+        xmin = extent.xmin - width,
+        ymin = extent.ymin - height,
+        xmax = extent.xmax + width,
+        ymax = extent.ymax + height
+      )
+  }
+}
