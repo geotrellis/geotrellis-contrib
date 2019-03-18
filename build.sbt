@@ -54,6 +54,7 @@ lazy val root = Project("geotrellis-contrib", file(".")).
   )
 
 lazy val vlm = project
+  .enablePlugins(TutPlugin)
   .settings(commonSettings)
   .settings(
     organization := "com.azavea.geotrellis",
@@ -65,6 +66,7 @@ lazy val vlm = project
       geotrellisUtil,
       scalactic,
       squants,
+      comonsIO,
       sparkCore % Provided,
       sparkSQL % Test,
       geotrellisSparkTestKit % Test,
