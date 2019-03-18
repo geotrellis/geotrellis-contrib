@@ -86,7 +86,7 @@ package object vlm {
     def getProjection(dataset: Int): Option[String] = {
       require(acceptableDatasets contains dataset)
       val crs = Array.ofDim[Byte](1 << 16)
-      if (!GDALWarp.get_crs_wkt(token, dataset, numberOfAttempts, crs))
+      if (GDALWarp.get_crs_wkt(token, dataset, numberOfAttempts, crs) <= 0)
         throw new Exception("get_crs_wkt")
       Some(new String(crs, "UTF-8"))
     }
@@ -97,8 +97,8 @@ package object vlm {
       require(acceptableDatasets contains dataset)
       val transform = Array.ofDim[Double](6)
       val width_height = Array.ofDim[Int](2)
-      if (!GDALWarp.get_transform(token, dataset, numberOfAttempts, transform) ||
-          !GDALWarp.get_width_height(token, dataset, numberOfAttempts, width_height))
+      if (GDALWarp.get_transform(token, dataset, numberOfAttempts, transform) <= 0 ||
+          GDALWarp.get_width_height(token, dataset, numberOfAttempts, width_height) <= 0)
         throw new Exception("get_transform or get_widht_height")
 
       val x1 = transform(0)
@@ -125,7 +125,7 @@ package object vlm {
       val heights = Array.ofDim[Int](N)
       val extent = token.extent(dataset)
 
-      if (!GDALWarp.get_overview_widths_heights(token, dataset, numberOfAttempts, widths, heights))
+      if (GDALWarp.get_overview_widths_heights(token, dataset, numberOfAttempts, widths, heights) <= 0)
         throw new Exception("get_overview_widths_heights")
       widths.zip(heights).flatMap({ case (w, h) =>
         if (w > 0 && h > 0) Some(RasterExtent(extent, cols = w, rows = h))
@@ -145,7 +145,7 @@ package object vlm {
     def bandCount(dataset: Int): Int = {
       require(acceptableDatasets contains dataset)
       val count = Array.ofDim[Int](1)
-      if (!GDALWarp.get_band_count(token, dataset, numberOfAttempts, count))
+      if (GDALWarp.get_band_count(token, dataset, numberOfAttempts, count) <= 0)
         throw new Exception("get_band_count")
       count(0)
     }
@@ -155,7 +155,7 @@ package object vlm {
     def crs(dataset: Int): CRS = {
       require(acceptableDatasets contains dataset)
       val crs = Array.ofDim[Byte](1 << 16)
-      if (!GDALWarp.get_crs_proj4(token, dataset, numberOfAttempts, crs))
+      if (GDALWarp.get_crs_proj4(token, dataset, numberOfAttempts, crs) <= 0)
         throw new Exception("get_crs_proj4")
       val proj4String: String = new String(crs, "UTF-8").trim
       if (proj4String.length > 0) CRS.fromString(proj4String.trim)
@@ -168,7 +168,7 @@ package object vlm {
       require(acceptableDatasets contains dataset)
       val nodata = Array.ofDim[Double](1)
       val success = Array.ofDim[Int](1)
-      if (!GDALWarp.get_band_nodata(token, dataset, numberOfAttempts, 1, nodata, success))
+      if (GDALWarp.get_band_nodata(token, dataset, numberOfAttempts, 1, nodata, success) <= 0)
         throw new Exception("get_band_nodata")
       if (success(0) == 0)
         None
@@ -181,7 +181,7 @@ package object vlm {
     def dataType(dataset: Int): Int = {
       require(acceptableDatasets contains dataset)
       val dataType = Array.ofDim[Int](1)
-      if (!GDALWarp.get_band_data_type(token, dataset, numberOfAttempts, 1, dataType))
+      if (GDALWarp.get_band_data_type(token, dataset, numberOfAttempts, 1, dataType) <= 0)
         throw new Exception("get_band_data_type")
       dataType(0)
     }
@@ -213,7 +213,7 @@ package object vlm {
       val dt = token.dataType(dataset)
       val bytes = Array.ofDim[Byte](dstWindow(0) * dstWindow(1) * ct.bytes)
 
-      if (!GDALWarp.get_data(token, dataset, numberOfAttempts, srcWindow, dstWindow, band, dt, bytes))
+      if (GDALWarp.get_data(token, dataset, numberOfAttempts, srcWindow, dstWindow, band, dt, bytes) <= 0)
         throw new Exception("get_data")
       ArrayTile.fromBytes(bytes, ct, dstWindow(0), dstWindow(1))
     }
