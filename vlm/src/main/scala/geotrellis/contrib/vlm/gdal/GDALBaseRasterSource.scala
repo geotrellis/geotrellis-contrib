@@ -58,11 +58,6 @@ trait GDALBaseRasterSource extends RasterSource {
         VSIPath(uri).vsiPath
     }
     val token = GDALWarp.get_token(gdalPath, (options).toWarpOptionsList.toArray)
-    Properties.envOrNone("GEOTRELLIS_CONTRIB_TOKEN") match { // XXX
-      case Some(_) =>
-        System.err.println(ANSI_BLUE + s"$uri@$token" + ANSI_RESET)
-      case None =>
-    }
     token
   }
 
