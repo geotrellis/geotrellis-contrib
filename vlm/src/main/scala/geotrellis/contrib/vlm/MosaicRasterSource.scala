@@ -34,34 +34,16 @@ import geotrellis.util.GetComponent
   * Single threaded instance of a reader for reading windows out of collections
   * of rasters
   *
+  * @param sources The underlying [[RasterSource]]s that you'll use for data access
+  * @param commonCrs The commonCrs to reproject all [[RasterSource]]s to anytime we need information about their data
+  * Since MosaicRasterSources represent collections of [[RasterSource]]s, we don't know in advance
+  * whether they'll have the same CRS. commonCrs allows specifying the CRS on read instead of
+  * having to make sure at compile time that you're threading CRSes through everywhere correctly.
   */
-trait MosaicRasterSource extends RasterSource {
-  // Orphan instance for semigroups for rasters, so we can combine
-  // Option[Raster[_]]s later
-  implicit val rasterSemigroup: Semigroup[Raster[MultibandTile]] =
-    new Semigroup[Raster[MultibandTile]] {
-      def combine(l: Raster[MultibandTile], r: Raster[MultibandTile]) = {
-        val targetRE = RasterExtent(
-          l.rasterExtent.extent combine r.rasterExtent.extent,
-          l.rasterExtent.cellSize)
-        val result = l.resample(targetRE) merge r.resample(targetRE)
-        result
-      }
-    }
+case class MosaicRasterSource(sources: NonEmptyList[RasterSource], crs: CRS)
+    extends RasterSource {
 
-  /**
-    * The underlying [[RasterSource]]s that you'll use for data access
-    */
-  val sources: NonEmptyList[RasterSource]
-
-  /**
-    * The commonCrs to reproject all [[RasterSource]]s to anytime we need information about their data
-    *
-    * Since MosaicRasterSources represent collections of [[RasterSource]]s, we don't know in advance
-    * whether they'll have the same CRS. commonCrs allows specifying the CRS on read instead of
-    * having to make sure at compile time that you're threading CRSes through everywhere correctly.
-    */
-  val commonCrs: CRS
+  import MosaicRasterSource._
 
   /**
     * Uri is required only for compatibility with RasterSource.
@@ -75,7 +57,7 @@ trait MosaicRasterSource extends RasterSource {
     """.trim.stripMargin
   )
 
-  def crs: CRS = commonCrs
+  val targetCellType = None
 
   /**
     * The bandCount of the first [[RasterSource]] in sources
@@ -139,10 +121,16 @@ trait MosaicRasterSource extends RasterSource {
 }
 
 object MosaicRasterSource {
-  /** Create a MosaicRasterSource with sources and bands set from the provided parameters
-    */
-  def apply(_sources: NonEmptyList[RasterSource], _commonCrs: CRS) = new MosaicRasterSource {
-    val sources = _sources
-    val commonCrs = _commonCrs
-  }
+  // Orphan instance for semigroups for rasters, so we can combine
+  // Option[Raster[_]]s later
+  implicit val rasterSemigroup: Semigroup[Raster[MultibandTile]] =
+    new Semigroup[Raster[MultibandTile]] {
+      def combine(l: Raster[MultibandTile], r: Raster[MultibandTile]) = {
+        val targetRE = RasterExtent(
+          l.rasterExtent.extent combine r.rasterExtent.extent,
+          List(l.rasterExtent.cellSize, r.rasterExtent.cellSize).minBy(_.resolution)
+        val result = l.resample(targetRE) merge r.resample(targetRE)
+        result
+      }
+    }
 }
