@@ -128,9 +128,13 @@ object MosaicRasterSource {
       def combine(l: Raster[MultibandTile], r: Raster[MultibandTile]) = {
         val targetRE = RasterExtent(
           l.rasterExtent.extent combine r.rasterExtent.extent,
-          List(l.rasterExtent.cellSize, r.rasterExtent.cellSize).minBy(_.resolution)
+          List(l.rasterExtent.cellSize, r.rasterExtent.cellSize).minBy(_.resolution))
         val result = l.resample(targetRE) merge r.resample(targetRE)
         result
       }
     }
+
+  @SuppressWarnings(Array("TraversableHead", "TraversableTail"))
+  def unsafeFromList(sources: List[RasterSource], crs: CRS = WebMercator) =
+    MosaicRasterSource(NonEmptyList(sources.head, sources.tail), crs)
 }
