@@ -35,9 +35,9 @@ import geotrellis.util.GetComponent
   * of rasters
   *
   * @param sources The underlying [[RasterSource]]s that you'll use for data access
-  * @param commonCrs The commonCrs to reproject all [[RasterSource]]s to anytime we need information about their data
+  * @param crs The crs to reproject all [[RasterSource]]s to anytime we need information about their data
   * Since MosaicRasterSources represent collections of [[RasterSource]]s, we don't know in advance
-  * whether they'll have the same CRS. commonCrs allows specifying the CRS on read instead of
+  * whether they'll have the same CRS. crs allows specifying the CRS on read instead of
   * having to make sure at compile time that you're threading CRSes through everywhere correctly.
   */
 case class MosaicRasterSource(sources: NonEmptyList[RasterSource], crs: CRS)
@@ -71,7 +71,7 @@ case class MosaicRasterSource(sources: NonEmptyList[RasterSource], crs: CRS)
   def cellType: CellType = sources.head.cellType
 
   def rasterExtent = {
-    val extents = sources map { _.reproject(commonCrs).rasterExtent }
+    val extents = sources map { _.reproject(crs).rasterExtent }
     extents.tail.foldLeft(extents.head) { _ combine _ }
   }
 
@@ -81,12 +81,12 @@ case class MosaicRasterSource(sources: NonEmptyList[RasterSource], crs: CRS)
     * @see [[geotrellis.contrib.vlm.RasterSource.resolutions]]
     */
   def resolutions = {
-    val resolutions = sources map { _.reproject(commonCrs).resolutions }
+    val resolutions = sources map { _.reproject(crs).resolutions }
     resolutions.tail.foldLeft(resolutions.head)( _ ++ _ )
   }
 
   /** Create a new MosaicRasterSource with sources transformed according to the provided
-    * crs, options, and strategy, and a new commonCrs
+    * crs, options, and strategy, and a new crs
     *
     * @see [[geotrellis.contrib.vlm.RasterSource.reproject]]
     */
@@ -97,25 +97,25 @@ case class MosaicRasterSource(sources: NonEmptyList[RasterSource], crs: CRS)
   )
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val rasters = sources map { _.reproject(commonCrs).read(extent, bands) }
+    val rasters = sources map { _.reproject(crs).read(extent, bands) }
     rasters.reduce
   }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val rasters = sources map { _.reproject(commonCrs).read(bounds, bands) }
+    val rasters = sources map { _.reproject(crs).read(bounds, bands) }
     rasters.reduce
   }
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy)
       : RasterSource = MosaicRasterSource(
-    sources map { _.reproject(commonCrs).resample(resampleGrid, method, strategy) },
-    commonCrs
+    sources map { _.reproject(crs).resample(resampleGrid, method, strategy) },
+    crs
   )
 
   def convert(targetCellType: TargetCellType): RasterSource = {
     MosaicRasterSource(
       sources map { _.convert(targetCellType) },
-      commonCrs
+      crs
     )
   }
 }
