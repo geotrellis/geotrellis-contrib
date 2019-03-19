@@ -26,8 +26,6 @@ import geotrellis.vector._
 
 import com.azavea.gdal.GDALWarp
 
-import scala.util.Properties
-
 import java.net.MalformedURLException
 
 
