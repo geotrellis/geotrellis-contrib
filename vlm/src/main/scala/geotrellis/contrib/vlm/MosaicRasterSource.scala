@@ -71,7 +71,10 @@ trait MosaicRasterSource extends RasterSource {
     */
   def bandCount: Int = sources.head.bandCount
 
-  def cellType: CellType = sources.head.cellType
+  def cellType: CellType = {
+    val cellTypes = sources map { _.cellType }
+    cellTypes.tail.foldLeft(cellTypes.head)(_ union _)
+  }
 
   /**
     * All available resolutions for all RasterSources in this MosaicRasterSource
