@@ -3,6 +3,8 @@ import Dependencies._
 scalaVersion := Version.scala
 scalaVersion in ThisBuild := Version.scala
 
+addCommandAlias("bintrayPublish", ";publish;bintrayRelease")
+
 lazy val commonSettings = Seq(
   scalaVersion := Version.scala,
   crossScalaVersions := Version.crossScala,
@@ -23,6 +25,7 @@ lazy val commonSettings = Seq(
   ),
   publishMavenStyle := true,
   publishArtifact in Test := false,
+  credentials += Credentials(Path.userHome / ".sbt" / ".credentials"),
   pomIncludeRepository := { _ => false },
   addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.4" cross CrossVersion.binary),
   addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.1" cross CrossVersion.full),
@@ -38,7 +41,18 @@ lazy val commonSettings = Seq(
   headerLicense := Some(HeaderLicense.ALv2("2018", "Azavea")),
   bintrayOrganization := Some("azavea"),
   bintrayRepository := "geotrellis",
-  bintrayPackageLabels := Seq("gis", "raster", "vector")
+  bintrayPackageLabels := Seq("gis", "raster", "vector"),
+  bintrayReleaseOnPublish := false,
+  publishTo := {
+    val bintrayPublishTo = publishTo.value
+    val nexus = "http://nexus.internal.azavea.com"
+
+    if (isSnapshot.value) {
+      Some("snapshots" at nexus + "/repository/azavea-snapshots")
+    } else {
+      bintrayPublishTo
+    }
+  }
 )
 
 lazy val root = Project("geotrellis-contrib", file(".")).
