@@ -9,6 +9,7 @@ matrix:
          homebrew:
            packages:
              - gdal
+           update: true
        script:
          - .travis/build-and-test-macintosh.sh
      # - sudo: false
