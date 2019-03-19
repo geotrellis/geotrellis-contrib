@@ -40,8 +40,11 @@ import geotrellis.util.GetComponent
   * whether they'll have the same CRS. crs allows specifying the CRS on read instead of
   * having to make sure at compile time that you're threading CRSes through everywhere correctly.
   */
-case class MosaicRasterSource(sources: NonEmptyList[RasterSource], crs: CRS)
-    extends RasterSource {
+trait MosaicRasterSource extends RasterSource {
+
+  val sources: NonEmptyList[RasterSource]
+  val crs: CRS
+  def rasterExtent: RasterExtent
 
   import MosaicRasterSource._
 
@@ -70,19 +73,14 @@ case class MosaicRasterSource(sources: NonEmptyList[RasterSource], crs: CRS)
 
   def cellType: CellType = sources.head.cellType
 
-  def rasterExtent = {
-    val extents = sources map { _.reproject(crs).rasterExtent }
-    extents.tail.foldLeft(extents.head) { _ combine _ }
-  }
-
   /**
     * All available resolutions for all RasterSources in this MosaicRasterSource
     *
     * @see [[geotrellis.contrib.vlm.RasterSource.resolutions]]
     */
   def resolutions = {
-    val resolutions = sources map { _.reproject(crs).resolutions }
-    resolutions.tail.foldLeft(resolutions.head)( _ ++ _ )
+    val resolutions = sources map { _.resolutions }
+    resolutions.reduce
   }
 
   /** Create a new MosaicRasterSource with sources transformed according to the provided
@@ -93,22 +91,23 @@ case class MosaicRasterSource(sources: NonEmptyList[RasterSource], crs: CRS)
   def reproject(crs: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy)
       : RasterSource = MosaicRasterSource(
     sources map { _.reproject(crs, reprojectOptions, strategy) },
-    crs
+    crs,
+    rasterExtent.reproject(this.crs, crs, reprojectOptions)
   )
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val rasters = sources map { _.reproject(crs).read(extent, bands) }
+    val rasters = sources map { _.read(extent, bands) }
     rasters.reduce
   }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val rasters = sources map { _.reproject(crs).read(bounds, bands) }
+    val rasters = sources map { _.read(bounds, bands) }
     rasters.reduce
   }
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy)
       : RasterSource = MosaicRasterSource(
-    sources map { _.reproject(crs).resample(resampleGrid, method, strategy) },
+    sources map { _.resample(resampleGrid, method, strategy) },
     crs
   )
 
@@ -134,7 +133,27 @@ object MosaicRasterSource {
       }
     }
 
+  def apply(_sources: NonEmptyList[RasterSource], _crs: CRS, _rasterExtent: RasterExtent) =
+    new MosaicRasterSource {
+      val sources = _sources map { _.reprojectToGrid(_crs, rasterExtent) }
+      val crs = _crs
+      def rasterExtent = _rasterExtent
+    }
+
+  def apply(_sources: NonEmptyList[RasterSource], _crs: CRS) =
+    new MosaicRasterSource {
+      val sources = _sources map { _.reprojectToGrid(_crs, _sources.head.rasterExtent) }
+      val crs = _crs
+      def rasterExtent = _sources.head.rasterExtent
+    }
+
   @SuppressWarnings(Array("TraversableHead", "TraversableTail"))
-  def unsafeFromList(sources: List[RasterSource], crs: CRS = WebMercator) =
-    MosaicRasterSource(NonEmptyList(sources.head, sources.tail), crs)
+  def unsafeFromList(_sources: List[RasterSource],
+                     _crs: CRS = WebMercator,
+                     _rasterExtent: Option[RasterExtent]) =
+    new MosaicRasterSource {
+      val sources = NonEmptyList(_sources.head, _sources.tail)
+      val crs = _crs
+      def rasterExtent  = _rasterExtent getOrElse { _sources.head.rasterExtent }
+    }
 }

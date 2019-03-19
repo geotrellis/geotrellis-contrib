@@ -38,7 +38,8 @@ class MosaicRasterSourceSpec extends FunSpec with Matchers {
     val gtRasterSource2 = GeoTiffRasterSource(inputPath2)
 
     val mosaicRasterSource = MosaicRasterSource(
-      NonEmptyList(gtRasterSource1, List(gtRasterSource2)), LatLng)
+      NonEmptyList(gtRasterSource1, List(gtRasterSource2)), LatLng,
+      gtRasterSource1.rasterExtent combine gtRasterSource2.rasterExtent)
 
     it("should understand its bounds") {
       mosaicRasterSource.cols shouldBe 8
@@ -53,8 +54,7 @@ class MosaicRasterSourceSpec extends FunSpec with Matchers {
 
     it("should union extents with reprojection") {
       mosaicRasterSource.reproject(WebMercator).rasterExtent shouldBe (
-        gtRasterSource1.reproject(WebMercator).rasterExtent combine
-          gtRasterSource2.reproject(WebMercator).rasterExtent
+        mosaicRasterSource.rasterExtent.reproject(LatLng, WebMercator)
       )
     }
 
