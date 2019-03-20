@@ -201,7 +201,15 @@ package object vlm {
       require(acceptableDatasets contains dataset)
       val nd = noDataValue(dataset)
       val dt = GDALDataType.intToGDALDataType(token.dataType(dataset))
-      GDALUtils.dataTypeToCellType(dt, nd)
+      val mm = {
+        val minmax = Array.ofDim[Double](2)
+        val success = Array.ofDim[Int](1)
+        if (GDALWarp.get_band_min_max(token, dataset, numberOfAttempts, 1, true, minmax, success) <= 0)
+          throw new Exception("get_band_min_max")
+        if (success(0) != 0) Some(minmax(0), minmax(1))
+        else None
+      }
+      GDALUtils.dataTypeToCellType(datatype = dt, noDataValue = nd, minMaxValues = mm)
     }
 
     def readTile(gb: GridBounds, band: Int, dataset: Int = GDALWarp.WARPED): Tile = {
