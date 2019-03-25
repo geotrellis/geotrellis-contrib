@@ -43,7 +43,12 @@ import geotrellis.util.GetComponent
   * @groupprio reproject 2
   */
 trait RasterSource extends CellGrid with AutoCloseable with Serializable {
+  // sfitch: As with `targetCellType` below, this feels like API leakage, and seems to be captured already by
+  // the `XXXResampleRasterSource` classes.
   def resampleMethod: Option[ResampleMethod]
+
+  // sfitch: what if we have `RasterSource`s that aren't identified by a URI? e.g. `InMemoryRasterSource`?
+  // Also: should we consider more strongly typing this?
   def uri: String
   def crs: CRS
   def bandCount: Int
@@ -212,6 +217,9 @@ trait RasterSource extends CellGrid with AutoCloseable with Serializable {
   def tileToLayout(layout: LayoutDefinition, resampleMethod: ResampleMethod = NearestNeighbor): LayoutTileSource =
     LayoutTileSource(resampleToGrid(layout, resampleMethod), layout)
 
+  // sfitch: As with `resampleMethod`, this feels like API leakage, and could be delegated to some sort of wrapper
+  // like `DelayedConversionRasterSource` or similar. I'd suggest putting any shared implementation in a mix-in,
+  // and just leave `convert` as the single abstract method dealing with conversions.
   private[vlm] def targetCellType: Option[TargetCellType]
 
   protected lazy val dstCellType: Option[CellType] =
