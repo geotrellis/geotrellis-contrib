@@ -73,7 +73,6 @@ lazy val vlm = project
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-vlm",
     libraryDependencies ++= Seq(
-      geotrellisGdal,
       geotrellisSpark,
       geotrellisS3,
       geotrellisUtil,
@@ -83,6 +82,28 @@ lazy val vlm = project
       sparkSQL % Test,
       geotrellisSparkTestKit % Test,
       scalatest % Test
+    ),
+    Test / fork := true,
+    Test / parallelExecution := false,
+    Test / testOptions += Tests.Argument("-oDF"),
+  )
+  .settings(
+    initialCommands in console :=
+      """
+        |import geotrellis.contrib.vlm._
+        |import geotrellis.contrib.vlm.geotiff._
+        |import geotrellis.contrib.vlm.gdal._
+      """.stripMargin
+  )
+
+lazy val gdal = project
+  .dependsOn(vlm)
+  .settings(commonSettings)
+  .settings(
+    organization := "com.azavea.geotrellis",
+    name := "geotrellis-contrib-gdal",
+    libraryDependencies ++= Seq(
+      geotrellisGdal
     ),
     Test / fork := true,
     Test / parallelExecution := false,
@@ -97,6 +118,7 @@ lazy val vlm = project
         |import geotrellis.contrib.vlm.gdal._
       """.stripMargin
   )
+
 
 lazy val summary = project
   .settings(commonSettings)
