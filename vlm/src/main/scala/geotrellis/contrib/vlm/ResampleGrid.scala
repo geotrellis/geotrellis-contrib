@@ -17,23 +17,24 @@
 package geotrellis.contrib.vlm
 
 import geotrellis.raster.{RasterExtent, GridExtent}
+import spire.math.Integral
 
-sealed trait ResampleGrid {
+sealed trait ResampleGrid[N] {
   // this is a by name parameter, as we don't need to call the source in all ResampleGrid types
-  def apply(source: => RasterExtent): RasterExtent
+  def apply(source: => GridExtent[N]): GridExtent[N]
 }
 
-case class Dimensions(cols: Int, rows: Int) extends ResampleGrid {
-  def apply(source: => RasterExtent): RasterExtent =
-    RasterExtent(source.extent, cols, rows)
+case class Dimensions[N: Integral](cols: N, rows: N) extends ResampleGrid[N] {
+  def apply(source: => GridExtent[N]): GridExtent[N] =
+    new GridExtent(source.extent, cols, rows)
 }
 
-case class TargetGrid(grid: GridExtent) extends ResampleGrid {
-  def apply(source: => RasterExtent): RasterExtent =
-    grid.createAlignedRasterExtent(source.extent)
+case class TargetGrid[N: Integral](grid: GridExtent[Long]) extends ResampleGrid[N] {
+  def apply(source: => GridExtent[N]): GridExtent[N] =
+    grid.createAlignedGridExtent(source.extent).toGridType[N]
 }
 
-case class TargetRegion(region: RasterExtent) extends ResampleGrid {
-  def apply(source: => RasterExtent): RasterExtent =
+case class TargetRegion[N: Integral](region: GridExtent[N]) extends ResampleGrid[N] {
+  def apply(source: => GridExtent[N]): GridExtent[N] =
     region
 }

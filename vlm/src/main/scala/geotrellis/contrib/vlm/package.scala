@@ -19,7 +19,7 @@ package geotrellis.contrib
 import geotrellis.contrib.vlm.config.S3Config
 import geotrellis.util.{FileRangeReader, StreamingByteReader}
 import geotrellis.proj4.{CRS, Transform}
-import geotrellis.raster.{GridExtent, RasterExtent}
+import geotrellis.raster.{GridExtent, GridBounds, RasterExtent}
 import geotrellis.raster.reproject.Reproject.Options
 import geotrellis.raster.reproject.ReprojectRasterExtent
 import geotrellis.spark.io.http.util.HttpRangeReader
@@ -84,7 +84,25 @@ package object vlm {
 
     def reproject(src: CRS, dest: CRS): RasterExtent =
       reproject(src, dest, Options.DEFAULT)
-
-    def toGridExtent: GridExtent = GridExtent(self.extent, self.cellheight, self.cellwidth)
   }
+
+  implicit class gridExtentMethods[N: spire.math.Integral](self: GridExtent[N]) {
+    def reproject(src: CRS, dest: CRS, options: Options): GridExtent[N] =
+      if(src == dest) self
+      else {
+        val transform = Transform(src, dest)
+        options.targetRasterExtent.
+          map(_.toGridType[N]).
+          getOrElse(ReprojectRasterExtent(self, transform, options = options))
+      }
+
+    def reproject(src: CRS, dest: CRS): GridExtent[N] =
+      reproject(src, dest, Options.DEFAULT)
+  }
+
+  /** RasterSource interface reads GridBounds[Long] but GridBounds[Int] abounds.
+   * Implicit conversions are evil, but this one is always safe and saves typing.
+   */
+  implicit def gridBoundsIntToLong(bounds: GridBounds[Int]): GridBounds[Long] =
+    bounds.toGridType[Long]
 }

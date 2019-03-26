@@ -38,7 +38,7 @@ class MosaicRasterSourceSpec extends FunSpec with Matchers {
 
     val mosaicRasterSource = MosaicRasterSource(
       NonEmptyList(gtRasterSource1, List(gtRasterSource2)), LatLng,
-      gtRasterSource1.rasterExtent combine gtRasterSource2.rasterExtent)
+      gtRasterSource1.gridExtent combine gtRasterSource2.gridExtent)
 
     it("should understand its bounds") {
       mosaicRasterSource.cols shouldBe 8
@@ -46,14 +46,14 @@ class MosaicRasterSourceSpec extends FunSpec with Matchers {
     }
 
     it("should union extents of its sources") {
-      mosaicRasterSource.rasterExtent shouldBe (
-        gtRasterSource1.rasterExtent combine gtRasterSource2.rasterExtent
+      mosaicRasterSource.gridExtent shouldBe (
+        gtRasterSource1.gridExtent combine gtRasterSource2.gridExtent
       )
     }
 
     it("should union extents with reprojection") {
-      mosaicRasterSource.reproject(WebMercator).rasterExtent shouldBe (
-        mosaicRasterSource.rasterExtent.reproject(LatLng, WebMercator)
+      mosaicRasterSource.reproject(WebMercator).gridExtent shouldBe (
+        mosaicRasterSource.gridExtent.reproject(LatLng, WebMercator)
       )
     }
 
@@ -61,9 +61,9 @@ class MosaicRasterSourceSpec extends FunSpec with Matchers {
       val extentRead1 = Extent(0, 0, 1, 1)
       val extentRead2 = Extent(1, 0, 2, 1)
       mosaicRasterSource.read(extentRead1, Seq(0)) shouldBe
-        gtRasterSource1.read(gtRasterSource1.rasterExtent.extent, Seq(0))
+        gtRasterSource1.read(gtRasterSource1.gridExtent.extent, Seq(0))
       mosaicRasterSource.read(extentRead2, Seq(0)) shouldBe
-        gtRasterSource2.read(gtRasterSource2.rasterExtent.extent, Seq(0))
+        gtRasterSource2.read(gtRasterSource2.gridExtent.extent, Seq(0))
     }
 
     it("should read an extent overlapping both tiles") {
@@ -89,7 +89,7 @@ class MosaicRasterSourceSpec extends FunSpec with Matchers {
                                            9, 10, 11, 12, 9, 10, 11, 12,
                                            13, 14, 15, 16, 13, 14, 15, 16),
                                      8, 4)),
-          mosaicRasterSource.rasterExtent.extent
+          mosaicRasterSource.gridExtent.extent
       )
       val result = mosaicRasterSource.read(mosaicRasterSource.bounds, Seq(0)).get
       result shouldEqual expectation

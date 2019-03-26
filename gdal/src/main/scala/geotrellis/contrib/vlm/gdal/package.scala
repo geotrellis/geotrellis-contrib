@@ -219,13 +219,15 @@ package object gdal {
       )
     }
 
-    def resample(gridExtent: => GridExtent, resampleGrid: ResampleGrid): GDALWarpOptions = {
-      val rasterExtent = gridExtent.toRasterExtent
+    def resample(gridExtent: => GridExtent[Long], resampleGrid: ResampleGrid[Long]): GDALWarpOptions = {
+
       resampleGrid match {
-        case Dimensions(cols, rows) => self.copy(te = None, cellSize = None, dimensions = (cols, rows).some)
+        case Dimensions(cols, rows) =>
+          self.copy(te = None, cellSize = None, dimensions = (cols.toInt, rows.toInt).some)
+
         case _ =>
           val re = {
-            val targetRasterExtent = resampleGrid(rasterExtent)
+            val targetRasterExtent = resampleGrid(gridExtent).toRasterExtent
             if(self.alignTargetPixels) targetRasterExtent.alignTargetPixels else targetRasterExtent
           }
 

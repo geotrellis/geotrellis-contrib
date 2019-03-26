@@ -88,7 +88,19 @@ lazy val vlm = project
     ),
     Test / fork := true,
     Test / parallelExecution := false,
+<<<<<<< HEAD
     Test / testOptions += Tests.Argument("-oDF")
+=======
+    Test / testOptions += Tests.Argument("-oDF"),
+  )
+  .settings(
+    initialCommands in console :=
+      """
+        |import geotrellis.contrib.vlm._
+        |import geotrellis.contrib.vlm.geotiff._
+        |import geotrellis.contrib.vlm.avro._
+      """.stripMargin
+>>>>>>> 65a3a60... RasterSource.gridExtent[Long] instead of rasterExtent
   )
   
 

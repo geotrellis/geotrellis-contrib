@@ -34,10 +34,10 @@ object RasterRegion {
     * @param source raster source that can be used to read this region.
     * @param bounds pixel bounds relative to the source, maybe not be fully contained by the source bounds.
     */
-  def apply(source: RasterSource, bounds: GridBounds): RasterRegion =
+  def apply(source: RasterSource, bounds: GridBounds[Long]): RasterRegion =
     GridBoundsRasterRegion(source, bounds)
 
-  case class GridBoundsRasterRegion(source: RasterSource, bounds: GridBounds) extends RasterRegion {
+  case class GridBoundsRasterRegion(source: RasterSource, bounds: GridBounds[Long]) extends RasterRegion {
     require(bounds.intersects(source.gridBounds), s"The given bounds: $bounds must intersect the given source: $source")
     @transient lazy val raster: Option[Raster[MultibandTile]] =
       for {
@@ -54,9 +54,9 @@ object RasterRegion {
         }
       }
 
-    override def cols: Int = bounds.width
-    override def rows: Int = bounds.height
-    override def extent: Extent = source.rasterExtent.extentFor(bounds, clamp = false)
+    override def cols: Int = bounds.width.toInt
+    override def rows: Int = bounds.height.toInt
+    override def extent: Extent = source.gridExtent.extentFor(bounds, clamp = false)
     override def crs: CRS = source.crs
     override def cellType: CellType = source.cellType
   }
