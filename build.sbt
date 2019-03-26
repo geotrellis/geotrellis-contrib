@@ -68,6 +68,7 @@ lazy val root = Project("geotrellis-contrib", file(".")).
   )
 
 lazy val vlm = project
+  .dependsOn(testkit % Test)
   .settings(commonSettings)
   .settings(
     organization := "com.azavea.geotrellis",
@@ -97,6 +98,7 @@ lazy val vlm = project
   )
 
 lazy val gdal = project
+  .dependsOn(testkit % Test)
   .dependsOn(vlm)
   .settings(commonSettings)
   .settings(
@@ -119,6 +121,18 @@ lazy val gdal = project
       """.stripMargin
   )
 
+lazy val testkit = project
+  .settings(commonSettings)
+  .settings(
+    organization := "com.azavea.geotrellis",
+    name := "geotrellis-contrib-testkit",
+    libraryDependencies ++= Seq(
+      geotrellisSpark, // SpatialKey
+      geotrellisRasterTestkit,
+      geotrellisRaster,
+      geotrellisMacros,
+      scalatest % Provided)
+  )
 
 lazy val summary = project
   .settings(commonSettings)
