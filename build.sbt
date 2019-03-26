@@ -105,7 +105,11 @@ lazy val gdal = project
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-gdal",
     libraryDependencies ++= Seq(
-      geotrellisGdal
+      geotrellisGdal,
+      sparkCore % Test,
+      sparkSQL % Test,
+      geotrellisSparkTestKit % Test,
+      scalatest % Test
     ),
     Test / fork := true,
     Test / parallelExecution := false,
