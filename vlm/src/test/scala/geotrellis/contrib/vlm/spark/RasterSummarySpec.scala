@@ -40,7 +40,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
           .map(uri => GeoTiffRasterSource(uri): RasterSource)
           .cache()
 
-      val metadata = RasterSummary.fromRDD(sourceRDD)
+      val metadata = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
       val rasterSource = GeoTiffRasterSource(inputPath)
 
       rasterSource.crs shouldBe metadata.crs
@@ -63,11 +63,11 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
           .map(uri => GeoTiffRasterSource(uri).reproject(targetCRS, method): RasterSource)
           .cache()
 
-      val summary = RasterSummary.fromRDD(sourceRDD)
+      val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
       val layoutLevel @ LayoutLevel(zoom, layout) = summary.levelFor(layoutScheme)
       val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
 
-      val summaryCollected = RasterSummary.fromRDD(tiledLayoutSource.map(_.source))
+      val summaryCollected = RasterSummary.fromRDD[RasterSource, Long](tiledLayoutSource.map(_.source))
       val summaryResampled = summary.resample(TargetGrid(layout))
 
       val metadata = summary.toTileLayerMetadata(layoutLevel)
@@ -105,7 +105,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
         .cache()
 
     // collect raster summary
-    val summary = RasterSummary.fromRDD(sourceRDD)
+    val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
     val layoutLevel @ LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
     val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
 

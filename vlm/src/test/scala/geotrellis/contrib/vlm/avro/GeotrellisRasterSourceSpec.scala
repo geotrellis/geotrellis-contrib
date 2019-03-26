@@ -106,7 +106,7 @@ class GeotrellisRasterSourceSpec extends FunSpec with RasterMatchers with Better
 
       val actual: Raster[MultibandTile] =
         resampledSource
-          .resampleToGrid(expected.rasterExtent)
+          .resampleToGrid(expected.rasterExtent.toGridType[Long])
           .read(expected.extent)
           .get
 
@@ -127,9 +127,9 @@ class GeotrellisRasterSourceSpec extends FunSpec with RasterMatchers with Better
 
     it("should get the closest resolution") {
       val extent = Extent(0.0, 0.0, 10.0, 10.0)
-      val rasterExtent1 = RasterExtent(extent, 1.0, 1.0, 10, 10)
-      val rasterExtent2 = RasterExtent(extent, 2.0, 2.0, 10, 10)
-      val rasterExtent3 = RasterExtent(extent, 4.0, 4.0, 10, 10)
+      val rasterExtent1 = new GridExtent[Long](extent, 1.0, 1.0, 10, 10)
+      val rasterExtent2 = new GridExtent[Long](extent, 2.0, 2.0, 10, 10)
+      val rasterExtent3 = new GridExtent[Long](extent, 4.0, 4.0, 10, 10)
 
       val resolutions = List(rasterExtent1, rasterExtent2, rasterExtent3)
       val cellSize1 = CellSize(1.0, 1.0)
@@ -148,9 +148,9 @@ class GeotrellisRasterSourceSpec extends FunSpec with RasterMatchers with Better
 
     it("should get the closest layer") {
       val extent = Extent(0.0, 0.0, 10.0, 10.0)
-      val rasterExtent1 = RasterExtent(extent, 1.0, 1.0, 10, 10)
-      val rasterExtent2 = RasterExtent(extent, 2.0, 2.0, 10, 10)
-      val rasterExtent3 = RasterExtent(extent, 4.0, 4.0, 10, 10)
+      val rasterExtent1 = new GridExtent[Long](extent, 1.0, 1.0, 10, 10)
+      val rasterExtent2 = new GridExtent[Long](extent, 2.0, 2.0, 10, 10)
+      val rasterExtent3 = new GridExtent[Long](extent, 4.0, 4.0, 10, 10)
 
       val resolutions = List(rasterExtent1, rasterExtent2, rasterExtent3)
 
@@ -168,7 +168,7 @@ class GeotrellisRasterSourceSpec extends FunSpec with RasterMatchers with Better
 
     it("should reproject") {
       val targetCRS = WebMercator
-      val bounds = GridBounds(0, 0, sourceMultiband.cols - 1, sourceMultiband.rows - 1)
+      val bounds = GridBounds[Int](0, 0, sourceMultiband.cols.toInt - 1, sourceMultiband.rows.toInt - 1)
 
       val expected: Raster[MultibandTile] =
         GeoTiffReader

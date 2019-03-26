@@ -19,12 +19,14 @@ package geotrellis.contrib.vlm.spark
 import com.typesafe.scalalogging.LazyLogging
 import geotrellis.contrib.vlm.{LayoutType, ResampleGrid, TargetGrid}
 import geotrellis.proj4.CRS
-import geotrellis.raster.{CellGrid, CellSize, CellType, RasterExtent}
+import geotrellis.raster.{CellGrid, CellSize, CellType, RasterExtent, GridExtent}
 import geotrellis.spark._
 import geotrellis.spark.tiling.{LayoutDefinition, LayoutLevel, LayoutScheme}
 import geotrellis.util._
 import geotrellis.vector.{Extent, ProjectedExtent}
 import org.apache.spark.rdd.RDD
+import spire.math.Integral
+import spire.implicits._
 
 case class RasterSummary(
   crs: CRS,
@@ -46,9 +48,11 @@ case class RasterSummary(
   def levelFor(layoutScheme: LayoutScheme): LayoutLevel =
     layoutScheme.levelFor(extent, cellSize)
 
-  def toRasterExtent: RasterExtent = RasterExtent(extent, cellSize)
+  def toGridExtent: GridExtent[Long] =
+    new GridExtent[Long](extent, cellSize)
 
-  def layoutDefinition(scheme: LayoutScheme): LayoutDefinition = scheme.levelFor(extent, cellSize).layout
+  def layoutDefinition(scheme: LayoutScheme): LayoutDefinition =
+    scheme.levelFor(extent, cellSize).layout
 
   def combine(other: RasterSummary): RasterSummary = {
     require(other.crs == crs, s"Can't combine LayerExtent for different CRS: $crs, ${other.crs}")
@@ -65,9 +69,11 @@ case class RasterSummary(
 
   def toTileLayerMetadata(layoutLevel: LayoutLevel): (TileLayerMetadata[SpatialKey], Some[Int]) = {
     val LayoutLevel(zoom, layoutDefinition) = layoutLevel
-    val re = TargetGrid(layoutDefinition)(toRasterExtent)
-    val dataBounds = KeyBounds(layoutDefinition.mapTransform.extentToBounds(re.extent))
-    TileLayerMetadata[SpatialKey](cellType, layoutDefinition, re.extent, crs, dataBounds) -> Some(zoom)
+    // We want to align the data extent to pixel layout of layoutDefinition
+    val layerGridExtent = layoutDefinition.createAlignedGridExtent(extent)
+    val dataBounds = KeyBounds(layoutDefinition.mapTransform.extentToBounds(layerGridExtent.extent))
+    val tlm = TileLayerMetadata[SpatialKey](cellType, layoutDefinition, layerGridExtent.extent, crs, dataBounds)
+    (tlm, Some(zoom))
   }
 
   def toTileLayerMetadata(layoutDefinition: LayoutDefinition, zoom: Int): (TileLayerMetadata[SpatialKey], Some[Int]) =
@@ -76,12 +82,13 @@ case class RasterSummary(
   def toTileLayerMetadata(layoutType: LayoutType): (TileLayerMetadata[SpatialKey], Option[Int]) = {
     val (ld, zoom) = layoutType.layoutDefinitionWithZoom(crs, extent, cellSize)
     val dataBounds: Bounds[SpatialKey] = KeyBounds(ld.mapTransform.extentToBounds(extent))
-    TileLayerMetadata[SpatialKey](cellType, ld, extent, crs, dataBounds) -> zoom
+    val tlm = TileLayerMetadata[SpatialKey](cellType, ld, extent, crs, dataBounds)
+    (tlm, zoom)
   }
 
   // TODO: probably this function should be removed in the future
-  def resample(resampleGrid: ResampleGrid): RasterSummary = {
-    val re = resampleGrid(toRasterExtent)
+  def resample(resampleGrid: ResampleGrid[Long]): RasterSummary = {
+    val re = resampleGrid(toGridExtent)
     RasterSummary(
       crs      = crs,
       cellType = cellType,
@@ -95,12 +102,14 @@ case class RasterSummary(
 
 object RasterSummary {
   /** Collect [[RasterSummary]] from unstructred rasters, grouped by CRS */
-  def collect[V <: CellGrid: GetComponent[?, ProjectedExtent]](rdd: RDD[V]): Seq[RasterSummary] = {
+  def collect[V <: CellGrid[N]: GetComponent[?, ProjectedExtent], N: Integral](rdd: RDD[V]): Seq[RasterSummary] = {
     rdd
       .map { grid =>
         val ProjectedExtent(extent, crs) = grid.getComponent[ProjectedExtent]
-        val cellSize = CellSize(extent, grid.cols, grid.rows)
-        (crs, RasterSummary(crs, grid.cellType, cellSize, extent, grid.size, 1))
+        val cellwidth: Double = extent.width / grid.cols.toDouble
+        val cellheight: Double = extent.height / grid.rows.toDouble
+        val cellSize = CellSize(cellwidth, cellheight)
+        (crs, RasterSummary(crs, grid.cellType, cellSize, extent, grid.size.toLong, 1))
       }
       .reduceByKey { _ combine _ }
       .values
@@ -108,15 +117,19 @@ object RasterSummary {
       .toSeq
   }
 
-  // TODO: should be refactored, we need to reproject all metadata into a common CRS
-  // this code is for the current code simplification
-  def fromRDD[V <: CellGrid: GetComponent[?, ProjectedExtent]](rdd: RDD[V]): RasterSummary = {
-    val all = collect[V](rdd)
+  // TODO: should be refactored, we need to reproject all metadata into a common CRS. This code is for the current code simplification
+  def fromRDD[V <: CellGrid[N]: GetComponent[?, ProjectedExtent], N: Integral](rdd: RDD[V]): RasterSummary = {
+    /* Notes on why this is awful:
+    - scalac can't infer both GetComponent and type V as CellGrid[N]
+    - very ad-hoc, why type constraint and lense?
+    - might be as simple as HasRasterSummary[V] in the first place
+    */
+    val all = collect[V, N](rdd)
     require(all.size == 1, "multiple CRSs detected") // what to do in this case?
     all.head
   }
 
-  def fromSeq[V <: CellGrid: GetComponent[?, ProjectedExtent]](seq: Seq[V]): RasterSummary = {
+  def fromSeq[V <: CellGrid[Int]: GetComponent[?, ProjectedExtent]](seq: Seq[V]): RasterSummary = {
     val all =
       seq
         .map { grid =>
@@ -131,4 +144,3 @@ object RasterSummary {
     all.head
   }
 }
-

@@ -27,7 +27,7 @@ import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
 case class GeoTiffResampleRasterSource(
   uri: String,
-  resampleGrid: ResampleGrid,
+  resampleGrid: ResampleGrid[Long],
   method: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
   private[vlm] val targetCellType: Option[TargetCellType] = None
@@ -41,61 +41,61 @@ case class GeoTiffResampleRasterSource(
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = dstCellType.getOrElse(tiff.cellType)
 
-  override lazy val rasterExtent: RasterExtent = resampleGrid(tiff.rasterExtent)
-  lazy val resolutions: List[RasterExtent] = {
-    val ratio = rasterExtent.cellSize.resolution / tiff.rasterExtent.cellSize.resolution
-    rasterExtent :: tiff.overviews.map { ovr =>
-      val re = ovr.rasterExtent
-      val CellSize(cw, ch) = re.cellSize
-      RasterExtent(re.extent, CellSize(cw * ratio, ch * ratio))
-    }
-  }
-
-  @transient protected lazy val closestTiffOverview: GeoTiff[MultibandTile] =
-    tiff.getClosestOverview(rasterExtent.cellSize, strategy)
-
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
-    new GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, targetCellType) {
-      override lazy val rasterExtent: RasterExtent = reprojectOptions.targetRasterExtent match {
-        case Some(targetRasterExtent) => targetRasterExtent
-        case None => ReprojectRasterExtent(self.rasterExtent, this.transform, this.reprojectOptions)
+  override lazy val gridExtent: GridExtent[Long] = resampleGrid(tiff.rasterExtent.toGridType[Long])
+  lazy val resolutions: List[GridExtent[Long]] = {
+      val ratio = gridExtent.cellSize.resolution / tiff.rasterExtent.cellSize.resolution
+      gridExtent :: tiff.overviews.map { ovr =>
+        val re = ovr.rasterExtent
+        val CellSize(cw, ch) = re.cellSize
+        new GridExtent[Long](re.extent, CellSize(cw * ratio, ch * ratio))
       }
     }
 
-  def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
+  @transient protected lazy val closestTiffOverview: GeoTiff[MultibandTile] =
+    tiff.getClosestOverview(gridExtent.cellSize, strategy)
+
+  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
+    new GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, targetCellType) {
+      override lazy val gridExtent: GridExtent[Long] = reprojectOptions.targetRasterExtent match {
+        case Some(targetRasterExtent) => targetRasterExtent.toGridType[Long]
+        case None => ReprojectRasterExtent(self.gridExtent, this.transform, this.reprojectOptions)
+      }
+    }
+
+  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
     GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, targetCellType)
 
   def convert(targetCellType: TargetCellType): RasterSource =
     GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, Some(targetCellType))
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
+    val bounds = gridExtent.gridBoundsFor(extent, clamp = false)
     val it = readBounds(List(bounds), bands)
     if (it.hasNext) Some(it.next) else None
   }
 
-  def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+  def read(bounds: GridBounds[Long], bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val it = readBounds(List(bounds), bands)
     if (it.hasNext) Some(it.next) else None
   }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
-    val targetPixelBounds = extents.map(rasterExtent.gridBoundsFor(_))
+    val targetPixelBounds = extents.map(gridExtent.gridBoundsFor(_))
     // result extents may actually expand to cover pixels at our resolution
     // TODO: verify the logic here, should the sourcePixelBounds be calculated from input or expanded extent?
     readBounds(targetPixelBounds, bands)
   }
 
-  override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
+  override def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     val geoTiffTile = closestTiffOverview.tile.asInstanceOf[GeoTiffMultibandTile]
 
     val windows = { for {
       queryPixelBounds <- bounds
-      targetPixelBounds <- queryPixelBounds.intersection(this)
+      targetPixelBounds <- queryPixelBounds.intersection(this.gridBounds)
     } yield {
-      val targetExtent = rasterExtent.extentFor(targetPixelBounds)
+      val targetExtent = gridExtent.extentFor(targetPixelBounds)
       val sourcePixelBounds = closestTiffOverview.rasterExtent.gridBoundsFor(targetExtent, clamp = true)
-      val targetRasterExtent = RasterExtent(targetExtent, targetPixelBounds.width, targetPixelBounds.height)
+      val targetRasterExtent = RasterExtent(targetExtent, targetPixelBounds.width.toInt, targetPixelBounds.height.toInt)
       (sourcePixelBounds, targetRasterExtent)
     }}.toMap
 

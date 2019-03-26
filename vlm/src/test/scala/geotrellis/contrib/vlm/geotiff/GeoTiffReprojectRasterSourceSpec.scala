@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 package geotrellis.contrib.vlm.geotiff
 
 import geotrellis.contrib.vlm._
@@ -49,7 +49,7 @@ class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with
       val warpRasterSource = rasterSource.reprojectToRegion(LatLng, expectedRasterExtent, method)
 
       warpRasterSource.resolutions.size shouldBe rasterSource.resolutions.size
-      
+
       val testBounds = GridBounds(0, 0, expectedRasterExtent.cols, expectedRasterExtent.rows).split(64,64).toSeq
 
       for (bound <- testBounds) yield {
@@ -58,7 +58,7 @@ class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with
           val testRasterExtent = RasterExtent(
             extent     = targetExtent,
             cellwidth  = expectedRasterExtent.cellwidth,
-            cellheight = expectedRasterExtent.cellheight, 
+            cellheight = expectedRasterExtent.cellheight,
             cols       = bound.width,
             rows       = bound.height
           )

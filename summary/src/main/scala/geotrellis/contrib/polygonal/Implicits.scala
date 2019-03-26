@@ -16,7 +16,7 @@ trait Implicits {
     }
   }
 
-  implicit def rasterHasRasterExtent[T <: CellGrid] = new GetComponent[Raster[T], RasterExtent] {
+  implicit def rasterHasRasterExtent[T <: CellGrid[Int]] = new GetComponent[Raster[T], RasterExtent] {
     override def get: Raster[T] => RasterExtent = _.rasterExtent
   }
 }

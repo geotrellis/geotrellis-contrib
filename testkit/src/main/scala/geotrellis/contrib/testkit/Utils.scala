@@ -6,7 +6,7 @@ import geotrellis.vector.Extent
 import scala.util.Try
 
 object Utils {
-  def roundRaster[T <: CellGrid](raster: Raster[T], scale: Int = 11): Raster[T] =
+  def roundRaster[T <: CellGrid[Int]](raster: Raster[T], scale: Int = 11): Raster[T] =
     raster.copy(extent = roundExtent(raster.extent, scale))
 
   def roundExtent(extent: Extent, scale: Int = 11): Extent = {

@@ -29,7 +29,7 @@ import geotrellis.spark.tiling._
   * @param layout definition of a tile grid over the pixel grid
   */
 class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) extends AutoCloseable {
-  LayoutTileSource.requireGridAligned(source.rasterExtent, layout)
+  LayoutTileSource.requireGridAligned(source.gridExtent, layout)
 
   def sourceColOffset: Long = ((source.extent.xmin - layout.extent.xmin) / layout.cellwidth).toLong
   def sourceRowOffset: Long = ((layout.extent.ymax - source.extent.ymax) / layout.cellheight).toLong
@@ -41,11 +41,11 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
      * We need to do this manually instead of using RasterExtent.gridBoundsFor because
      * the target pixel area isn't always square.
      */
-    val sourcePixelBounds = GridBounds(
-      colMin = (col * layout.tileCols - sourceColOffset).toInt,
-      rowMin = (row * layout.tileRows - sourceRowOffset).toInt,
-      colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset).toInt,
-      rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset).toInt)
+    val sourcePixelBounds = GridBounds[Long](
+      colMin = (col * layout.tileCols - sourceColOffset),
+      rowMin = (row * layout.tileRows - sourceRowOffset),
+      colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset),
+      rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset))
 
     if (source.gridBounds.intersects(sourcePixelBounds))
       Some(RasterRegion(source, sourcePixelBounds))
@@ -64,13 +64,13 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
     val col = key.col.toLong
     val row = key.row.toLong
     val sourcePixelBounds = GridBounds(
-      colMin = (col * layout.tileCols - sourceColOffset).toInt,
-      rowMin = (row * layout.tileRows - sourceRowOffset).toInt,
-      colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset).toInt,
-      rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset).toInt)
+      colMin = (col * layout.tileCols - sourceColOffset),
+      rowMin = (row * layout.tileRows - sourceRowOffset),
+      colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset),
+      rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset))
 
     for {
-      bounds <- sourcePixelBounds.intersection(source)
+      bounds <- sourcePixelBounds.intersection(source.gridBounds)
       raster <- source.read(bounds, bands)
     } yield {
       if (raster.tile.cols == layout.tileCols && raster.tile.rows == layout.tileRows) {
@@ -81,7 +81,7 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
         val colOffset = bounds.colMin - sourcePixelBounds.colMin
         val rowOffset = bounds.rowMin - sourcePixelBounds.rowMin
         raster.tile.mapBands { (_, band) =>
-          PaddedTile(band, colOffset, rowOffset, layout.tileCols, layout.tileRows)
+          PaddedTile(band, colOffset.toInt, rowOffset.toInt, layout.tileCols, layout.tileRows)
         }
       }
     }
@@ -97,11 +97,11 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
       col = key.col.toLong
       row = key.row.toLong
       sourcePixelBounds = GridBounds(
-        colMin = (col * layout.tileCols - sourceColOffset).toInt,
-        rowMin = (row * layout.tileRows - sourceRowOffset).toInt,
-        colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset).toInt,
-        rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset).toInt)
-      bounds <- sourcePixelBounds.intersection(source)
+        colMin = (col * layout.tileCols - sourceColOffset),
+        rowMin = (row * layout.tileRows - sourceRowOffset),
+        colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset),
+        rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset))
+      bounds <- sourcePixelBounds.intersection(source.gridBounds)
       raster <- source.read(bounds, bands)
     } yield {
       val tile =
@@ -113,7 +113,7 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
           val colOffset = bounds.colMin - sourcePixelBounds.colMin
           val rowOffset = bounds.rowMin - sourcePixelBounds.rowMin
           raster.tile.mapBands { (_, band) =>
-            PaddedTile(band, colOffset, rowOffset, layout.tileCols, layout.tileRows)
+            PaddedTile(band, colOffset.toInt, rowOffset.toInt, layout.tileCols, layout.tileRows)
           }
         }
       (key, tile)
@@ -167,7 +167,7 @@ object LayoutTileSource {
   def apply(source: RasterSource, layout: LayoutDefinition): LayoutTileSource =
     new LayoutTileSource(source, layout)
 
-  private def requireGridAligned(a: GridExtent, b: GridExtent): Unit = {
+  private def requireGridAligned(a: GridExtent[Long], b: GridExtent[Long]): Unit = {
     import org.scalactic._
     import TripleEquals._
     import Tolerance._
