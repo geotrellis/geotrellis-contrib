@@ -1,0 +1,67 @@
+@startuml
+hide empty members
+title Sketch on Abstracting Source from Transformations
+
+interface RasterSource {
+  + convert(CellType): RasterSource
+  + reproject(CRS): RasterSource
+  + reproject(CRS, GridExtent): RasterSource
+  # withTransformation(RasterTransformation): RasterSource
+}
+
+note left of RasterSource::convert
+Implementation is something like:
+""withTransformation(CellTypeConversion(cellType))""
+end note
+note left of RasterSource::reproject(CRS)
+e.g.
+""withTransformation(Reprojection(crs))""
+end note
+note left of RasterSource::withTransformation
+This protected method is implemented by the subclasses
+to create a new instance that includes the staged
+transformation, combining existing ones as appropriate.
+end note
+
+RasterSource <|--GDALRasterSource
+RasterSource <|--AvroRasterSource
+RasterSource <|--GeoTiffRasterSource
+RasterSource <|--InMemoryRasterSource
+
+
+interface RasterTransformation
+note left of RasterTransformation
+Base type of the
+"""RasterSource"" Transformation AST".
+end note
+
+RasterTransformation <|-- CellTypeConversion
+RasterTransformation <|-- Reprojection
+RasterTransformation <|-- Resample
+
+CellTypeConversion <|-- DefaultCellTypeConversion
+CellTypeConversion <|-- GDALOptimizedCellTypeConversion
+
+
+GDALRasterSource ...> GDALOptimizedCellTypeConversion: uses
+InMemoryRasterSource ...> DefaultCellTypeConversion: uses
+AvroRasterSource ...> DefaultCellTypeConversion: uses
+GeoTiffRasterSource ...> DefaultCellTypeConversion: uses
+
+note bottom of GDALOptimizedCellTypeConversion
+""RasterSource""-specific specializations are used
+when there's an available optimization
+end note
+
+Reprojection <|-- DefaultResampleAndReprojection
+Resample <|-- DefaultResampleAndReprojection
+
+note bottom of DefaultResampleAndReprojection
+When combining transformations is more efficient
+""withTransformation"" will combine and replace with
+the appropriate substitution.
+end note
+
+GeoTiffRasterSource -[hidden]-> RasterTransformation
+
+@enduml
