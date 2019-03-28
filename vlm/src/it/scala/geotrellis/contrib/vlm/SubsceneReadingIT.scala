@@ -20,7 +20,7 @@ import org.scalatest.{FunSpec, Matchers}
 import Timing._
 import com.typesafe.scalalogging.LazyLogging
 import geotrellis.contrib.vlm.gdal.GDALRasterSource
-import geotrellis.vector.Extent
+import geotrellis.vector.{Extent, ProjectedExtent}
 
 class SubsceneReadingIT extends FunSpec with Matchers with LazyLogging {
   val sample = "https://s3-us-west-2.amazonaws.com/radiant-nasa-iserv/2014/02/14/IP0201402141023382027S03100E/IP0201402141023382027S03100E-COG.tif"
@@ -34,7 +34,23 @@ class SubsceneReadingIT extends FunSpec with Matchers with LazyLogging {
     }
   }
   describe("GDAL vs GeoTrellis GeoTiff reading") {
-    it("should be faster with GDAL") {
+    it("should read projected extent with similar performance with GDAL") {
+      val gt = time("GeoTrellis") {
+        val src = GeoTiffRasterSource(sample)
+        ProjectedExtent(src.extent, src.crs)
+      }
+      logger.info(gt._2.toString)
+
+      val gdal = time("GDAL") {
+        val src = GDALRasterSource(sample)
+        ProjectedExtent(src.extent, src.crs)
+      }
+      logger.info(gdal._2.toString)
+
+      gt._1 should be (gdal._1)
+      gt._2.durationMillis should be(gdal._2.durationMillis +- 1000)
+    }
+    it("should be faster reading subextent with GDAL") {
       val gt = time("GeoTrellis") {
         val src = GeoTiffRasterSource(sample)
         // Read the tiles, forcing a mapping over cells to eliminate any chance of lazy loading
