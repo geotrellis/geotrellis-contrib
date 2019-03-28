@@ -74,18 +74,6 @@ package object vlm {
     new StreamingByteReader(rr)
   }
 
-  implicit class rasterExtentMethods(self: RasterExtent) {
-    def reproject(src: CRS, dest: CRS, options: Options): RasterExtent =
-      if(src == dest) self
-      else {
-        val transform = Transform(src, dest)
-        options.targetRasterExtent.getOrElse(ReprojectRasterExtent(self, transform, options = options))
-      }
-
-    def reproject(src: CRS, dest: CRS): RasterExtent =
-      reproject(src, dest, Options.DEFAULT)
-  }
-
   implicit class gridExtentMethods[N: spire.math.Integral](self: GridExtent[N]) {
     def reproject(src: CRS, dest: CRS, options: Options): GridExtent[N] =
       if(src == dest) self
@@ -99,10 +87,4 @@ package object vlm {
     def reproject(src: CRS, dest: CRS): GridExtent[N] =
       reproject(src, dest, Options.DEFAULT)
   }
-
-  /** RasterSource interface reads GridBounds[Long] but GridBounds[Int] abounds.
-   * Implicit conversions are evil, but this one is always safe and saves typing.
-   */
-  implicit def gridBoundsIntToLong(bounds: GridBounds[Int]): GridBounds[Long] =
-    bounds.toGridType[Long]
 }

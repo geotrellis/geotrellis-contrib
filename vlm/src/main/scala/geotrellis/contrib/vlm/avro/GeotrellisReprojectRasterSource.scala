@@ -25,67 +25,60 @@ import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.spark._
 import geotrellis.spark.io._
+import com.typesafe.scalalogging.LazyLogging
 
-case class GeotrellisReprojectRasterSource(
-  uri: String,
-  baseLayerId: LayerId,
-  bandCount: Int,
-  crs: CRS,
-  reprojectOptions: Reproject.Options = Reproject.Options.DEFAULT,
-  strategy: OverviewStrategy = AutoHigherResolution,
-  private[vlm] val targetCellType: Option[TargetCellType] = None
-) extends RasterSource { self =>
-  lazy val reader = CollectionLayerReader(uri)
+class GeotrellisReprojectRasterSource(
+  val attributeStore: AttributeStore,
+  val uri: String,
+  val layerId: LayerId,
+  val sourceLayers: Stream[Layer],
+  val gridExtent: GridExtent[Long],
+  val crs: CRS,
+  val reprojectOptions: Reproject.Options,
+  val targetCellType: Option[TargetCellType]
+) extends RasterSource with LazyLogging { self =>
+  import GeotrellisReprojectRasterSource._
 
-  /** This metadata returns data in its owm projection and resolution */
-  protected lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
+  lazy val reader = CollectionLayerReader(attributeStore, uri)
 
-  def cellType: CellType = dstCellType.getOrElse(metadata.cellType)
-  def resampleMethod: Option[ResampleMethod] = Some(reprojectOptions.method)
-
-  protected lazy val baseCRS: CRS = baseMetadata.crs
-  protected lazy val baseMetadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](baseLayerId)
-  protected lazy val baseGridExtent: GridExtent[Long] =
-    baseMetadata.layout.createAlignedGridExtent(baseMetadata.extent)
-
-  protected lazy val transform = Transform(baseCRS, crs)
-  protected lazy val backTransform = Transform(crs, baseCRS)
-
-  protected lazy val layerName = baseLayerId.name
-  protected lazy val layerIds: Seq[LayerId] = GeotrellisRasterSource.getLayerIdsByName(reader, layerName)
-
-  override lazy val gridExtent: GridExtent[Long] = reprojectOptions.targetRasterExtent match {
-      case Some(targetRasterExtent) =>
-        targetRasterExtent.toGridType[Long]
-      case None =>
-        ReprojectRasterExtent(baseGridExtent, transform, reprojectOptions)
+  lazy val resolutions: List[GridExtent[Long]] = {
+    sourceLayers.map { layer =>
+      ReprojectRasterExtent(layer.gridExtent, layer.metadata.crs, crs)
     }
+  }.toList
 
-  lazy val resolutions: List[GridExtent[Long]] =
-      GeotrellisRasterSource.getResolutions(reader, layerName).map(resolution =>
-        ReprojectRasterExtent(resolution, transform))
+  lazy val sourceLayer: Layer = sourceLayers.find(_.id == layerId).get
 
-  @transient private[vlm] lazy val layerId: LayerId = {
-    if (reprojectOptions.targetRasterExtent.isDefined
-      || reprojectOptions.parentGridExtent.isDefined
-      || reprojectOptions.targetCellSize.isDefined)
-    {
-      // we're asked to match specific target resolution, estimate what resolution we need in source to sample it
-      val estimatedSource = ReprojectRasterExtent(gridExtent, backTransform, reprojectOptions)
-      GeotrellisRasterSource.getClosestLayer(resolutions, layerIds, baseLayerId, estimatedSource.cellSize, strategy)
-    } else {
-      GeotrellisRasterSource.getClosestLayer(resolutions, layerIds, baseLayerId, baseGridExtent.cellSize, strategy)
-    }
-  }
+  def bandCount: Int = sourceLayer.bandCount
+
+  def cellType: CellType = dstCellType.getOrElse(sourceLayer.metadata.cellType)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+    val transform = Transform(sourceLayer.metadata.crs, crs)
+    val backTransform = Transform(crs, sourceLayer.metadata.crs)
     for {
-      _ <- this.extent.intersection(extent)
-      targetRasterExtent = gridExtent.createAlignedRasterExtent(extent)
+      subExtent <- this.extent.intersection(extent)
+      targetRasterExtent = this.gridExtent.createAlignedRasterExtent(subExtent)
       sourceExtent = targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope
-      raster <- GeotrellisRasterSource.readIntersecting(reader, layerId, metadata, sourceExtent, bands)
+      sourceRegion = sourceLayer.metadata.layout.createAlignedGridExtent(sourceExtent)
+      _ = {
+        lazy val tileBounds = sourceLayer.metadata.mapTransform.extentToBounds(sourceExtent)
+        lazy val pixelsRead = (tileBounds.size * sourceLayer.metadata.layout.tileCols * sourceLayer.metadata.layout.tileRows).toDouble
+        lazy val pixelsQueried = (targetRasterExtent.cols.toDouble * targetRasterExtent.rows.toDouble)
+        def msg = s"""\u001b[32mread($extent)\u001b[0m =
+        |\t\u001b[1mFROM\u001b[0m $uri ${sourceLayer.id}
+        |\t\u001b[1mTARGET\u001b[0m ${targetRasterExtent.extent} ${targetRasterExtent.cellSize} @ ${crs}
+        |\t\u001b[1mSOURCE\u001b[0m $sourceExtent ${sourceLayer.metadata.cellSize} @ ${sourceLayer.metadata.crs}
+        |\t\u001b[1mREAD\u001b[0m ${pixelsRead/pixelsQueried} read/query ratio for ${tileBounds.size} tiles""".stripMargin
+        if (tileBounds.size < 1024) // Assuming 256x256 tiles this would be a very large request
+          logger.debug(msg)
+        else
+          logger.warn(msg + " (large read)")
+      }
+      raster <- GeotrellisRasterSource.readIntersecting(reader, layerId, sourceLayer.metadata, sourceExtent, bands)
     } yield {
-      convertRaster(raster.reproject(targetRasterExtent, transform, backTransform, reprojectOptions))
+      val reproejcted = raster.reproject(targetRasterExtent, transform, backTransform, reprojectOptions)
+      convertRaster(reproejcted)
     }
   }
 
@@ -101,14 +94,92 @@ case class GeotrellisReprojectRasterSource(
   override def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
     bounds.toIterator.flatMap(_.intersection(this.gridBounds).flatMap(read(_, bands)))
 
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, targetCRS, reprojectOptions, strategy, targetCellType)
-
-  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
-    val resampledReprojectOptions = reprojectOptions.copy(method = method, targetRasterExtent = Some(resampleGrid(self.gridExtent).toRasterExtent))
-    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, crs, resampledReprojectOptions, strategy, targetCellType)
+  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource = {
+    if (targetCRS == sourceLayer.metadata.crs) {
+      val resampleGrid = ResampleGrid.fromReprojectOptions(reprojectOptions).get
+      val resampledGridExtent = resampleGrid(this.sourceLayer.gridExtent)
+      val closestLayer = GeotrellisRasterSource.getClosestResolution(sourceLayers.toSeq, resampledGridExtent.cellSize, strategy)(_.metadata.layout.cellSize).get
+      // TODO: if closestLayer is w/in some marging of desired CellSize, return GeoTrellisRasterSource instead
+      new GeotrellisResampleRasterSource(attributeStore, uri, closestLayer.id, sourceLayers, resampledGridExtent, reprojectOptions.method, targetCellType)
+    } else {
+      // Pick new layer ID
+      val (closestLayerId, gridExtent) = GeotrellisReprojectRasterSource.getClosestSourceLayer(targetCRS, sourceLayers, reprojectOptions, strategy)
+      new GeotrellisReprojectRasterSource(attributeStore, uri, layerId, sourceLayers, gridExtent, targetCRS, reprojectOptions, targetCellType)
+    }
   }
 
-  def convert(targetCellType: TargetCellType): RasterSource =
-    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, crs, reprojectOptions, strategy, Some(targetCellType))
+  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
+    val newReprojectOptions = ResampleGrid.toReprojectOptions(this.gridExtent, resampleGrid, method)
+    val (closestLayerId, newGridExtent) = GeotrellisReprojectRasterSource.getClosestSourceLayer(crs, sourceLayers, newReprojectOptions, strategy)
+    new GeotrellisReprojectRasterSource(attributeStore, uri, closestLayerId, sourceLayers, newGridExtent, crs, newReprojectOptions, targetCellType)
+  }
+
+  def convert(targetCellType: TargetCellType): RasterSource = {
+    new GeotrellisReprojectRasterSource(attributeStore, uri, layerId, sourceLayers, gridExtent, crs, reprojectOptions, Some(targetCellType))
+  }
+
+  override def toString: String =
+    s"GeoTrellisReprojectRasterSource($uri,$layerId,$crs,$gridExtent,${reprojectOptions.method})"
+}
+
+object GeotrellisReprojectRasterSource {
+  /** Pick the closest source layer and decide what its GridExtent should be based on Reproject.Options
+   * Assumes that all layers in source Pyramid share the same CRS and the highest resolution layer is at the head.
+   */
+  private[avro] def getClosestSourceLayer(
+    targetCRS: CRS,
+    sourcePyramid: Stream[Layer],
+    options: Reproject.Options,
+    strategy: OverviewStrategy
+  ): (LayerId, GridExtent[Long]) = {
+    // most resolute layer
+    val baseLayer: Layer = sourcePyramid.minBy(_.metadata.cellSize.resolution)
+    val sourceCRS: CRS = baseLayer.metadata.crs
+
+    if (options.targetRasterExtent.isDefined) {
+      val targetGrid: GridExtent[Long] = options.targetRasterExtent.get.toGridType[Long]
+      val sourceGrid: GridExtent[Long] = ReprojectRasterExtent(targetGrid, targetCRS, sourceCRS)
+      val sourceLayer = GeotrellisRasterSource.getClosestResolution(sourcePyramid, sourceGrid.cellSize, strategy)(_.metadata.layout.cellSize).get
+      (sourceLayer.id, targetGrid)
+
+    } else if (options.parentGridExtent.isDefined) {
+      val targetGridAlignment: GridExtent[Long] = options.parentGridExtent.get
+      val sourceGridInTargetCrs: GridExtent[Long] = ReprojectRasterExtent(baseLayer.gridExtent, sourceCRS, targetCRS)
+      val sourceLayer: Layer = {
+        // we know the target pixel grid but we don't know which is the closest source resolution to it
+        // we're going to use the same heuristic we use when reprojecting without target CellSize backwards
+        val provisional: GridExtent[Long] = targetGridAlignment.createAlignedGridExtent(sourceGridInTargetCrs.extent)
+        val aproximateSourceCellSize: CellSize = {
+          val newExtent = baseLayer.metadata.extent
+          val distance = newExtent.northWest.distance(newExtent.southEast)
+          val cols: Double = provisional.extent.width / provisional.cellwidth
+          val rows: Double = provisional.extent.height / provisional.cellheight
+          val pixelSize = distance / math.sqrt(cols * cols + rows * rows)
+          CellSize(pixelSize, pixelSize)
+        }
+        GeotrellisRasterSource.getClosestResolution(sourcePyramid, aproximateSourceCellSize, strategy)(_.metadata.layout.cellSize).get
+      }
+      val gridExtent: GridExtent[Long] = ReprojectRasterExtent(sourceLayer.gridExtent, sourceLayer.metadata.crs, targetCRS, options)
+      (sourceLayer.id, gridExtent)
+
+    } else if (options.targetCellSize.isDefined) {
+      val targetCellSize = options.targetCellSize.get
+      val sourceGridInTargetCrs: GridExtent[Long] = ReprojectRasterExtent(baseLayer.gridExtent, sourceCRS, targetCRS)
+      val aproximateSourceCellSize: CellSize = {
+        val newExtent = baseLayer.metadata.extent
+        val distance = newExtent.northWest.distance(newExtent.southEast)
+        val cols: Double = sourceGridInTargetCrs.extent.width / targetCellSize.width
+        val rows: Double = sourceGridInTargetCrs.extent.height / targetCellSize.height
+        val pixelSize = distance / math.sqrt(cols * cols + rows * rows)
+        CellSize(pixelSize, pixelSize)
+      }
+      val sourceLayer = GeotrellisRasterSource.getClosestResolution(sourcePyramid, aproximateSourceCellSize, strategy)(_.metadata.layout.cellSize).get
+      val gridExtent: GridExtent[Long] = ReprojectRasterExtent(sourceLayer.gridExtent, sourceLayer.metadata.crs, targetCRS, options)
+      (sourceLayer.id, gridExtent)
+
+    } else { // do your worst ... or best !
+      val targetGrid: GridExtent[Long] = ReprojectRasterExtent(baseLayer.gridExtent, sourceCRS, targetCRS)
+      (sourcePyramid.head.id, targetGrid)
+    }
+  }
 }

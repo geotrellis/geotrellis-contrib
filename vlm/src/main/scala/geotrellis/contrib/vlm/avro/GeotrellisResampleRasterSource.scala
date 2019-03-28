@@ -25,41 +25,66 @@ import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.spark.{LayerId, SpatialKey, TileLayerMetadata}
 import geotrellis.spark.io._
+import com.typesafe.scalalogging.LazyLogging
 
-case class GeotrellisResampleRasterSource(
-  uri: String,
-  baseLayerId: LayerId,
-  bandCount: Int,
-  resampleGrid: ResampleGrid[Long],
-  method: ResampleMethod = NearestNeighbor,
-  strategy: OverviewStrategy = AutoHigherResolution,
-  private[vlm] val targetCellType: Option[TargetCellType] = None
-) extends RasterSource { self =>
-  lazy val reader = CollectionLayerReader(uri)
 
-  lazy val baseMetadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](baseLayerId)
-  lazy val baseGridExtent: GridExtent[Long] = baseMetadata.layout.createAlignedGridExtent(baseMetadata.extent)
+/** RasterSource that resamples on read from underlying GeoTrellis layer.
+ *
+ * Note:
+ * The constructor is unfriendly.
+ * This class is not intended to constructed directly by the users.
+ * Refer to [[GeoTrellisRasterSource]] for example of correct setup.
+ * It is expected that the caller has significant pre-computed information  about the layers.
+ *
+ * @param attributeStore the source of metadata for the layers, used for reading
+ * @param uri URI of the GeoTrellis catalog that can be read by AttributeStore
+ * @param layerId The specific layer we're sampling from
+ * @param sourceLayers list of layers we can can sample from for futher resample
+ * @param gridExtent the desired pixel grid for the layer
+ * @param resampleGrid Target pixel grid to which the layer will be resampled
+ * @param resampleMethod Resampling method used when fitting data to target grid
+ */
+class GeotrellisResampleRasterSource(
+  val attributeStore: AttributeStore,
+  val uri: String,
+  val layerId: LayerId,
+  val sourceLayers: Stream[Layer],
+  val gridExtent: GridExtent[Long],
+  val resampleMethod: ResampleMethod = NearestNeighbor,
+  val targetCellType: Option[TargetCellType] = None
+) extends RasterSource with LazyLogging { self =>
 
-  @transient protected lazy val layerId: LayerId =
-    GeotrellisRasterSource.getClosestLayer(resolutions, layerIds, baseLayerId, gridExtent.cellSize, strategy)
+  lazy val reader = CollectionLayerReader(attributeStore, uri)
 
-  lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
+  /** Source layer metadata  that needs to be resampled */
+  lazy val sourceLayer: Layer = sourceLayers.find(_.id == layerId).get
 
-  def crs: CRS = metadata.crs
-  def cellType: CellType = dstCellType.getOrElse(metadata.cellType)
-  def resampleMethod: Option[ResampleMethod] = Some(method)
+  /** GridExtent of source pixels that needs to be resampled */
+  lazy val sourceGridExtent: GridExtent[Long] = sourceLayer.gridExtent
 
-  lazy val layerName = baseLayerId.name
-  lazy val gridExtent: GridExtent[Long] = resampleGrid(baseGridExtent)
-  lazy val resolutions: List[GridExtent[Long]] = GeotrellisRasterSource.getResolutions(reader, layerName)
-  lazy val layerIds: Seq[LayerId] = GeotrellisRasterSource.getLayerIdsByName(reader, layerName)
+  def crs: CRS = sourceLayer.metadata.crs
 
-  def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] =
-    GeotrellisRasterSource.readIntersecting(reader, layerId, metadata, extent, bands)
+  def cellType: CellType = dstCellType.getOrElse(sourceLayer.metadata.cellType)
+
+  def bandCount: Int = sourceLayer.bandCount
+
+  lazy val resolutions: List[GridExtent[Long]] = sourceLayers.map(_.gridExtent).toList
+
+  def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+    val tileBounds = sourceLayer.metadata.mapTransform.extentToBounds(extent)
+    def msg = s"\u001b[32mread($extent)\u001b[0m = $uri ${sourceLayer.id} ${sourceLayer.metadata.cellSize} @ ${sourceLayer.metadata.crs} TO $cellSize -- reading ${tileBounds.size} tiles"
+    if (tileBounds.size < 1024) // Assuming 256x256 tiles this would be a very large request
+      logger.debug(msg)
+    else
+      logger.warn(msg + " (large read)")
+
+    GeotrellisRasterSource.readIntersecting(reader, layerId, sourceLayer.metadata, extent, bands)
       .map { raster =>
         val targetRasterExtent = gridExtent.createAlignedRasterExtent(extent)
-        raster.resample(targetRasterExtent, method)
+        logger.trace(s"\u001b[31mTargetRasterExtent\u001b[0m: ${targetRasterExtent} ${targetRasterExtent.dimensions}")
+        raster.resample(targetRasterExtent, resampleMethod)
       }
+  }
 
   def read(bounds: GridBounds[Long], bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     bounds
@@ -68,18 +93,30 @@ case class GeotrellisResampleRasterSource(
       .flatMap(read(_, bands))
   }
 
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeotrellisReprojectRasterSource =
-    GeotrellisReprojectRasterSource(uri, baseLayerId, bandCount, targetCRS, reprojectOptions, strategy, targetCellType)
+  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeotrellisReprojectRasterSource = {
+    val (closestLayerId, gridExtent) = GeotrellisReprojectRasterSource.getClosestSourceLayer(targetCRS, sourceLayers, reprojectOptions, strategy)
+    new GeotrellisReprojectRasterSource(attributeStore, uri, layerId, sourceLayers, gridExtent, targetCRS, reprojectOptions, targetCellType)
+  }
+  /** Resample underlying RasterSource to new grid extent
+   * Note: ResampleGrid will be applied to GridExtent of the source layer, not the GridExtent of this RasterSource
+   */
+  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): GeotrellisResampleRasterSource = {
+    val resampledGridExtent = resampleGrid(this.gridExtent)
+    val closestLayer = GeotrellisRasterSource.getClosestResolution(sourceLayers.toSeq, resampledGridExtent.cellSize, strategy)(_.metadata.layout.cellSize).get
+    // TODO: if closestLayer is w/in some marging of desired CellSize, return GeoTrellisRasterSource instead
+    new GeotrellisResampleRasterSource(attributeStore, uri, closestLayer.id, sourceLayers, resampledGridExtent, method, targetCellType)
+  }
 
-  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GeotrellisResampleRasterSource(uri, baseLayerId, bandCount, resampleGrid, method, strategy, targetCellType)
-
-  def convert(targetCellType: TargetCellType): RasterSource =
-    GeotrellisResampleRasterSource(uri, baseLayerId, bandCount, resampleGrid, method, strategy, Some(targetCellType))
+  def convert(targetCellType: TargetCellType): GeotrellisResampleRasterSource = {
+    new GeotrellisResampleRasterSource(attributeStore, uri, layerId, sourceLayers, gridExtent, resampleMethod, Some(targetCellType))
+  }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
     extents.toIterator.flatMap(read(_, bands))
 
   override def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
     bounds.toIterator.flatMap(_.intersection(this.gridBounds).flatMap(read(_, bands)))
+
+  override def toString: String =
+    s"GeoTrellisResampleRasterSource($uri,$layerId,$gridExtent,$resampleMethod)"
 }
