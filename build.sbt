@@ -39,10 +39,10 @@ lazy val commonSettings = Seq(
     "geotrellis-staging" at "https://oss.sonatype.org/service/local/repositories/orglocationtechgeotrellis-1009/content"
   ),
   headerLicense := Some(HeaderLicense.ALv2("2018", "Azavea")),
-  bintrayOrganization := Some("azavea"),
-  bintrayRepository := "geotrellis",
-  bintrayPackageLabels := Seq("gis", "raster", "vector"),
-  bintrayReleaseOnPublish := false,
+  // bintrayOrganization := Some("azavea"),
+  // bintrayRepository := "geotrellis",
+  // bintrayPackageLabels := Seq("gis", "raster", "vector"),
+  // bintrayReleaseOnPublish := false,
   publishTo := {
     val bintrayPublishTo = publishTo.value
     val nexus = "http://nexus.internal.azavea.com"
@@ -88,9 +88,6 @@ lazy val vlm = project
     ),
     Test / fork := true,
     Test / parallelExecution := false,
-<<<<<<< HEAD
-    Test / testOptions += Tests.Argument("-oDF")
-=======
     Test / testOptions += Tests.Argument("-oDF"),
   )
   .settings(
@@ -100,9 +97,8 @@ lazy val vlm = project
         |import geotrellis.contrib.vlm.geotiff._
         |import geotrellis.contrib.vlm.avro._
       """.stripMargin
->>>>>>> 65a3a60... RasterSource.gridExtent[Long] instead of rasterExtent
   )
-  
+
 
 lazy val gdal = project
   .dependsOn(testkit % Test)

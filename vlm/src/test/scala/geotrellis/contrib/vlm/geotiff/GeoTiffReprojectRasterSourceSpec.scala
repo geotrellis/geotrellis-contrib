@@ -33,14 +33,14 @@ import geotrellis.spark.tiling.LayoutDefinition
 
 class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
   describe("Reprojecting a RasterSource") {
-    lazy val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
-    lazy val schemeURI = s"file://$uri"
+    val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
+    val schemeURI = s"file://$uri"
 
-    lazy val rasterSource = GeoTiffRasterSource(schemeURI)
-    lazy val sourceTiff = GeoTiffReader.readMultiband(uri)
+    val rasterSource = GeoTiffRasterSource(schemeURI)
+    val sourceTiff = GeoTiffReader.readMultiband(uri)
 
-    lazy val expectedRasterExtent = {
-      val re = ReprojectRasterExtent(rasterSource.rasterExtent, Transform(rasterSource.crs, LatLng))
+    val expectedRasterExtent = {
+      val re = ReprojectRasterExtent(rasterSource.gridExtent, Transform(rasterSource.crs, LatLng))
       // stretch target raster extent slightly to avoid default case in ReprojectRasterExtent
       RasterExtent(re.extent, CellSize(re.cellheight * 1.1, re.cellwidth * 1.1))
     }
@@ -50,17 +50,17 @@ class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with
 
       warpRasterSource.resolutions.size shouldBe rasterSource.resolutions.size
 
-      val testBounds = GridBounds(0, 0, expectedRasterExtent.cols, expectedRasterExtent.rows).split(64,64).toSeq
+      val testBounds = GridBounds(0, 0, expectedRasterExtent.cols, expectedRasterExtent.rows).toGridType[Long].split(64,64).toSeq
 
       for (bound <- testBounds) yield {
         withClue(s"Read window ${bound}: ") {
-          val targetExtent = expectedRasterExtent.extentFor(bound)
+          val targetExtent = expectedRasterExtent.extentFor(bound.toGridType[Int])
           val testRasterExtent = RasterExtent(
             extent     = targetExtent,
             cellwidth  = expectedRasterExtent.cellwidth,
             cellheight = expectedRasterExtent.cellheight,
-            cols       = bound.width,
-            rows       = bound.height
+            cols       = bound.width.toInt,
+            rows       = bound.height.toInt
           )
 
           val expected: Raster[MultibandTile] = {
