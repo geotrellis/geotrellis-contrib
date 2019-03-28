@@ -13,23 +13,24 @@ import geotrellis.raster.render.ascii._
 
 import matchers._
 import org.scalatest.tools.BetterPrinters
-import spire.syntax.cfor._
 
 import scala.reflect._
 import java.nio.file.{Files, Paths}
 import spire.math.Integral
+import spire.implicits._
 
 trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
   import BetterRasterMatchers._
 
-  private def dims[T <: Grid[N], N: Integral](t: T): String =
+  private def dimsToString[T <: Grid[N], N: Integral](t: T): String =
     s"""(${t.cols}, ${t.rows})"""
 
-  def dimensions[T<: CellGrid[Int]: ClassTag] (dims: (Int, Int)) = HavePropertyMatcher[T, (Int, Int)] { grid =>
-      HavePropertyMatchResult(grid.dimensions == dims, "dimensions", dims, grid.dimensions)
-  }
 
-  def cellType[T<: CellGrid[Int]: ClassTag] (ct: CellType) = HavePropertyMatcher[T, CellType] { grid =>
+  // def dimensions(dims: (Int, Int)) = HavePropertyMatcher[CellGrid[Int], (Int, Int)] { grid =>
+  //   HavePropertyMatchResult(grid.dimensions == dims, "dimensions", dims, grid.dimensions)
+  // }
+
+  def cellType[T<: CellGrid[_]: ClassTag] (ct: CellType) = HavePropertyMatcher[T, CellType] { grid =>
       HavePropertyMatchResult(grid.cellType == ct, "cellType", ct, grid.cellType)
   }
 
@@ -49,7 +50,7 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
   def assertTilesEqual(actual: MultibandTile, expected: MultibandTile): Unit = {
     actual should have (
       cellType (expected.cellType),
-      dimensions (expected.dimensions),
+      // dimensions (expected.dimensions),
       bandCount (expected.bandCount)
     )
 
@@ -63,7 +64,7 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
 
     actual.tile should have (
       cellType (expected.cellType),
-      dimensions (expected.dimensions),
+      // dimensions (expected.dimensions),
       bandCount (expected.tile.bandCount)
     )
 
@@ -77,7 +78,7 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
 
     actual.tile should have (
       cellType (expected.cellType),
-      dimensions (expected.dimensions),
+      // dimensions (expected.dimensions),
       bandCount (expected.tile.bandCount)
     )
 
