@@ -91,7 +91,7 @@ class MosaicRasterSourceSpec extends FunSpec with Matchers {
                                      8, 4)),
           mosaicRasterSource.gridExtent.extent
       )
-      val result = mosaicRasterSource.read(mosaicRasterSource.bounds, Seq(0)).get
+      val result = mosaicRasterSource.read(mosaicRasterSource.gridBounds, Seq(0)).get
       result shouldEqual expectation
       result.extent shouldEqual expectation.extent
     }
