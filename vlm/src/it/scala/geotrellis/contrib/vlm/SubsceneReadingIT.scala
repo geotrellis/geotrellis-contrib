@@ -20,6 +20,7 @@ import org.scalatest.{FunSpec, Matchers}
 import Timing._
 import com.typesafe.scalalogging.LazyLogging
 import geotrellis.contrib.vlm.gdal.GDALRasterSource
+import geotrellis.raster.{MultibandTile, Raster}
 import geotrellis.vector.{Extent, ProjectedExtent}
 
 class SubsceneReadingIT extends FunSpec with Matchers with LazyLogging {
@@ -33,39 +34,76 @@ class SubsceneReadingIT extends FunSpec with Matchers with LazyLogging {
       Extent(c.x, c.y, c.x + w * 0.1, c.y + h * 0.1)
     }
   }
+
+  /** Reads all the cells, to eliminate any chance of lazy loading */
+  val readCells = (r: Raster[MultibandTile]) => r.mapTile(_.mapDouble((_, c) => c)).size
+
   describe("GDAL vs GeoTrellis GeoTiff reading") {
     it("should read projected extent with similar performance with GDAL") {
       val gt = time("GeoTrellis") {
         val src = GeoTiffRasterSource(sample)
         ProjectedExtent(src.extent, src.crs)
       }
-      logger.info(gt._2.toString)
+      logger.info(gt.toString)
 
       val gdal = time("GDAL") {
         val src = GDALRasterSource(sample)
         ProjectedExtent(src.extent, src.crs)
       }
-      logger.info(gdal._2.toString)
+      logger.info(gdal.toString)
 
-      gt._1 should be (gdal._1)
-      gt._2.durationMillis should be(gdal._2.durationMillis +- 1000)
+      gt.result should be (gdal.result)
+      gt.durationMillis should be(gdal.durationMillis +- 1000)
     }
     it("should be faster reading subextent with GDAL") {
       val gt = time("GeoTrellis") {
         val src = GeoTiffRasterSource(sample)
-        // Read the tiles, forcing a mapping over cells to eliminate any chance of lazy loading
-        src.read(src.extent.subextent).map(_.tile.mapDouble((_, c) => c))
+        src.read(src.extent.subextent).map(readCells)
       }
-      logger.info(gt._2.toString)
+      logger.info(gt.toString)
 
       val gdal = time("GDAL") {
         val src = GDALRasterSource(sample)
-        // Read the tiles, forcing a mapping over cells to eliminate any chance of lazy loading
-        src.read(src.extent.subextent).map(_.tile.mapDouble((_, c) => c))
+        src.read(src.extent.subextent).map(readCells)
       }
-      logger.info(gdal._2.toString)
+      logger.info(gdal.toString)
 
-      gt._2.durationMillis shouldBe >= (gdal._2.durationMillis)
+      gt.durationMillis shouldBe >= (gdal.durationMillis)
+    }
+    it("should be faster reading full scene as tiles with GDAL") {
+      def subbounds(src: RasterSource) = src.gridBounds.split(256, 256).toArray
+      val gt = time("GeoTrellis") {
+        val src = GeoTiffRasterSource(sample)
+        val bnds = subbounds(src)
+        logger.info(s"reading ${bnds.size} tiles")
+        bnds.map(b => src.read(b, Seq(0)).get).map(readCells).sum
+      }
+      logger.info(gt.toString)
+
+      val gdal = time("GDAL") {
+        val src = GDALRasterSource(sample)
+        val bnds = subbounds(src)
+        bnds.flatMap(b => src.read(b, Seq(0))).map(readCells).sum
+      }
+      logger.info(gdal.toString)
+
+      gt.durationMillis shouldBe >= (gdal.durationMillis)
+    }
+
+    it("should be faster reading full scene GDAL") {
+      val gt = time("GeoTrellis") {
+        val src = GeoTiffRasterSource(sample)
+        src.read(Seq(0)).map(readCells).get
+      }
+      logger.info(gt.toString)
+
+      val gdal = time("GDAL") {
+        val src = GDALRasterSource(sample)
+        src.read(Seq(0)).map(readCells).get
+      }
+      logger.info(gdal.toString)
+
+      gt.durationMillis shouldBe >= (gdal.durationMillis)
     }
   }
 }

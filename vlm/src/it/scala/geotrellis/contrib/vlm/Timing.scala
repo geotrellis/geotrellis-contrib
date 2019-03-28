@@ -16,16 +16,16 @@
 
 package geotrellis.contrib.vlm
 
-case class Timing(label: String, start: Long, end: Long) {
+case class Timing[T](label: String, start: Long, end: Long, result: T) {
   def durationMillis: Double = end - start
   def durationSecs: Double = durationMillis * 1e-3
-  override def toString: String = f"Elapsed time of $label: $durationSecs%.4fs"
+  override def toString: String = f"Elapsed time of $label is $durationSecs%.4fs, producing $result"
 }
 object Timing {
-  def time[R](label: String)(block: ⇒ R): (R, Timing) = {
+  def time[R](label: String)(block: ⇒ R): Timing[R] = {
     val start = System.currentTimeMillis()
     val result = block
     val end = System.currentTimeMillis()
-    (result, Timing(label, start, end))
+    Timing[R](label, start, end, result)
   }
 }
