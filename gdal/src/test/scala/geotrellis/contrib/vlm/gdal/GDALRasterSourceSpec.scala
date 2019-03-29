@@ -160,4 +160,12 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
       }
     }
   }
+
+  describe("supported file formats") {
+    it("should read JPG2000 scene") {
+      val path = Resource.path("img/sentinel-2.jp2")
+      val src = GDALRasterSource(path.toString)
+      src.bandCount should be(1)
+    }
+  }
 }
