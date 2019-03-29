@@ -16,9 +16,14 @@
 
 import sbt._
 
+import scala.util.Properties
+
+
 object Version {
   val geotrellis     = "2.2.0"
   val geotrellisGdal = "0.18.5"
+  val gdal           = Properties.envOrElse("GDAL_VERSION", "2.4.0")
+  val gdalWarp       = "33.803211f"
   val scala          = "2.11.12"
   val crossScala     = Seq(scala, "2.12.8")
   val hadoop         = "2.8.0"
@@ -26,6 +31,8 @@ object Version {
 }
 
 object Dependencies {
+  val gdalBindings            = "org.gdal"                     % "gdal"                      % Version.gdal
+  val gdalWarp                = "com.azavea.gdal"              % "gdal-warp-bindings"        % Version.gdalWarp
   val geotrellisGdal          = "com.azavea.geotrellis"       %% "geotrellis-gdal"           % Version.geotrellisGdal
   val geotrellisSpark         = "org.locationtech.geotrellis" %% "geotrellis-spark"          % Version.geotrellis
   val geotrellisSparkTestKit  = "org.locationtech.geotrellis" %% "geotrellis-spark-testkit"  % Version.geotrellis
@@ -36,6 +43,8 @@ object Dependencies {
   val geotrellisVector        = "org.locationtech.geotrellis" %% "geotrellis-vector"         % Version.geotrellis
   val geotrellisUtil          = "org.locationtech.geotrellis" %% "geotrellis-util"           % Version.geotrellis
   val geotrellisShapefile     = "org.locationtech.geotrellis" %% "geotrellis-shapefile"      % Version.geotrellis
+
+  val gdal                = "org.gdal"                    % "gdal"                     % Properties.envOrElse("GDAL_VERSION", "2.4.0")
 
   val pureconfig          = "com.github.pureconfig"      %% "pureconfig"               % "0.9.1"
   val logging             = "com.typesafe.scala-logging" %% "scala-logging"            % "3.9.0"

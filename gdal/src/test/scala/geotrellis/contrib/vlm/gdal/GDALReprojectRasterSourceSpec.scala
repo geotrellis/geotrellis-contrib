@@ -17,11 +17,12 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm._
-import geotrellis.gdal._
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.resample._
 import geotrellis.raster.testkit._
+
+import com.azavea.gdal.GDALWarp
 
 import org.scalatest._
 
@@ -43,6 +44,7 @@ class GDALReprojectRasterSourceSpec extends FunSpec with RasterMatchers with Bet
     * */
 
   describe("Reprojecting a RasterSource") {
+
     val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
 
     /**

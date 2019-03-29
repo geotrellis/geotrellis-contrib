@@ -72,8 +72,6 @@ lazy val IntegrationTest = config("it") extend Test
 lazy val vlm = project
   .dependsOn(testkit % Test)
   .settings(commonSettings)
-  .configs(IntegrationTest)
-  .settings(Defaults.itSettings)
   .settings(
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-vlm",
@@ -90,30 +88,26 @@ lazy val vlm = project
     ),
     Test / fork := true,
     Test / parallelExecution := false,
-    Test / testOptions += Tests.Argument("-oDF"),
+    Test / testOptions += Tests.Argument("-oDF")
   )
-  .settings(
-    initialCommands in console :=
-      """
-        |import geotrellis.contrib.vlm._
-        |import geotrellis.contrib.vlm.geotiff._
-        |import geotrellis.contrib.vlm.gdal._
-      """.stripMargin
-  )
+  
 
 lazy val gdal = project
   .dependsOn(testkit % Test)
   .dependsOn(vlm)
   .settings(commonSettings)
+  .configs(IntegrationTest)
+  .settings(Defaults.itSettings)
   .settings(
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-gdal",
     libraryDependencies ++= Seq(
-      geotrellisGdal,
+      gdalWarp,
       sparkCore % Test,
       sparkSQL % Test,
       geotrellisSparkTestKit % Test,
-      scalatest % Test
+      scalatest % Test,
+      gdalBindings % Test
     ),
     Test / fork := true,
     Test / parallelExecution := false,
@@ -139,7 +133,8 @@ lazy val testkit = project
       geotrellisRasterTestkit,
       geotrellisRaster,
       geotrellisMacros,
-      scalatest % Provided)
+      scalatest % Provided
+    )
   )
 
 lazy val summary = project
@@ -147,7 +142,6 @@ lazy val summary = project
   .settings(
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-summary",
-    version := "0.1.1",
     libraryDependencies ++= Seq(
       geotrellisRaster,
       geotrellisVector,

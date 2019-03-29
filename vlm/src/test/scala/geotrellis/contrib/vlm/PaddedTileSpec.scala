@@ -3,6 +3,7 @@ package geotrellis.contrib.vlm
 import geotrellis.raster._
 import geotrellis.raster.testkit.RasterMatchers
 import org.scalatest._
+
 import spire.syntax.cfor._
 
 class PaddedTileSpec extends FunSpec with Matchers with BetterRasterMatchers with RasterMatchers {

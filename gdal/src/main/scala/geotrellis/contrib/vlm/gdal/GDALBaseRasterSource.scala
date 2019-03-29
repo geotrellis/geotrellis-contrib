@@ -17,7 +17,6 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm._
-import geotrellis.gdal._
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.OverviewStrategy
@@ -25,17 +24,20 @@ import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.vector._
 
-import org.gdal.gdal.Dataset
+import com.azavea.gdal.GDALWarp
 
 import java.net.MalformedURLException
 
 trait GDALBaseRasterSource extends RasterSource {
+  val ANSI_RESET = "\u001B[0m"
+  val ANSI_BLUE = "\u001B[34m"
+
   val vsiPath: String = if (VSIPath.isVSIFormatted(uri)) uri else try {
     VSIPath(uri).vsiPath
   } catch {
     case _: Throwable =>
       throw new MalformedURLException(
-        s"Invalid URI passed into the GDALRasterSource constructor: ${uri}." +
+          s"Invalid URI passed into the GDALRasterSource constructor: ${uri}." +
           s"Check geotrellis.contrib.vlm.gdal.VSIPath constrains, " +
           s"or pass VSI formatted String into the GDALRasterSource constructor manually."
       )
@@ -44,19 +46,28 @@ trait GDALBaseRasterSource extends RasterSource {
   /** options to override some values on transformation steps, should be used carefully as these params can change the behaviour significantly */
   val options: GDALWarpOptions
 
-  // generate a vrt before the current options application
-  @transient lazy val baseDataset: Dataset = GDAL.fromGDALWarpOptions(uri, Nil)
   // current dataset
-  @transient lazy val dataset: Dataset = GDAL.fromGDALWarpOptions(uri, options :: Nil, baseDataset)
+  @transient lazy val dataset: Long = {
+    val gdalPath = {
+      if (VSIPath.isVSIFormatted(uri))
+        uri
+      else
+        VSIPath(uri).vsiPath
+    }
+    val token = GDALWarp.get_token(gdalPath, (options).toWarpOptionsList.toArray)
+    token
+  }
 
-  lazy val bandCount: Int = dataset.getRasterCount
+  lazy val bandCount: Int = dataset.bandCount
 
-  lazy val crs: CRS = dataset.crs.getOrElse(CRS.fromEpsgCode(4326))
+  lazy val crs: CRS = dataset.crs
 
-  private lazy val reader: GDALReader = GDALReader(dataset)
+  // private lazy val reader: GDALReader = GDALReader(dataset)
 
   // noDataValue from the previous step
-  lazy val noDataValue: Option[Double] = baseDataset.getNoDataValue
+  lazy val noDataValue: Option[Double] = dataset.noDataValue(GDALWarp.SOURCE)
+
+  lazy val dataType: Int = dataset.dataType
 
   lazy val cellType: CellType = dstCellType.getOrElse(dataset.cellType)
 
@@ -67,27 +78,22 @@ trait GDALBaseRasterSource extends RasterSource {
     * These resolutions could represent actual overview as seen in source file
     * or overviews of VRT that was created as result of resample operations.
     */
-  lazy val resolutions: List[RasterExtent] = {
-    val band = dataset.GetRasterBand(1)
-    rasterExtent :: (0 until band.GetOverviewCount).toList.map { idx =>
-      val ovr = band.GetOverview(idx)
-      RasterExtent(extent, cols = ovr.getXSize, rows = ovr.getYSize)
-    }
-  }
+  lazy val resolutions: List[RasterExtent] = dataset.resolutions
 
   override def readBounds(bounds: Traversable[GridBounds], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     bounds
       .toIterator
       .flatMap { gb => gridBounds.intersection(gb) }
       .map { gb =>
-        val tile = reader.read(gb, bands = bands)
+        val tile = MultibandTile(bands.map({ band => dataset.readTile(gb, band + 1) }))
         val extent = rasterExtent.extentFor(gb)
         convertRaster(Raster(tile, extent))
       }
   }
 
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
+  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource = {
     GDALReprojectRasterSource(uri, reprojectOptions, strategy, options.reproject(rasterExtent, crs, targetCRS, reprojectOptions))
+  }
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
     GDALResampleRasterSource(uri, resampleGrid, method, strategy, options.resample(rasterExtent.toGridExtent, resampleGrid))
@@ -140,10 +146,11 @@ trait GDALBaseRasterSource extends RasterSource {
     readBounds(bounds, 0 until bandCount)
   }
 
-  override def close = dataset.delete
+  // override def close = dataset.delete
 }
 
 object GDALBaseRasterSource {
+
   def createConvertOptions(targetCellType: TargetCellType, noDataValue: Option[Double]): List[GDALWarpOptions] =
     targetCellType match {
       case ConvertTargetCellType(target) =>

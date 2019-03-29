@@ -16,15 +16,15 @@
 
 package geotrellis.contrib.vlm.gdal
 
-import geotrellis.gdal._
 import geotrellis.proj4._
-import geotrellis.contrib.vlm.{RasterSource, TargetCellType}
+import geotrellis.contrib.vlm._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 
+import com.azavea.gdal.GDALWarp
+
 import cats.syntax.option._
-import org.gdal.osr.SpatialReference
 
 case class GDALReprojectRasterSource(
   uri: String,
@@ -38,16 +38,8 @@ case class GDALReprojectRasterSource(
   def resampleMethod: Option[ResampleMethod] = reprojectOptions.method.some
 
   lazy val warpOptions: GDALWarpOptions = {
-    val baseSpatialReference = {
-      val spatialReference = new SpatialReference()
-      spatialReference.ImportFromWkt(baseDataset.getProjection.getOrElse(LatLng.toWKT.get))
-      spatialReference
-    }
-    val targetSpatialReference = {
-      val spatialReference = new SpatialReference()
-      spatialReference.ImportFromProj4(targetCRS.toProj4String)
-      spatialReference
-    }
+    val baseSpatialReference = dataset.crs(GDALWarp.SOURCE)
+    val targetSpatialReference = targetCRS
 
     val cellSize = reprojectOptions.targetRasterExtent.map(_.cellSize) match {
       case sz if sz.nonEmpty => sz
@@ -61,8 +53,8 @@ case class GDALReprojectRasterSource(
       resampleMethod = reprojectOptions.method.some,
       errorThreshold = reprojectOptions.errorThreshold.some,
       cellSize       = cellSize,
-      sourceCRS      = baseSpatialReference.toCRS.some,
-      targetCRS      = targetSpatialReference.toCRS.some,
+      sourceCRS      = baseSpatialReference.some,
+      targetCRS      = targetSpatialReference.some,
       srcNoData      = noDataValue.map(_.toString).toList,
       ovr            = strategy.some
     )

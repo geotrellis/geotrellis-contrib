@@ -29,10 +29,9 @@ import geotrellis.util._
 import org.scalatest._
 
 class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
-  val url = Resource.path("img/aspect-tiled.tif")
+  lazy val url = Resource.path("img/aspect-tiled.tif")
 
-  val source: GeoTiffRasterSource = new GeoTiffRasterSource(url)
-
+  lazy val source: GeoTiffRasterSource = new GeoTiffRasterSource(url)
 
   it("should be able to read upper left corner") {
     val bounds = GridBounds(0, 0, 10, 10)

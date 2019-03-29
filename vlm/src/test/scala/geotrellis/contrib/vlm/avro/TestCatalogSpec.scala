@@ -16,18 +16,15 @@
 
 package geotrellis.contrib.vlm.avro
 
-import TestCatalog._
 import geotrellis.contrib.vlm.geotiff._
 
-import org.scalatest.FunSpec
 import geotrellis.spark.io.{ValueReader, CollectionLayerReader}
 import geotrellis.raster.{Tile, MultibandTile}
 import geotrellis.spark._
 import geotrellis.spark.io._
 
-
 import java.io.File
-
+import org.scalatest.FunSpec
 
 class TestCatalogSpec extends FunSpec with CatalogTestEnvironment {
   val absMultibandOutputPath = s"file://${TestCatalog.multibandOutputPath}"

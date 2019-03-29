@@ -16,7 +16,6 @@
 
 package geotrellis.contrib.vlm.gdal
 
-import geotrellis.gdal._
 import geotrellis.contrib.vlm.TargetCellType
 import geotrellis.raster.resample.ResampleMethod
 

@@ -24,12 +24,12 @@ import geotrellis.raster.resample.Bilinear
 import geotrellis.spark._
 import geotrellis.spark.testkit._
 import geotrellis.spark.tiling._
-import geotrellis.vector.Extent
+
 import org.apache.spark.rdd._
 import org.scalatest._
-import spire.syntax.cfor._
 
 class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
+
   describe("Should collect GeoTiffRasterSource RasterSummary correct") {
     it("should collect summary for a raw source") {
       val inputPath = Resource.path("img/aspect-tiled.tif")

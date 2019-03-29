@@ -17,41 +17,35 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm._
-import geotrellis.gdal._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
-import geotrellis.raster.io.geotiff.AutoHigherResolution
-import geotrellis.raster.resample._
 import geotrellis.raster.testkit._
-import geotrellis.vector._
-import geotrellis.spark._
-import geotrellis.util._
+
 import org.scalatest._
 
-import java.net.MalformedURLException
-
 class GDALConvertedRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
+
   val url = Resource.path("img/aspect-tiled.tif")
   val uri = s"file://$url"
 
   val url2 = Resource.path("img/byte-tile.tiff")
   val uri2 = s"file://$url2"
 
-  val source: GDALRasterSource = GDALRasterSource(uri)
-  val byteSource: GDALRasterSource = GDALRasterSource(uri2)
+  lazy val source: GDALRasterSource = GDALRasterSource(url)
+  lazy val byteSource: GDALRasterSource = GDALRasterSource(url2)
 
-  val expectedRaster: Raster[MultibandTile] =
+  lazy val expectedRaster: Raster[MultibandTile] =
     GeoTiffReader
       .readMultiband(url, streaming = false)
       .raster
 
-  val expectedRaster2: Raster[MultibandTile] =
+  lazy val expectedRaster2: Raster[MultibandTile] =
     GeoTiffReader
       .readMultiband(url2, streaming = false)
       .raster
 
-  val targetExtent = expectedRaster.extent
-  val targetExtent2 = expectedRaster2.extent
+  lazy val targetExtent = expectedRaster.extent
+  lazy val targetExtent2 = expectedRaster2.extent
 
   /** Note:
    *  Many of these tests have a threshold of 1.0. The reason for this large value
@@ -63,6 +57,7 @@ class GDALConvertedRasterSourceSpec extends FunSpec with RasterMatchers with Bet
    */
 
   describe("Converting to a different CellType") {
+
     describe("Byte CellType") {
       it("should convert to: ByteConstantNoDataCellType") {
         val actual = byteSource.convert(ByteConstantNoDataCellType).read(targetExtent2).get

@@ -17,8 +17,7 @@
 package geotrellis.contrib.vlm.spark
 
 import geotrellis.contrib.vlm.gdal._
-import geotrellis.contrib.vlm.geotiff._
-import geotrellis.contrib.vlm.{BetterRasterMatchers, GlobalLayout, RasterRegion, RasterSource, Resource, TargetGrid}
+import geotrellis.contrib.vlm._
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.resample.Bilinear
@@ -26,6 +25,7 @@ import geotrellis.spark._
 import geotrellis.spark.testkit._
 import geotrellis.spark.tiling._
 import geotrellis.vector.Extent
+
 import org.apache.spark.rdd._
 import org.scalatest._
 import spire.syntax.cfor._

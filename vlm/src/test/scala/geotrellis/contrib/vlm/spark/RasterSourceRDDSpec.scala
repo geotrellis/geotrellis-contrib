@@ -41,12 +41,12 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
   val filePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
   def filePathByIndex(i: Int): String = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-$i.tif"
   val uri = s"file://$filePath"
-  val rasterSource = GeoTiffRasterSource(uri)
-  val targetCRS = CRS.fromEpsgCode(3857)
-  val scheme = ZoomedLayoutScheme(targetCRS)
-  val layout = scheme.levelForZoom(13).layout
+  lazy val rasterSource = GeoTiffRasterSource(uri)
+  lazy val targetCRS = CRS.fromEpsgCode(3857)
+  lazy val scheme = ZoomedLayoutScheme(targetCRS)
+  lazy val layout = scheme.levelForZoom(13).layout
 
-  val reprojectedSource = rasterSource.reprojectToGrid(targetCRS, layout)
+  lazy val reprojectedSource = rasterSource.reprojectToGrid(targetCRS, layout)
 
   describe("reading in GeoTiffs as RDDs") {
     it("should have the right number of tiles") {
@@ -101,10 +101,10 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
     }
 
     def assertRDDLayersEqual(
-      expected: MultibandTileLayerRDD[SpatialKey],
-      actual: MultibandTileLayerRDD[SpatialKey],
-      matchRasters: Boolean = false
-    ): Unit = {
+                              expected: MultibandTileLayerRDD[SpatialKey],
+                              actual: MultibandTileLayerRDD[SpatialKey],
+                              matchRasters: Boolean = false
+                            ): Unit = {
       val joinedRDD = expected.filter { case (_, t) => !t.band(0).isNoDataTile }.leftOuterJoin(actual)
 
       joinedRDD.collect().foreach { case (key, (expected, actualTile)) =>

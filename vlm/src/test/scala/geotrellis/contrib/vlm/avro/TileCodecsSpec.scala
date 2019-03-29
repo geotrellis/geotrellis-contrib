@@ -4,6 +4,7 @@ import geotrellis.contrib.vlm.{BetterRasterMatchers, PaddedTile}
 import geotrellis.raster.testkit.RasterMatchers
 import geotrellis.raster.{ByteArrayTile, MultibandTile, Tile}
 import geotrellis.spark.io.avro.AvroRecordCodec
+
 import org.scalatest._
 
 class TileCodecsSpec extends FunSpec with Matchers with RasterMatchers with BetterRasterMatchers {

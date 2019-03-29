@@ -28,18 +28,18 @@ import org.scalatest._
 
 class LayoutTileSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers {
   val testFile = Resource.path("img/aspect-tiled.tif")
-  val tiff = GeoTiffReader.readMultiband(testFile, streaming = false)
+  lazy val tiff = GeoTiffReader.readMultiband(testFile, streaming = false)
 
-  val rasterSource = new GeoTiffRasterSource(testFile)
+  lazy val rasterSource = GeoTiffRasterSource(testFile)
   val scheme = FloatingLayoutScheme(256)
   val layout = scheme.levelFor(rasterSource.extent, rasterSource.cellSize).layout
-  val source = new LayoutTileSource(rasterSource, layout)
+  lazy val source = new LayoutTileSource(rasterSource, layout)
 
   val mbTestFile = Resource.path("img/multiband.tif")
-  val mbTiff = GeoTiffReader.readMultiband(mbTestFile, streaming = false)
-  val mbRasterSource = new GeoTiffRasterSource(mbTestFile)
+  lazy val mbTiff = GeoTiffReader.readMultiband(mbTestFile, streaming = false)
+  lazy val mbRasterSource = GeoTiffRasterSource(mbTestFile)
   val mbLayout = scheme.levelFor(mbRasterSource.extent, mbRasterSource.cellSize).layout
-  val mbSource = new LayoutTileSource(mbRasterSource, mbLayout)
+  lazy val mbSource = new LayoutTileSource(mbRasterSource, mbLayout)
 
   it("should read all the keys") {
     val keys = source.layout

@@ -16,6 +16,10 @@
 
 package geotrellis.contrib.vlm.avro
 
+import geotrellis.contrib.vlm._
+import geotrellis.contrib.vlm.geotiff._
+import geotrellis.contrib.vlm.spark.RasterSourceRDD
+
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff._
 import geotrellis.raster.render._
@@ -34,15 +38,12 @@ import geotrellis.spark.reproject._
 import geotrellis.spark.tiling._
 import geotrellis.spark.render._
 import geotrellis.vector._
+
 import org.apache.spark._
 import org.apache.spark.rdd._
 
 import scala.io.StdIn
 import java.io.File
-
-import geotrellis.contrib.vlm._
-import geotrellis.contrib.vlm.geotiff._
-import geotrellis.contrib.vlm.spark.RasterSourceRDD
 
 object TestCatalog {
   val filePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
