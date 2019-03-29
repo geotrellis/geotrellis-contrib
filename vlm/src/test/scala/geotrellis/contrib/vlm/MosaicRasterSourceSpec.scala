@@ -18,17 +18,16 @@
 package geotrellis.contrib.vlm
 
 import geotrellis.contrib.vlm.geotiff._
-
-import cats.data.NonEmptyList
 import geotrellis.proj4.{LatLng, WebMercator}
 import geotrellis.raster.{IntConstantNoDataArrayTile, MultibandTile, Raster}
 import geotrellis.vector.Extent
+
+import cats.data.NonEmptyList
 import org.scalatest._
 
 class MosaicRasterSourceSpec extends FunSpec with Matchers {
 
   describe("union operations") {
-
     // With Extent(0, 0, 1, 1)
     val inputPath1 = Resource.path("img/geotiff-at-origin.tif")
     // With Extent(1, 0, 2, 1)

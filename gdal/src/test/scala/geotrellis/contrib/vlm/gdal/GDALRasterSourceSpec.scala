@@ -30,13 +30,11 @@ import geotrellis.spark.tiling._
 import geotrellis.util._
 
 import com.azavea.gdal.GDALWarp
-
 import cats.implicits._
 
 import org.scalatest._
 
 import java.net.MalformedURLException
-
 
 class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
 

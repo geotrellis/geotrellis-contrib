@@ -28,7 +28,6 @@ import org.scalatest._
 
 import java.io.File
 
-
 class GDALReprojectRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
 
   /**

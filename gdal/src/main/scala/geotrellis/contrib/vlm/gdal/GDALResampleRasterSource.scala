@@ -25,7 +25,6 @@ import com.azavea.gdal.GDALWarp
 
 import cats.syntax.option._
 
-
 case class GDALResampleRasterSource(
   uri: String,
   resampleGrid: ResampleGrid,

@@ -26,15 +26,11 @@ import geotrellis.vector.Extent
 import geotrellis.raster.testkit._
 
 import org.gdal.gdal._
-
-import com.azavea.gdal.GDALWarp
-
 import cats.implicits._
 
 import scala.collection.JavaConverters._
 
 import org.scalatest._
-
 
 class GDALWarpOptionsSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
   import GDALWarpOptionsSpec._

@@ -23,7 +23,6 @@ import geotrellis.vector.Extent
 
 import cats.syntax.option._
 
-
 package object gdal {
 
   implicit class GDALRasterExtentMethods(val self: RasterExtent) {

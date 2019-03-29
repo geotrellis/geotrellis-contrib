@@ -17,7 +17,7 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.proj4._
-import geotrellis.contrib.vlm.{RasterSource, TargetCellType}
+import geotrellis.contrib.vlm._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
@@ -25,9 +25,6 @@ import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import com.azavea.gdal.GDALWarp
 
 import cats.syntax.option._
-
-import geotrellis.contrib.vlm._
-
 
 case class GDALReprojectRasterSource(
   uri: String,

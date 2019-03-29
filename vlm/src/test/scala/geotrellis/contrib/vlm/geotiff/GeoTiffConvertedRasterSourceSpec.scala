@@ -20,29 +20,25 @@ import geotrellis.contrib.vlm._
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
-import geotrellis.raster.resample._
 import geotrellis.raster.testkit._
 import geotrellis.vector._
-import geotrellis.spark._
-import geotrellis.spark.tiling._
-import geotrellis.util._
 
 import org.scalatest._
 
 class GeoTiffConvertedRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
-  val url = Resource.path("img/aspect-tiled.tif")
+  lazy val url = Resource.path("img/aspect-tiled.tif")
 
-  val source: GeoTiffRasterSource = new GeoTiffRasterSource(url)
+  lazy val source: GeoTiffRasterSource = new GeoTiffRasterSource(url)
 
-  val expectedRaster: Raster[MultibandTile] =
+  lazy val expectedRaster: Raster[MultibandTile] =
     GeoTiffReader
       .readMultiband(url, streaming = false)
       .raster
 
   describe("Converting to a different CellType") {
-    val targetExtent = expectedRaster.extent
+    lazy val targetExtent = expectedRaster.extent
 
-    val expectedTile: MultibandTile = expectedRaster.tile
+    lazy val expectedTile: MultibandTile = expectedRaster.tile
 
     describe("Bit CellType") {
       it("should convert to: ByteCellType") {

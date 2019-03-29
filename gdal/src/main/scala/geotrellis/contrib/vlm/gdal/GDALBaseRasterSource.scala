@@ -26,10 +26,7 @@ import geotrellis.vector._
 
 import com.azavea.gdal.GDALWarp
 
-import scala.util.Properties
-
 import java.net.MalformedURLException
-
 
 trait GDALBaseRasterSource extends RasterSource {
   val ANSI_RESET = "\u001B[0m"
