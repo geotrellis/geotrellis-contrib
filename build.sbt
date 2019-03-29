@@ -72,8 +72,6 @@ lazy val IntegrationTest = config("it") extend Test
 lazy val vlm = project
   .dependsOn(testkit % Test)
   .settings(commonSettings)
-  .configs(IntegrationTest)
-  .settings(Defaults.itSettings)
   .settings(
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-vlm",
@@ -103,6 +101,8 @@ lazy val vlm = project
 
 lazy val gdal = project
   .dependsOn(testkit % Test)
+  .configs(IntegrationTest)
+  .settings(Defaults.itSettings)
   .dependsOn(vlm)
   .settings(commonSettings)
   .settings(
