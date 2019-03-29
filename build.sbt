@@ -81,12 +81,10 @@ lazy val vlm = project
       geotrellisUtil,
       scalactic,
       squants,
-      warpwrap,
       sparkCore % Provided,
       sparkSQL % Test,
       geotrellisSparkTestKit % Test,
-      scalatest % Test,
-      gdalBindings % Test
+      scalatest % Test
     ),
     Test / fork := true,
     Test / parallelExecution := false,
@@ -104,11 +102,12 @@ lazy val gdal = project
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-gdal",
     libraryDependencies ++= Seq(
-      geotrellisGdal,
+      gdalWarp,
       sparkCore % Test,
       sparkSQL % Test,
       geotrellisSparkTestKit % Test,
-      scalatest % Test
+      scalatest % Test,
+      gdalBindings % Test
     ),
     Test / fork := true,
     Test / parallelExecution := false,
@@ -134,7 +133,8 @@ lazy val testkit = project
       geotrellisRasterTestkit,
       geotrellisRaster,
       geotrellisMacros,
-      scalatest % Provided)
+      scalatest % Provided
+    )
   )
 
 lazy val summary = project

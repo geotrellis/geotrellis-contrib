@@ -26,7 +26,6 @@ import cats.implicits._
 
 import scala.collection.JavaConverters._
 
-
 /**
   * GDALWarpOptions basically should cover https://www.gdal.org/gdalwarp.html
   */

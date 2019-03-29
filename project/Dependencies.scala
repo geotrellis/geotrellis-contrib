@@ -23,6 +23,7 @@ object Version {
   val geotrellis     = "2.2.0"
   val geotrellisGdal = "0.18.5"
   val gdal           = Properties.envOrElse("GDAL_VERSION", "2.4.0")
+  val gdalWarp       = "33.803211f"
   val scala          = "2.11.12"
   val crossScala     = Seq(scala, "2.12.8")
   val hadoop         = "2.8.0"
@@ -31,6 +32,7 @@ object Version {
 
 object Dependencies {
   val gdalBindings            = "org.gdal"                     % "gdal"                      % Version.gdal
+  val gdalWarp                = "com.azavea.gdal"              % "gdal-warp-bindings"        % Version.gdalWarp
   val geotrellisGdal          = "com.azavea.geotrellis"       %% "geotrellis-gdal"           % Version.geotrellisGdal
   val geotrellisSpark         = "org.locationtech.geotrellis" %% "geotrellis-spark"          % Version.geotrellis
   val geotrellisSparkTestKit  = "org.locationtech.geotrellis" %% "geotrellis-spark-testkit"  % Version.geotrellis
@@ -61,6 +63,4 @@ object Dependencies {
   val hadoopClient        = "org.apache.hadoop"           % "hadoop-client"            % Version.hadoop
 
   val squants = "org.typelevel" %% "squants" % "1.3.0"
-
-  val warpwrap = "com.azavea.gdal" % "gdal-warp-bindings" % "33.803211f"
 }

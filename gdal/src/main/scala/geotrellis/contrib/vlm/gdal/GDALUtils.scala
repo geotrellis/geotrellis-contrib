@@ -20,7 +20,6 @@ import geotrellis.raster._
 import geotrellis.raster.io.geotiff._
 import geotrellis.raster.resample._
 
-
 object GDALUtils {
   def deriveResampleMethodString(method: ResampleMethod): String =
     method match {

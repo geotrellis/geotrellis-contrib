@@ -18,7 +18,6 @@ package geotrellis.contrib.vlm.gdal
 
 import java.io.File
 
-
 /*
  * Parses and formats the given URI into a format that GDAL can read.
  * The [[vsiPath]] value contains this formatted string.

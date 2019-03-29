@@ -18,7 +18,6 @@ package geotrellis.contrib.vlm.gdal
 
 import scala.util.matching.Regex
 
-
 /*
  * Contains the different Regexs needed to parse
  * the paths given to GDAL to read.

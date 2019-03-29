@@ -16,7 +16,6 @@
 
 package geotrellis.contrib.vlm.gdal
 
-
 /*
  * This object conatins the different schemes and filetypes one can pass
  * into GDAL.
