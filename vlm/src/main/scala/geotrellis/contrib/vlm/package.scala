@@ -16,7 +16,7 @@
 
 package geotrellis.contrib
 
-import geotrellis.util.{FileRangeReader, StreamingByteReader}
+import geotrellis.util.{FileRangeReader, RangeReader, StreamingByteReader}
 import geotrellis.proj4.{CRS, Transform}
 import geotrellis.raster.{GridExtent, RasterExtent}
 import geotrellis.raster.reproject.Reproject.Options
@@ -24,20 +24,21 @@ import geotrellis.raster.reproject.ReprojectRasterExtent
 import geotrellis.spark.io.http.util.HttpRangeReader
 import geotrellis.spark.io.s3.util.S3RangeReader
 import geotrellis.spark.io.s3.AmazonS3Client
-
 import org.apache.http.client.utils.URLEncodedUtils
 import com.amazonaws.services.s3.{AmazonS3ClientBuilder, AmazonS3URI}
-
 import java.nio.file.Paths
 import java.net.{URI, URL}
 import java.nio.charset.Charset
 
 package object vlm {
-  private[vlm] def getByteReader(uri: String): StreamingByteReader = {
+  private[vlm] def getByteReader(uri: String): StreamingByteReader =
+    new StreamingByteReader(getRangeReader(uri))
+
+  private[vlm] def getRangeReader(uri: String): RangeReader = {
     val javaURI = new URI(uri)
     val noQueryParams = URLEncodedUtils.parse(uri, Charset.forName("UTF-8")).isEmpty
 
-    val rr =  javaURI.getScheme match {
+    javaURI.getScheme match {
       case null =>
         FileRangeReader(Paths.get(javaURI.toString).toFile)
 
@@ -67,9 +68,7 @@ package object vlm {
       case scheme =>
         throw new IllegalArgumentException(s"Unable to read scheme $scheme at $uri")
     }
-    new StreamingByteReader(rr)
   }
-
   implicit class rasterExtentMethods(self: RasterExtent) {
     def reproject(src: CRS, dest: CRS, options: Options): RasterExtent =
       if(src == dest) self

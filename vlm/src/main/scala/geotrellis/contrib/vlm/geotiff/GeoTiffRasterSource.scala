@@ -24,15 +24,17 @@ import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
 import geotrellis.raster.io.geotiff.{GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
+import geotrellis.util.StreamingByteReader
 
 case class GeoTiffRasterSource(
   uri: String,
+  readerBuilder: String => StreamingByteReader,
   private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource {
   def resampleMethod: Option[ResampleMethod] = None
 
   @transient lazy val tiff: MultibandGeoTiff =
-    GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
+    GeoTiffReader.readMultiband(readerBuilder(uri), streaming = true)
 
   lazy val rasterExtent: RasterExtent = tiff.rasterExtent
   lazy val resolutions: List[RasterExtent] = rasterExtent :: tiff.overviews.map(_.rasterExtent)
@@ -47,7 +49,7 @@ case class GeoTiffRasterSource(
     GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, targetCellType)
 
   def convert(targetCellType: TargetCellType): GeoTiffRasterSource =
-    GeoTiffRasterSource(uri, Some(targetCellType))
+    GeoTiffRasterSource(uri, readerBuilder, Some(targetCellType))
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = rasterExtent.gridBoundsFor(extent, clamp = false)
@@ -74,5 +76,15 @@ case class GeoTiffRasterSource(
     geoTiffTile.crop(intersectingBounds, bands.toArray).map { case (gb, tile) =>
       convertRaster(Raster(tile, rasterExtent.extentFor(gb, clamp = true)))
     }
+  }
+}
+object GeoTiffRasterSource {
+  def apply(uri: String): GeoTiffRasterSource = {
+    val builder: String => StreamingByteReader =
+      if (Config.geotiff.logReads)
+        (uri: String) => new StreamingByteReader(ReadCallback.loggingRangeReader(uri, getRangeReader(uri)))
+      else getByteReader
+
+    new GeoTiffRasterSource(uri, builder)
   }
 }

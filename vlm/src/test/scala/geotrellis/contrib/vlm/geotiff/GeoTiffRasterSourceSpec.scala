@@ -16,7 +16,10 @@
 
 package geotrellis.contrib.vlm.geotiff
 
+import com.typesafe.scalalogging.LazyLogging
 import geotrellis.contrib.vlm._
+import geotrellis.contrib.vlm.geotiff.GeoTiffRasterSourceSpec.ReadCounter
+import geotrellis.contrib.vlm.geotiff.ReadCallback.CallbackEnabledRangeReader
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.resample._
@@ -25,13 +28,12 @@ import geotrellis.vector._
 import geotrellis.spark._
 import geotrellis.spark.tiling._
 import geotrellis.util._
-
 import org.scalatest._
 
 class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
   lazy val url = Resource.path("img/aspect-tiled.tif")
 
-  lazy val source: GeoTiffRasterSource = new GeoTiffRasterSource(url)
+  lazy val source: GeoTiffRasterSource = GeoTiffRasterSource(url)
 
   it("should be able to read upper left corner") {
     val bounds = GridBounds(0, 0, 10, 10)
@@ -140,5 +142,44 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
         layoutSource.source
       }
     }
+  }
+
+  describe("optimized metadata reading") {
+    it("should report reads") {
+      val counter = new ReadCounter(url)
+      val reader = (uri: String) =>
+        new StreamingByteReader(CallbackEnabledRangeReader(getRangeReader(uri), counter))
+      val src = new GeoTiffRasterSource(url, reader)
+      counter.counts.reads should be (0)
+
+      src.crs
+      counter.counts.reads should be (1)
+      counter.counts.bytes shouldBe < (50000L)
+      src.extent
+      counter.counts.reads should be (1)
+      src.bandCount
+      counter.counts.reads should be (1)
+      val header = counter.counts.bytes
+      val sub = GridBounds(10, 10, 50, 60)
+      src.read(sub) shouldNot be (None)
+      counter.counts.reads should be (2)
+      (counter.counts.bytes - header) shouldBe >= (sub.size)
+      // TODO: A test that confirms that a tile at the end of the geotiff's segment list
+      // doesn't require a full scan.
+    }
+  }
+}
+object GeoTiffRasterSourceSpec {
+  case class Counts(reads: Int = 0, bytes: Long = 0) {
+    def + (b: Int): Counts = copy(reads = reads + 1, bytes = bytes + b)
+    override def toString: String = s"$bytes bytes in $reads read(s)"
+  }
+  class ReadCounter(label: String) extends ReadCallback with LazyLogging {
+    var counts = Counts()
+    override def readRange(start: Long, length: Int): Unit = {
+      counts = counts + length
+      logger.info(this.toString)
+    }
+    override def toString: String = s"$counts from $label"
   }
 }

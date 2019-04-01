@@ -17,19 +17,16 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm._
-import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.io.geotiff.AutoHigherResolution
 import geotrellis.raster.resample._
-import geotrellis.raster.reproject.Reproject.{Options => ReprojectOptions}
 import geotrellis.raster.testkit._
 import geotrellis.vector._
 import geotrellis.spark._
 import geotrellis.spark.tiling._
 import geotrellis.util._
 
-import com.azavea.gdal.GDALWarp
 import cats.implicits._
 
 import org.scalatest._

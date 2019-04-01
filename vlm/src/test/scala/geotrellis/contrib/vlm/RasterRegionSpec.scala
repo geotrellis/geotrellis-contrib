@@ -32,7 +32,7 @@ class RasterRegionSpec extends FunSpec with TestEnvironment with BetterRasterMat
 
     When("Generating RDD of RasterRegions")
     val rdd: RDD[(SpatialKey, RasterRegion)] with Metadata[TileLayerMetadata[SpatialKey]] = {
-      val srcRdd = sc.parallelize(paths, paths.size).map { uri => new GeoTiffRasterSource(uri) }
+      val srcRdd = sc.parallelize(paths, paths.size).map(GeoTiffRasterSource.apply)
       srcRdd.cache()
 
       val (combinedExtent, commonCellType) =
