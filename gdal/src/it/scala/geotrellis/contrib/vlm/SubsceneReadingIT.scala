@@ -65,7 +65,7 @@ class SubsceneReadingIT extends FunSpec with Matchers with LazyLogging {
 
   describe("GDAL vs GeoTrellis GeoTiff reading") {
 
-    it("should read projected extent with similar performance with GDAL") {
+    it("should be faster reading projected extent with GDAL") {
       val gt = time("GeoTrellis") {
         val src = GeoTiffRasterSource(sample)
         ProjectedExtent(src.extent, src.crs)
@@ -79,7 +79,8 @@ class SubsceneReadingIT extends FunSpec with Matchers with LazyLogging {
       logger.info(gdal.toString)
 
       gt.result should be (gdal.result)
-      gt.durationMillis should be(gdal.durationMillis +- 1000)
+
+      gt.durationMillis shouldBe >= (gdal.durationMillis - 0.05*gt.durationMillis)
     }
 
     it("should be faster reading subextent with GDAL") {
@@ -95,7 +96,7 @@ class SubsceneReadingIT extends FunSpec with Matchers with LazyLogging {
       }
       logger.info(gdal.toString)
 
-      gt.durationMillis shouldBe >= (gdal.durationMillis)
+      gt.durationMillis shouldBe >= (gdal.durationMillis - 0.05*gt.durationMillis)
     }
 
     it("should be faster reading full scene as tiles with GDAL") {
@@ -115,7 +116,7 @@ class SubsceneReadingIT extends FunSpec with Matchers with LazyLogging {
       }
       logger.info(gdal.toString)
 
-      gt.durationMillis shouldBe >= (gdal.durationMillis)
+      gt.durationMillis shouldBe >= (gdal.durationMillis - 0.05*gt.durationMillis)
     }
 
     it("should be faster reading full scene GDAL") {
@@ -131,7 +132,7 @@ class SubsceneReadingIT extends FunSpec with Matchers with LazyLogging {
       }
       logger.info(gdal.toString)
 
-      gt.durationMillis shouldBe >= (gdal.durationMillis)
+      gt.durationMillis shouldBe >= (gdal.durationMillis - 0.05*gt.durationMillis)
     }
   }
 }
