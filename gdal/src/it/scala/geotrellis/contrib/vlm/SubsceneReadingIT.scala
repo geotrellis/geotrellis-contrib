@@ -24,31 +24,16 @@ import geotrellis.vector.{Extent, ProjectedExtent}
 import com.typesafe.scalalogging.LazyLogging
 import org.scalatest.{FunSpec, Matchers}
 
+import com.azavea.gdal.GDALWarp
+
+
 class SubsceneReadingIT extends FunSpec with Matchers with LazyLogging {
   import Timing._
 
-  /*
-   * APOLOGY
-   *
-   * In order to find metadata-containing sidecar files, GDAL's
-   * GeoTiff driver takes a listing of the directory containing the
-   * file in question.  This succeeds with `/vsis3/` URIs because S3
-   * supports that kind of thing (the first file in the listing is the
-   * GeoTiff itself, so GDAL extracts the metadata from that file).
-   * For `/vsicurl/` URIs, GDAL hits the URI of the directory and
-   * hopes to get back a sensible response, but S3's http server does
-   * not give one.  It then begins generating filenames, and attempts
-   * to `stat` them which results in a delay.
-   *
-   * For that reason, an http link cannot be used to (fairly) test
-   * GDAL's performance.
-   *
-   * However, one cannot use an S3 link to test GeoTrellis'
-   * performance because of
-   * https://github.com/locationtech/geotrellis/issues/2889
-   */
+  GDALWarp.set_config_option("GDAL_DISABLE_READDIR_ON_OPEN", "YES")
+  GDALWarp.set_config_option("CPL_VSIL_CURL_ALLOWED_EXTENSIONS", ".tif")
+
   val sample = "https://s3-us-west-2.amazonaws.com/radiant-nasa-iserv/2014/02/14/IP0201402141023382027S03100E/IP0201402141023382027S03100E-COG.tif"
-  val sample2 = "s3://radiant-nasa-iserv/2014/02/14/IP0201402141023382027S03100E/IP0201402141023382027S03100E-COG.tif"
 
   implicit class WithSubExtent(e: Extent) {
     /** Constructs an arbitrary subextent covering 1% of base extent. */
@@ -73,7 +58,7 @@ class SubsceneReadingIT extends FunSpec with Matchers with LazyLogging {
       logger.info(gt.toString)
 
       val gdal = time("GDAL") {
-        val src = GDALRasterSource(sample2)
+        val src = GDALRasterSource(sample)
         ProjectedExtent(src.extent, src.crs)
       }
       logger.info(gdal.toString)
@@ -91,7 +76,7 @@ class SubsceneReadingIT extends FunSpec with Matchers with LazyLogging {
       logger.info(gt.toString)
 
       val gdal = time("GDAL") {
-        val src = GDALRasterSource(sample2)
+        val src = GDALRasterSource(sample)
         src.read(src.extent.subextent).map(readCells)
       }
       logger.info(gdal.toString)
@@ -110,7 +95,7 @@ class SubsceneReadingIT extends FunSpec with Matchers with LazyLogging {
       logger.info(gt.toString)
 
       val gdal = time("GDAL") {
-        val src = GDALRasterSource(sample2)
+        val src = GDALRasterSource(sample)
         val bnds = subbounds(src)
         bnds.flatMap(b => src.read(b, Seq(0))).map(readCells).sum
       }
@@ -127,7 +112,7 @@ class SubsceneReadingIT extends FunSpec with Matchers with LazyLogging {
       logger.info(gt.toString)
 
       val gdal = time("GDAL") {
-        val src = GDALRasterSource(sample2)
+        val src = GDALRasterSource(sample)
         src.read(Seq(0)).map(readCells).get
       }
       logger.info(gdal.toString)
