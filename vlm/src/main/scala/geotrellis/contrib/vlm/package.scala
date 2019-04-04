@@ -16,6 +16,7 @@
 
 package geotrellis.contrib
 
+import geotrellis.contrib.vlm.config.S3Config
 import geotrellis.util.{FileRangeReader, StreamingByteReader}
 import geotrellis.proj4.{CRS, Transform}
 import geotrellis.raster.{GridExtent, RasterExtent}
@@ -52,15 +53,18 @@ package object vlm {
 
       case "s3" =>
         val s3Uri = new AmazonS3URI(java.net.URLDecoder.decode(uri, "UTF-8"))
-        val s3Client = if (Config.s3.allowGlobalRead) {
-          new AmazonS3Client(
-            AmazonS3ClientBuilder
-              .standard()
-              .withForceGlobalBucketAccessEnabled(true)
-              .build()
-          )
+        val s3Client = if (S3Config.allowGlobalRead) {
+          val builder = AmazonS3ClientBuilder
+            .standard()
+            .withForceGlobalBucketAccessEnabled(true)
+
+          val client = S3Config.region.fold(builder) { region => builder.setRegion(region); builder }.build
+
+          new AmazonS3Client(client)
         } else {
-          new AmazonS3Client(AmazonS3ClientBuilder.defaultClient())
+          val builder = AmazonS3ClientBuilder.standard()
+          val client = S3Config.region.fold(builder) { region => builder.setRegion(region); builder }.build
+          new AmazonS3Client(client)
         }
         S3RangeReader(s3Uri.getBucket, s3Uri.getKey, s3Client)
 
