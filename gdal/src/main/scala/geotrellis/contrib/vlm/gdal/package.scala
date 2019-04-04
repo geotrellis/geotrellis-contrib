@@ -16,18 +16,21 @@
 
 package geotrellis.contrib.vlm
 
+import geotrellis.contrib.vlm.gdal.config.GDALOptionsConfig
 import geotrellis.raster._
 import geotrellis.proj4.{CRS, LatLng}
 import geotrellis.raster.reproject.Reproject.{Options => ReprojectOptions}
 import geotrellis.vector.Extent
 
 import com.azavea.gdal.GDALWarp
+
 import cats.syntax.option._
 
 package object gdal {
+  GDALOptionsConfig.set
 
-  val acceptableDatasets = Set(GDALWarp.SOURCE, GDALWarp.WARPED)
-  val numberOfAttempts = 1 << 20
+  val acceptableDatasets: Set[Int] = GDALOptionsConfig.getAcceptableDatasets
+  val numberOfAttempts: Int = GDALOptionsConfig.getNumberOfAttempts
 
   implicit class tokenMethods(val token: Long) extends AnyVal {
 
@@ -70,7 +73,7 @@ package object gdal {
 
     def resolutions(dataset: Int): List[RasterExtent] = {
       require(acceptableDatasets contains dataset)
-      val N = 1 << 8;
+      val N = 1 << 8
       val widths = Array.ofDim[Int](N)
       val heights = Array.ofDim[Int](N)
       val extent = token.extent(dataset)
