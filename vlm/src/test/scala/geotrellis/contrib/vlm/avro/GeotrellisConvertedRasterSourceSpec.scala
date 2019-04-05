@@ -41,7 +41,7 @@ class GeotrellisConvertedRasterSourceSpec extends FunSpec with RasterMatchers wi
   describe("Converting to a different CellType") {
     val targetExtent = expectedRaster.extent
 
-    val expectedTile: MultibandTile = expectedRaster.tile
+    lazy val expectedTile: MultibandTile = expectedRaster.tile
 
     describe("Bit CellType") {
       it("should convert to: ByteCellType") {

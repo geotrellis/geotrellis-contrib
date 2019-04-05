@@ -49,7 +49,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
   lazy val rasterSource = GeoTiffRasterSource(uri)
   val targetCRS = CRS.fromEpsgCode(3857)
   val scheme = ZoomedLayoutScheme(targetCRS)
-  val layout = scheme.levelForZoom(13).layout
+  lazy val layout = scheme.levelForZoom(13).layout
 
   lazy val reprojectedSource = rasterSource.reprojectToGrid(targetCRS, layout)
 
