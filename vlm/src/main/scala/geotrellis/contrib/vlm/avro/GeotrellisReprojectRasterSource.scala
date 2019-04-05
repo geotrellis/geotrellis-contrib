@@ -26,6 +26,7 @@ import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.spark._
 import geotrellis.spark.io._
 import com.typesafe.scalalogging.LazyLogging
+import scala.io.AnsiColor._
 
 class GeotrellisReprojectRasterSource(
   val attributeStore: AttributeStore,
@@ -65,11 +66,11 @@ class GeotrellisReprojectRasterSource(
         lazy val tileBounds = sourceLayer.metadata.mapTransform.extentToBounds(sourceExtent)
         lazy val pixelsRead = (tileBounds.size * sourceLayer.metadata.layout.tileCols * sourceLayer.metadata.layout.tileRows).toDouble
         lazy val pixelsQueried = (targetRasterExtent.cols.toDouble * targetRasterExtent.rows.toDouble)
-        def msg = s"""\u001b[32mread($extent)\u001b[0m =
-        |\t\u001b[1mFROM\u001b[0m $uri ${sourceLayer.id}
-        |\t\u001b[1mTARGET\u001b[0m ${targetRasterExtent.extent} ${targetRasterExtent.cellSize} @ ${crs}
-        |\t\u001b[1mSOURCE\u001b[0m $sourceExtent ${sourceLayer.metadata.cellSize} @ ${sourceLayer.metadata.crs}
-        |\t\u001b[1mREAD\u001b[0m ${pixelsRead/pixelsQueried} read/query ratio for ${tileBounds.size} tiles""".stripMargin
+        def msg = s"""${GREEN}ead($extent)${RESET} =
+        |\t${BOLD}FROM${RESET} $uri ${sourceLayer.id}
+        |\t${BOLD}TARGET${RESET} ${targetRasterExtent.extent} ${targetRasterExtent.cellSize} @ ${crs}
+        |\t${BOLD}SOURCE${RESET} $sourceExtent ${sourceLayer.metadata.cellSize} @ ${sourceLayer.metadata.crs}
+        |\t${BOLD}READ${RESET} ${pixelsRead/pixelsQueried} read/query ratio for ${tileBounds.size} tiles""".stripMargin
         if (tileBounds.size < 1024) // Assuming 256x256 tiles this would be a very large request
           logger.debug(msg)
         else
