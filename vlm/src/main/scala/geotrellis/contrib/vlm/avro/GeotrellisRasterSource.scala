@@ -99,7 +99,7 @@ class GeotrellisRasterSource(
       ResampleGrid.fromReprojectOptions(reprojectOptions) match {
         case Some(resampleGrid) =>
           val resampledGridExtent = resampleGrid(this.gridExtent)
-          val closestLayerId = GeotrellisRasterSource.getClosestResolution(sourceLayers.toSeq, resampledGridExtent.cellSize, strategy)(_.metadata.layout.cellSize).get.id
+          val closestLayerId = GeotrellisRasterSource.getClosestResolution(sourceLayers.toList, resampledGridExtent.cellSize, strategy)(_.metadata.layout.cellSize).get.id
           new GeotrellisResampleRasterSource(attributeStore, uri, closestLayerId, sourceLayers, resampledGridExtent, reprojectOptions.method, targetCellType)
         case None =>
           this // I think I was asked to do nothing
