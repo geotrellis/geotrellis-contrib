@@ -68,7 +68,7 @@ class GDALReprojectRasterSourceSpec extends FunSpec with RasterMatchers with Bet
     def testReprojection(method: ResampleMethod) = {
       val rasterSource = GDALRasterSource(uri)
       val expectedRasterSource = GDALRasterSource(expectedUri(method))
-      val expectedRasterExtent = expectedRasterSource.gridExtent
+      val expectedRasterExtent = expectedRasterSource.gridExtent.toRasterExtent
       val warpRasterSource = rasterSource.reprojectToRegion(LatLng, expectedRasterExtent, method)
       val testBounds = GridBounds(0, 0, expectedRasterExtent.cols, expectedRasterExtent.rows).split(64,64).toSeq
 
@@ -88,7 +88,7 @@ class GDALReprojectRasterSourceSpec extends FunSpec with RasterMatchers with Bet
           // due to a bit different logic used by GDAL working with different output formats
           // there can be a difference around +-1e-11
           val expected = Utils.roundRaster(expectedRasterSource.read(testRasterExtent.extent).get)
-          val actual = Utils.roundRaster(warpRasterSource.read(bound).get)
+          val actual = Utils.roundRaster(warpRasterSource.read(bound.toGridType[Long]).get)
 
           actual.extent.covers(expected.extent) should be (true) // -- doesn't work due to a precision issue
           actual.rasterExtent.extent.xmin should be (expected.rasterExtent.extent.xmin +- 1e-5)
