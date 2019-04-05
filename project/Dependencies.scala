@@ -20,7 +20,7 @@ import scala.util.Properties
 
 
 object Version {
-  val geotrellis     = "3.0.1-SNAPSHOT"
+  val geotrellis     = "3.0.0-M1"
   val geotrellisGdal = "0.18.5"
   val gdal           = Properties.envOrElse("GDAL_VERSION", "2.4.0")
   val gdalWarp       = "33.e53ec75"
