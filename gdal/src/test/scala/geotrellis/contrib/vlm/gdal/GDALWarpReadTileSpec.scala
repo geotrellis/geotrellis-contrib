@@ -40,7 +40,7 @@ class GDALWarpReadTileSpec extends FunSpec with RasterMatchers {
     it("should match one read with GeoTools") {
       println("Reading with GDAL...")
       val dataset = GDALWarp.get_token(path, Array())
-      val raster = Raster(dataset.readMultibandTile(), dataset.rasterExtent.extent)
+      val raster = dataset.readMultibandRaster()
       val gdRaster = raster.tile.band(0)
       val gdExt = raster.extent
       println("Reading with GeoTools....")
