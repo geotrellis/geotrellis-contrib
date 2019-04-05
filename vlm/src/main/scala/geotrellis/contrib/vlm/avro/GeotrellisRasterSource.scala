@@ -131,7 +131,7 @@ object GeotrellisRasterSource {
 
     strategy match {
       case AutoHigherResolution =>
-        (grids) // overviews can have erased extent information
+        grids // overviews can have erased extent information
           .map { v => (cellSize.resolution - f(v).resolution) -> v }
           .filter(_._1 >= 0)
           .sortBy(_._1)
