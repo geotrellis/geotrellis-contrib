@@ -139,10 +139,8 @@ object GeotrellisRasterSource {
           .headOption
           .orElse(maxResultion)
       case Auto(n) =>
-        (grids) // overviews can have erased extent information
-          .sortBy(v => math.abs(cellSize.resolution - f(v).resolution))
-          .lift(n)
-          .orElse(maxResultion) // n can be out of bounds,
+        val sorted = grids.sortBy(v => math.abs(cellSize.resolution - f(v).resolution))
+        sorted.lift(n).orElse(sorted.lastOption) // n can be out of bounds,
       // makes only overview lookup as overview position is important
       case Base => maxResultion
     }

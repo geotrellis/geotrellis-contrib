@@ -127,9 +127,9 @@ class GeotrellisRasterSourceSpec extends FunSpec with RasterMatchers with Better
 
     it("should get the closest resolution") {
       val extent = Extent(0.0, 0.0, 10.0, 10.0)
-      val rasterExtent1 = new GridExtent[Long](extent, 1.0, 1.0, 10, 10)
-      val rasterExtent2 = new GridExtent[Long](extent, 2.0, 2.0, 10, 10)
-      val rasterExtent3 = new GridExtent[Long](extent, 4.0, 4.0, 10, 10)
+      val rasterExtent1 = new GridExtent[Long](extent, CellSize(1.0, 1.0))
+      val rasterExtent2 = new GridExtent[Long](extent, CellSize(2.0, 2.0))
+      val rasterExtent3 = new GridExtent[Long](extent, CellSize(4.0, 4.0))
 
       val resolutions = List(rasterExtent1, rasterExtent2, rasterExtent3)
       val cellSize1 = CellSize(1.0, 1.0)
@@ -143,9 +143,14 @@ class GeotrellisRasterSourceSpec extends FunSpec with RasterMatchers with Better
       assert(GeotrellisRasterSource.getClosestResolution(resolutions, cellSize1, Auto(0)).get == rasterExtent1)
       assert(GeotrellisRasterSource.getClosestResolution(resolutions, cellSize1, Auto(1)).get == rasterExtent2)
       assert(GeotrellisRasterSource.getClosestResolution(resolutions, cellSize1, Auto(2)).get == rasterExtent3)
-      assert(GeotrellisRasterSource.getClosestResolution(resolutions, cellSize1, Auto(3)) == None)
+      // do the best we can, we can't get index 3, so we get the closest:
+      val res = GeotrellisRasterSource.getClosestResolution(resolutions, cellSize1, Auto(3))
+      info (s"Auto(3): ${res.map(_.cellSize)}")
+      assert(res == Some(rasterExtent3))
 
-      assert(GeotrellisRasterSource.getClosestResolution(resolutions, cellSize1, Base) == None)
+      val resBase = GeotrellisRasterSource.getClosestResolution(resolutions, cellSize1, Base)
+      info(s"Base: ${resBase.map(_.cellSize)}")
+      assert(resBase == Some(rasterExtent1))
     }
 
     // it("should get the closest layer") {
