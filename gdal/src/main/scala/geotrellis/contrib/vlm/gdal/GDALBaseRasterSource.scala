@@ -78,21 +78,21 @@ trait GDALBaseRasterSource extends RasterSource {
     * These resolutions could represent actual overview as seen in source file
     * or overviews of VRT that was created as result of resample operations.
     */
-  lazy val resolutions: List[RasterExtent] = dataset.resolutions
+  lazy val resolutions: List[GridExtent[Long]] = dataset.resolutions.map(_.toGridType[Long])
 
   override def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     bounds
       .toIterator
       .flatMap { gb => gridBounds.intersection(gb) }
       .map { gb =>
-        val tile = MultibandTile(bands.map({ band => dataset.readTile(gb, band + 1) }))
-        val extent = rasterExtent.extentFor(gb)
+        val tile = MultibandTile(bands.map({ band => dataset.readTile(gb.toGridType[Int], band + 1) }))
+        val extent = this.gridExtent.extentFor(gb)
         convertRaster(Raster(tile, extent))
       }
   }
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource = {
-    GDALReprojectRasterSource(uri, reprojectOptions, strategy, options.reproject(rasterExtent, crs, targetCRS, reprojectOptions))
+    GDALReprojectRasterSource(uri, reprojectOptions, strategy, options.reproject(this.gridExtent, crs, targetCRS, reprojectOptions))
   }
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {

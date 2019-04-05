@@ -81,8 +81,8 @@ class GDALWarpOptionsSpec extends FunSpec with RasterMatchers with BetterRasterM
           ReprojectOptions.DEFAULT.copy(targetCellSize = CellSize(10, 10).some)
       )
         .resample(
-          GridExtent(Extent(-8769160.0, 4257700.0, -8750630.0, 4274460.0), 10, 10).toRasterExtent,
-          TargetRegion(GridExtent(Extent(-8769160.0, 4257700.0, -8750630.0, 4274460.0), 22, 22).toRasterExtent)
+          GridExtent(Extent(-8769160.0, 4257700.0, -8750630.0, 4274460.0), CellSize(10, 10)),
+          TargetRegion(GridExtent(Extent(-8769160.0, 4257700.0, -8750630.0, 4274460.0), CellSize(22, 22)))
       )
     rasterSourceFromUriOptions(uri, opts)
   }
