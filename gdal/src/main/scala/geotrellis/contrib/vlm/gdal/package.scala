@@ -165,7 +165,7 @@ package object gdal {
       GDALUtils.dataTypeToCellType(datatype = dt, noDataValue = nd, minMaxValues = mm)
     }
 
-    def readTile(gb: GridBounds, band: Int, dataset: Int = GDALWarp.WARPED): Tile = {
+    def readTile(gb: GridBounds[Int], band: Int, dataset: Int = GDALWarp.WARPED): Tile = {
       require(acceptableDatasets contains dataset)
       val GridBounds(xmin, ymin, xmax, ymax) = gb
       val srcWindow: Array[Int] = Array(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1)
@@ -208,7 +208,7 @@ package object gdal {
 
 
   implicit class GDALWarpOptionsMethodExtension(val self: GDALWarpOptions) {
-    def reproject(rasterExtent: RasterExtent, sourceCRS: CRS, targetCRS: CRS, reprojectOptions: ReprojectOptions = ReprojectOptions.DEFAULT): GDALWarpOptions = {
+    def reproject(rasterExtent: GridExtent[Long], sourceCRS: CRS, targetCRS: CRS, reprojectOptions: ReprojectOptions = ReprojectOptions.DEFAULT): GDALWarpOptions = {
       val re = rasterExtent.reproject(sourceCRS, targetCRS, reprojectOptions)
 
       self.copy(
