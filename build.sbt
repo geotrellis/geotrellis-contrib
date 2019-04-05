@@ -38,10 +38,10 @@ lazy val commonSettings = Seq(
     "geotrellis-staging" at "https://oss.sonatype.org/service/local/repositories/orglocationtechgeotrellis-1009/content"
   ),
   headerLicense := Some(HeaderLicense.ALv2("2018", "Azavea")),
-  // bintrayOrganization := Some("azavea"),
-  // bintrayRepository := "geotrellis",
-  // bintrayPackageLabels := Seq("gis", "raster", "vector"),
-  // bintrayReleaseOnPublish := false,
+  bintrayOrganization := Some("azavea"),
+  bintrayRepository := "geotrellis",
+  bintrayPackageLabels := Seq("gis", "raster", "vector"),
+  bintrayReleaseOnPublish := false,
   publishTo := {
     val bintrayPublishTo = publishTo.value
     val nexus = "http://nexus.internal.azavea.com"
