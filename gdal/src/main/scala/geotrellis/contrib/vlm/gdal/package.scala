@@ -179,6 +179,9 @@ package object gdal {
       ArrayTile.fromBytes(bytes, ct, dstWindow(0), dstWindow(1))
     }
 
+    def readMultibandTile(gb: GridBounds[Int] = rasterExtent.gridBounds, bands: Seq[Int] = 1 to bandCount, dataset: Int = GDALWarp.WARPED): MultibandTile =
+      MultibandTile(bands.map { readTile(gb, _, dataset) })
+
   }
 
   implicit class GDALRasterExtentMethods(val self: RasterExtent) {
