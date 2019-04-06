@@ -36,10 +36,10 @@ class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with
     val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
     val schemeURI = s"file://$uri"
 
-    val rasterSource = GeoTiffRasterSource(schemeURI)
-    val sourceTiff = GeoTiffReader.readMultiband(uri)
+    lazy val rasterSource = GeoTiffRasterSource(schemeURI)
+    lazy val sourceTiff = GeoTiffReader.readMultiband(uri)
 
-    val expectedRasterExtent = {
+    lazy val expectedRasterExtent = {
       val re = ReprojectRasterExtent(rasterSource.gridExtent, Transform(rasterSource.crs, LatLng))
       // stretch target raster extent slightly to avoid default case in ReprojectRasterExtent
       RasterExtent(re.extent, CellSize(re.cellheight * 1.1, re.cellwidth * 1.1))

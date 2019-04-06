@@ -42,7 +42,7 @@ class GDALRasterSummarySpec extends FunSpec with TestEnvironment with BetterRast
           .map(uri => GDALRasterSource(uri): RasterSource)
           .cache()
 
-      val summary = RasterSummary.fromRDD(sourceRDD)
+      val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
       val rasterSource = GDALRasterSource(inputPath)
 
       rasterSource.crs shouldBe summary.crs
@@ -66,11 +66,11 @@ class GDALRasterSummarySpec extends FunSpec with TestEnvironment with BetterRast
           .map(uri => GDALRasterSource(uri).reproject(targetCRS, method): RasterSource)
           .cache()
 
-      val summary = RasterSummary.fromRDD(sourceRDD)
+      val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
       val layoutLevel @ LayoutLevel(zoom, layout) = summary.levelFor(layoutScheme)
       val tiledRDD = sourceRDD.map(_.tileToLayout(layout, method))
 
-      val summaryCollected = RasterSummary.fromRDD(tiledRDD.map(_.source))
+      val summaryCollected = RasterSummary.fromRDD[RasterSource, Long](tiledRDD.map(_.source))
       val summaryResampled = summary.resample(TargetGrid(layout))
 
       val metadata = summary.toTileLayerMetadata(layoutLevel)
@@ -118,7 +118,7 @@ class GDALRasterSummarySpec extends FunSpec with TestEnvironment with BetterRast
         .cache()
 
     // collect raster summary
-    val summary = RasterSummary.fromRDD(sourceRDD)
+    val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
     val layoutLevel @ LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
 
     val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
@@ -148,11 +148,11 @@ class GDALRasterSummarySpec extends FunSpec with TestEnvironment with BetterRast
     val targetCRS = WebMercator
     val method = Bilinear
     val layout = LayoutDefinition(GridExtent(Extent(-2.0037508342789244E7, -2.0037508342789244E7, 2.0037508342789244E7, 2.0037508342789244E7), 9.554628535647032, 9.554628535647032), 256)
-    val RasterExtent(Extent(exmin, eymin, exmax, eymax), ecw, ech, ecols, erows) = RasterExtent(Extent(-8769161.632988561, 4257685.794912352, -8750616.09900087, 4274482.8318780195), CellSize(9.554628535647412, 9.554628535646911))
+    val RasterExtent(Extent(exmin, eymin, exmax, eymax), ecw, ech, ecols, erows) = RasterExtent(Extent(-8769161.632988561, 4257685.794912352, -8750625.653629405, 4274482.8318780195), CellSize(9.554628535647412, 9.554628535646911))
 
     cfor(0)(_ < 11, _ + 1) { _ =>
       val reference = GDALRasterSource(inputPath).reproject(targetCRS, method).tileToLayout(layout, method)
-      val RasterExtent(Extent(axmin, aymin, axmax, aymax), acw, ach, acols, arows) = reference.source.rasterExtent
+      val RasterExtent(Extent(axmin, aymin, axmax, aymax), acw, ach, acols, arows) = reference.source.gridExtent.toRasterExtent
 
       axmin shouldBe exmin +- 1e-5
       aymin shouldBe eymin +- 1e-5

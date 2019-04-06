@@ -62,11 +62,10 @@ package object gdal {
         math.min(x1, x2),
         math.min(y1, y2),
         math.max(x1, x2),
-        math.max(y1, y2))
+        math.max(y1, y2)
+      )
 
-      RasterExtent(e,
-        math.abs(transform(1)), math.abs(transform(5)),
-        width_height(0), width_height(1))
+      RasterExtent(e, math.abs(transform(1)), math.abs(transform(5)), width_height(0), width_height(1))
     }
 
     def resolutions: List[RasterExtent] = resolutions(GDALWarp.WARPED)
@@ -123,10 +122,8 @@ package object gdal {
       val success = Array.ofDim[Int](1)
       if (GDALWarp.get_band_nodata(token, dataset, numberOfAttempts, 1, nodata, success) <= 0)
         throw new Exception("get_band_nodata")
-      if (success(0) == 0)
-        None
-      else
-        Some(nodata(0))
+      if (success(0) == 0) None
+      else Some(nodata(0))
     }
 
     def dataType: Int = dataType(GDALWarp.WARPED)
@@ -178,6 +175,12 @@ package object gdal {
         throw new Exception("get_data")
       ArrayTile.fromBytes(bytes, ct, dstWindow(0), dstWindow(1))
     }
+
+    def readMultibandTile(gb: GridBounds[Int] = rasterExtent.gridBounds, bands: Seq[Int] = 1 to bandCount, dataset: Int = GDALWarp.WARPED): MultibandTile =
+      MultibandTile(bands.map { readTile(gb, _, dataset) })
+
+    def readMultibandRaster(gb: GridBounds[Int] = rasterExtent.gridBounds, bands: Seq[Int] = 1 to bandCount, dataset: Int = GDALWarp.WARPED): Raster[MultibandTile] =
+      Raster(readMultibandTile(gb, bands, dataset), rasterExtent.rasterExtentFor(gb).extent)
 
   }
 

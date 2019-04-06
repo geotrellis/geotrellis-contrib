@@ -54,15 +54,13 @@ trait GDALBaseRasterSource extends RasterSource {
       else
         VSIPath(uri).vsiPath
     }
-    val token = GDALWarp.get_token(gdalPath, (options).toWarpOptionsList.toArray)
+    val token = GDALWarp.get_token(gdalPath, options.toWarpOptionsList.toArray)
     token
   }
 
   lazy val bandCount: Int = dataset.bandCount
 
   lazy val crs: CRS = dataset.crs
-
-  // private lazy val reader: GDALReader = GDALReader(dataset)
 
   // noDataValue from the previous step
   lazy val noDataValue: Option[Double] = dataset.noDataValue(GDALWarp.SOURCE)
@@ -85,7 +83,7 @@ trait GDALBaseRasterSource extends RasterSource {
       .toIterator
       .flatMap { gb => gridBounds.intersection(gb) }
       .map { gb =>
-        val tile = MultibandTile(bands.map({ band => dataset.readTile(gb.toGridType[Int], band + 1) }))
+        val tile = dataset.readMultibandTile(gb.toGridType[Int], bands.map(_ + 1))
         val extent = this.gridExtent.extentFor(gb)
         convertRaster(Raster(tile, extent))
       }
@@ -145,8 +143,6 @@ trait GDALBaseRasterSource extends RasterSource {
     val bounds = extents.map(gridExtent.gridBoundsFor(_, clamp = false))
     readBounds(bounds, 0 until bandCount)
   }
-
-  // override def close = dataset.delete
 }
 
 object GDALBaseRasterSource {
