@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Azavea
+ * Copyright 2019 Azavea
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ class GDALReprojectRasterSourceSpec extends FunSpec with RasterMatchers with Bet
 
   describe("Reprojecting a RasterSource") {
 
-    val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
+    val uri = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled.tif"
 
     /**
       * For some reasons, the Pipeline described above is OS specific,
@@ -58,11 +58,11 @@ class GDALReprojectRasterSourceSpec extends FunSpec with RasterMatchers with Bet
     val expectedUri = Map[ResampleMethod, String](
       Bilinear -> {
         if(System.getProperty("os.name").toLowerCase().startsWith("mac"))
-          s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-bilinear.tif"
+          s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled-bilinear.tif"
         else
-          s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-bilinear-linux.tif"
+          s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled-bilinear-linux.tif"
       },
-      NearestNeighbor -> s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-near.tif"
+      NearestNeighbor -> s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled-near.tif"
     )
 
     def testReprojection(method: ResampleMethod) = {

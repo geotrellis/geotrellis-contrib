@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Azavea
+ * Copyright 2019 Azavea
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,4 @@
 
 package geotrellis.contrib.vlm
 
-import geotrellis.vector.Extent
-
-package object avro extends Implicits {
-  implicit class ExtentMethods(val extent: Extent) extends AnyVal {
-    def buffer(width: Double, height: Double): Extent =
-      Extent(
-        xmin = extent.xmin - width,
-        ymin = extent.ymin - height,
-        xmax = extent.xmax + width,
-        ymax = extent.ymax + height
-      )
-  }
-}
+package object avro extends avro.Implicits

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Azavea
+ * Copyright 2019 Azavea
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,8 +38,8 @@ import spire.syntax.cfor._
 import scala.concurrent.ExecutionContext
 
 class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with BeforeAndAfterAll {
-  val filePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
-  def filePathByIndex(i: Int): String = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-$i.tif"
+  val filePath = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled.tif"
+  def filePathByIndex(i: Int): String = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled-$i.tif"
   val uri = s"file://$filePath"
   lazy val rasterSource = GeoTiffRasterSource(uri)
   lazy val targetCRS = CRS.fromEpsgCode(3857)
@@ -191,7 +191,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
     val cellType = rasterSource.cellType
 
-    val multibandTilePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-0-1-2.tif"
+    val multibandTilePath = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled-0-1-2.tif"
 
     val noDataTile = ArrayTile.alloc(cellType, rasterSource.cols.toInt, rasterSource.rows.toInt).fill(NODATA).interpretAs(cellType)
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Azavea
+ * Copyright 2019 Azavea
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import geotrellis.spark.tiling.LayoutDefinition
 
 class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
   describe("Reprojecting a RasterSource") {
-    val uri = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
+    val uri = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled.tif"
     val schemeURI = s"file://$uri"
 
     lazy val rasterSource = GeoTiffRasterSource(schemeURI)
