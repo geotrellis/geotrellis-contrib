@@ -37,7 +37,7 @@ lazy val commonSettings = Seq(
     "osgeo" at "http://download.osgeo.org/webdav/geotools/",
     "geotrellis-staging" at "https://oss.sonatype.org/service/local/repositories/orglocationtechgeotrellis-1009/content"
   ),
-  headerLicense := Some(HeaderLicense.ALv2("2018", "Azavea")),
+  headerLicense := Some(HeaderLicense.ALv2("2019", "Azavea")),
   bintrayOrganization := Some("azavea"),
   bintrayRepository := "geotrellis",
   bintrayPackageLabels := Seq("gis", "raster", "vector"),

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Azavea
+ * Copyright 2019 Azavea
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -152,7 +152,7 @@ case class GDALDataset(token: Long) extends AnyVal {
     GDALUtils.dataTypeToCellType(datatype = dt, noDataValue = nd, minMaxValues = mm)
   }
 
-  def readTile(gb: GridBounds[Int], band: Int, dataset: Int = GDALWarp.WARPED): Tile = {
+  def readTile(gb: GridBounds[Int] = rasterExtent.gridBounds, band: Int, dataset: Int = GDALWarp.WARPED): Tile = {
     require(acceptableDatasets contains dataset)
     val GridBounds(xmin, ymin, xmax, ymax) = gb
     val srcWindow: Array[Int] = Array(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1)
@@ -176,4 +176,5 @@ case class GDALDataset(token: Long) extends AnyVal {
 object GDALDataset {
   GDALOptionsConfig.setOptions
   def apply(uri: String, options: Array[String]): GDALDataset = GDALDataset(GDALWarp.get_token(uri, options))
+  def apply(uri: String): GDALDataset = apply(uri, Array())
 }

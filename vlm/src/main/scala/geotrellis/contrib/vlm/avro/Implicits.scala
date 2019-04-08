@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Azavea
+ * Copyright 2019 Azavea
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import geotrellis.contrib.vlm.PaddedTile
 import geotrellis.raster.{ArrayMultibandTile, MultibandTile, Tile}
 import geotrellis.spark.io.avro._
 import geotrellis.spark.io.avro.codecs.Implicits._
+import geotrellis.vector.Extent
 
 import org.apache.avro._
 import org.apache.avro.generic._
@@ -103,6 +104,16 @@ trait Implicits extends Serializable {
 
       ArrayMultibandTile(bands)
     }
+  }
+
+  implicit class ExtentMethods(val extent: Extent) {
+    def buffer(width: Double, height: Double): Extent =
+      Extent(
+        xmin = extent.xmin - width,
+        ymin = extent.ymin - height,
+        xmax = extent.xmax + width,
+        ymax = extent.ymax + height
+      )
   }
 }
 

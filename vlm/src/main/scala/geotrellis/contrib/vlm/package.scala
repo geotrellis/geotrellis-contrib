@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Azavea
+ * Copyright 2019 Azavea
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,6 @@ package geotrellis.contrib
 
 import geotrellis.contrib.vlm.config.S3Config
 import geotrellis.util.{FileRangeReader, StreamingByteReader}
-import geotrellis.proj4.{CRS, Transform}
-import geotrellis.raster.{GridExtent, GridBounds, RasterExtent}
-import geotrellis.raster.reproject.Reproject.Options
-import geotrellis.raster.reproject.ReprojectRasterExtent
 import geotrellis.spark.io.http.util.HttpRangeReader
 import geotrellis.spark.io.s3.util.S3RangeReader
 import geotrellis.spark.io.s3.AmazonS3Client
@@ -33,7 +29,7 @@ import java.nio.file.Paths
 import java.net.{URI, URL}
 import java.nio.charset.Charset
 
-package object vlm {
+package object vlm extends vlm.Implicits {
   private[vlm] def getByteReader(uri: String): StreamingByteReader = {
     val javaURI = new URI(uri)
     val noQueryParams = URLEncodedUtils.parse(uri, Charset.forName("UTF-8")).isEmpty
@@ -72,19 +68,5 @@ package object vlm {
         throw new IllegalArgumentException(s"Unable to read scheme $scheme at $uri")
     }
     new StreamingByteReader(rr)
-  }
-
-  implicit class gridExtentMethods[N: spire.math.Integral](self: GridExtent[N]) {
-    def reproject(src: CRS, dest: CRS, options: Options): GridExtent[N] =
-      if(src == dest) self
-      else {
-        val transform = Transform(src, dest)
-        options.targetRasterExtent.
-          map(_.toGridType[N]).
-          getOrElse(ReprojectRasterExtent(self, transform, options = options))
-      }
-
-    def reproject(src: CRS, dest: CRS): GridExtent[N] =
-      reproject(src, dest, Options.DEFAULT)
   }
 }

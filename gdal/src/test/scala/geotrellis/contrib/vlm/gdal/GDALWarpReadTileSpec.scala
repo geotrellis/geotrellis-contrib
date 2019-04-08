@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 Azavea
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.proj4._
@@ -16,7 +32,7 @@ class GDALWarpReadTileSpec extends FunSpec with RasterMatchers {
   describe("reading a GeoTiff") {
     it("should read full raster correct") {
       val filePath = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled.tif"
-      val dataset = GDALDataset(filePath, Array())
+      val dataset = GDALDataset(filePath)
       val gdalTile = dataset.readMultibandTile()
       val gtTile = GeoTiffReader.readMultiband(filePath).tile.toArrayTile
 
@@ -28,7 +44,7 @@ class GDALWarpReadTileSpec extends FunSpec with RasterMatchers {
       val filePath = s"${new File("").getAbsolutePath}/src/test/resources/img/badnodata.tif"
       // using a small extent to make tests work faster
       val ext = Extent(680138.59203, 4904905.667, 680189.7, 4904955.9)
-      val dataset = GDALDataset(filePath, Array())
+      val dataset = GDALDataset(filePath)
       val gdalTile = dataset.readMultibandTile(dataset.rasterExtent.gridBoundsFor(ext, clamp = false))
       val gtTile = GeoTiffReader.readMultiband(filePath, ext).tile.toArrayTile
 
@@ -38,7 +54,7 @@ class GDALWarpReadTileSpec extends FunSpec with RasterMatchers {
 
     it("should match one read with GeoTools") {
       println("Reading with GDAL...")
-      val dataset = GDALDataset(path, Array())
+      val dataset = GDALDataset(path)
       val raster = dataset.readMultibandRaster()
       val gdRaster = raster.tile.band(0)
       val gdExt = raster.extent
@@ -70,7 +86,7 @@ class GDALWarpReadTileSpec extends FunSpec with RasterMatchers {
     }
 
     it("should do window reads") {
-      val dataset = GDALDataset(path, Array())
+      val dataset = GDALDataset(path)
       val gtiff = MultibandGeoTiff(path)
       val gridBounds = dataset.rasterExtent.gridBounds.split(15, 21)
 
@@ -94,8 +110,8 @@ class GDALWarpReadTileSpec extends FunSpec with RasterMatchers {
     val jpeg2000Path = s"${new File("").getAbsolutePath}/src/test/resources/img/jpeg2000-test-files/testJpeg2000.jp2"
     val jpegTiffPath = s"${new File("").getAbsolutePath}/src/test/resources/img/jpeg2000-test-files/jpegTiff.tif"
 
-    val jpegDataset = GDALDataset(jpeg2000Path, Array())
-    val tiffDataset = GDALDataset(jpegTiffPath, Array())
+    val jpegDataset = GDALDataset(jpeg2000Path)
+    val tiffDataset = GDALDataset(jpegTiffPath)
 
     val gridBounds: Iterator[GridBounds[Int]] =
       jpegDataset.rasterExtent.gridBounds.split(20, 15)

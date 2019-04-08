@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Azavea
+ * Copyright 2019 Azavea
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,8 +43,8 @@ import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 
 class GDALRasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with BeforeAndAfterAll {
-  val filePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled.tif"
-  def filePathByIndex(i: Int): String = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-$i.tif"
+  val filePath = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled.tif"
+  def filePathByIndex(i: Int): String = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled-$i.tif"
   val uri = s"file://$filePath"
   lazy val rasterSource = GeoTiffRasterSource(uri)
   val targetCRS = CRS.fromEpsgCode(3857)
@@ -191,7 +191,7 @@ class GDALRasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRa
     }
 
     describe("GDALRasterSource") {
-      val expectedFilePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-near-merc-rdd.tif"
+      val expectedFilePath = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled-near-merc-rdd.tif"
 
       it("should reproduce tileToLayout") {
         val rasterSource = GDALRasterSource(filePath)
@@ -308,7 +308,7 @@ class GDALRasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRa
 
     val cellType = rasterSource.cellType
 
-    val multibandTilePath = s"${new File("").getAbsolutePath()}/src/test/resources/img/aspect-tiled-0-1-2.tif"
+    val multibandTilePath = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled-0-1-2.tif"
 
     val noDataTile = ArrayTile.alloc(cellType, rasterSource.cols.toInt, rasterSource.rows.toInt).fill(NODATA).interpretAs(cellType)
 
