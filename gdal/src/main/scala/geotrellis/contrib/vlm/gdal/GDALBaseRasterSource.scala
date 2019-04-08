@@ -47,15 +47,12 @@ trait GDALBaseRasterSource extends RasterSource {
   val options: GDALWarpOptions
 
   // current dataset
-  @transient lazy val dataset: Long = {
-    val gdalPath = {
-      if (VSIPath.isVSIFormatted(uri))
-        uri
-      else
-        VSIPath(uri).vsiPath
-    }
-    val token = GDALWarp.get_token(gdalPath, options.toWarpOptionsList.toArray)
-    token
+  @transient lazy val dataset: GDALDataset = {
+    val gdalPath =
+      if (VSIPath.isVSIFormatted(uri)) uri
+      else VSIPath(uri).vsiPath
+
+    GDALDataset(gdalPath, options.toWarpOptionsList.toArray)
   }
 
   lazy val bandCount: Int = dataset.bandCount

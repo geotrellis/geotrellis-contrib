@@ -6,7 +6,6 @@ import geotrellis.raster.testkit._
 import geotrellis.raster.io.geotiff._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.vector.Extent
-import com.azavea.gdal.GDALWarp
 
 import org.scalatest._
 import java.io.File
@@ -17,7 +16,7 @@ class GDALWarpReadTileSpec extends FunSpec with RasterMatchers {
   describe("reading a GeoTiff") {
     it("should read full raster correct") {
       val filePath = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled.tif"
-      val dataset = GDALWarp.get_token(filePath, Array())
+      val dataset = GDALDataset(filePath, Array())
       val gdalTile = dataset.readMultibandTile()
       val gtTile = GeoTiffReader.readMultiband(filePath).tile.toArrayTile
 
@@ -29,7 +28,7 @@ class GDALWarpReadTileSpec extends FunSpec with RasterMatchers {
       val filePath = s"${new File("").getAbsolutePath}/src/test/resources/img/badnodata.tif"
       // using a small extent to make tests work faster
       val ext = Extent(680138.59203, 4904905.667, 680189.7, 4904955.9)
-      val dataset = GDALWarp.get_token(filePath, Array())
+      val dataset = GDALDataset(filePath, Array())
       val gdalTile = dataset.readMultibandTile(dataset.rasterExtent.gridBoundsFor(ext, clamp = false))
       val gtTile = GeoTiffReader.readMultiband(filePath, ext).tile.toArrayTile
 
@@ -39,7 +38,7 @@ class GDALWarpReadTileSpec extends FunSpec with RasterMatchers {
 
     it("should match one read with GeoTools") {
       println("Reading with GDAL...")
-      val dataset = GDALWarp.get_token(path, Array())
+      val dataset = GDALDataset(path, Array())
       val raster = dataset.readMultibandRaster()
       val gdRaster = raster.tile.band(0)
       val gdExt = raster.extent
@@ -71,7 +70,7 @@ class GDALWarpReadTileSpec extends FunSpec with RasterMatchers {
     }
 
     it("should do window reads") {
-      val dataset = GDALWarp.get_token(path, Array())
+      val dataset = GDALDataset(path, Array())
       val gtiff = MultibandGeoTiff(path)
       val gridBounds = dataset.rasterExtent.gridBounds.split(15, 21)
 
@@ -84,7 +83,7 @@ class GDALWarpReadTileSpec extends FunSpec with RasterMatchers {
     }
 
     it("should read CRS from file") {
-      val dataset = GDALWarp.get_token(s"${new File("").getAbsolutePath}/src/test/resources/img/all-ones.tif", Array())
+      val dataset = GDALDataset(s"${new File("").getAbsolutePath}/src/test/resources/img/all-ones.tif", Array())
       dataset.crs.epsgCode should equal(LatLng.epsgCode)
     }
   }
@@ -95,8 +94,8 @@ class GDALWarpReadTileSpec extends FunSpec with RasterMatchers {
     val jpeg2000Path = s"${new File("").getAbsolutePath}/src/test/resources/img/jpeg2000-test-files/testJpeg2000.jp2"
     val jpegTiffPath = s"${new File("").getAbsolutePath}/src/test/resources/img/jpeg2000-test-files/jpegTiff.tif"
 
-    val jpegDataset = GDALWarp.get_token(jpeg2000Path, Array())
-    val tiffDataset = GDALWarp.get_token(jpegTiffPath, Array())
+    val jpegDataset = GDALDataset(jpeg2000Path, Array())
+    val tiffDataset = GDALDataset(jpegTiffPath, Array())
 
     val gridBounds: Iterator[GridBounds[Int]] =
       jpegDataset.rasterExtent.gridBounds.split(20, 15)
