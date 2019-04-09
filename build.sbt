@@ -56,7 +56,7 @@ lazy val commonSettings = Seq(
 
 lazy val root = Project("geotrellis-contrib", file(".")).
   aggregate(
-    vlm
+    vlm, gdal, summary
   ).
   settings(commonSettings: _*).
   settings(publish / skip := true).
