@@ -66,7 +66,7 @@ class GeotrellisReprojectRasterSource(
         lazy val tileBounds = sourceLayer.metadata.mapTransform.extentToBounds(sourceExtent)
         lazy val pixelsRead = (tileBounds.size * sourceLayer.metadata.layout.tileCols * sourceLayer.metadata.layout.tileRows).toDouble
         lazy val pixelsQueried = (targetRasterExtent.cols.toDouble * targetRasterExtent.rows.toDouble)
-        def msg = s"""${GREEN}ead($extent)${RESET} =
+        def msg = s"""${GREEN}Read($extent)${RESET} =
         |\t${BOLD}FROM${RESET} $uri ${sourceLayer.id}
         |\t${BOLD}TARGET${RESET} ${targetRasterExtent.extent} ${targetRasterExtent.cellSize} @ ${crs}
         |\t${BOLD}SOURCE${RESET} $sourceExtent ${sourceLayer.metadata.cellSize} @ ${sourceLayer.metadata.crs}
