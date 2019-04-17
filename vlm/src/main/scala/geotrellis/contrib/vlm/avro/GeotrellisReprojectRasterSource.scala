@@ -66,11 +66,13 @@ class GeotrellisReprojectRasterSource(
         lazy val tileBounds = sourceLayer.metadata.mapTransform.extentToBounds(sourceExtent)
         lazy val pixelsRead = (tileBounds.size * sourceLayer.metadata.layout.tileCols * sourceLayer.metadata.layout.tileRows).toDouble
         lazy val pixelsQueried = (targetRasterExtent.cols.toDouble * targetRasterExtent.rows.toDouble)
-        def msg = s"""${GREEN}Read($extent)${RESET} =
-        |\t${BOLD}FROM${RESET} $uri ${sourceLayer.id}
-        |\t${BOLD}TARGET${RESET} ${targetRasterExtent.extent} ${targetRasterExtent.cellSize} @ ${crs}
-        |\t${BOLD}SOURCE${RESET} $sourceExtent ${sourceLayer.metadata.cellSize} @ ${sourceLayer.metadata.crs}
-        |\t${BOLD}READ${RESET} ${pixelsRead/pixelsQueried} read/query ratio for ${tileBounds.size} tiles""".stripMargin
+        def msg = s"""
+          |${GREEN}Read($extent)${RESET} =
+          |\t${BOLD}FROM${RESET} $uri ${sourceLayer.id}
+          |\t${BOLD}SOURCE${RESET} $sourceExtent ${sourceLayer.metadata.cellSize} @ ${sourceLayer.metadata.crs}
+          |\t${BOLD}TARGET${RESET} ${targetRasterExtent.extent} ${targetRasterExtent.cellSize} @ ${crs}
+          |\t${BOLD}READ${RESET} ${pixelsRead/pixelsQueried} read/query ratio for ${tileBounds.size} tiles
+        """.stripMargin
         if (tileBounds.size < 1024) // Assuming 256x256 tiles this would be a very large request
           logger.debug(msg)
         else
@@ -78,8 +80,8 @@ class GeotrellisReprojectRasterSource(
       }
       raster <- GeotrellisRasterSource.readIntersecting(reader, layerId, sourceLayer.metadata, sourceExtent, bands)
     } yield {
-      val reproejcted = raster.reproject(targetRasterExtent, transform, backTransform, reprojectOptions)
-      convertRaster(reproejcted)
+      val reprojected = raster.reproject(targetRasterExtent, transform, backTransform, reprojectOptions)
+      convertRaster(reprojected)
     }
   }
 

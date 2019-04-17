@@ -17,15 +17,14 @@
 package geotrellis.contrib.vlm.avro
 
 import geotrellis.contrib.vlm._
-import geotrellis.vector._
 import geotrellis.proj4._
-import geotrellis.raster._
+import geotrellis.raster.io.geotiff.{Auto, AutoHigherResolution, Base, OverviewStrategy}
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
-import geotrellis.raster.io.geotiff.{Auto, AutoHigherResolution, Base, OverviewStrategy}
-import geotrellis.spark.{LayerId, Metadata, SpatialKey, TileLayerMetadata}
+import geotrellis.raster.{MultibandTile, Tile, _}
 import geotrellis.spark.io._
-import geotrellis.raster.{MultibandTile, Tile}
+import geotrellis.spark.{LayerId, Metadata, SpatialKey, TileLayerMetadata}
+import geotrellis.vector._
 
 case class Layer(id: LayerId, metadata: TileLayerMetadata[SpatialKey], bandCount: Int) {
   /** GridExtent of the data pixels in the layer */
@@ -187,22 +186,40 @@ object GeotrellisRasterSource {
 
   def readIntersecting(reader: CollectionLayerReader[LayerId], layerId: LayerId, metadata: TileLayerMetadata[SpatialKey], extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val tiles = readTiles(reader, layerId, extent, bands)
-    if (tiles.isEmpty)
-      None
-    else
-      Some(tiles.stitch())
+    sparseStitch(tiles, extent)
   }
 
   def read(reader: CollectionLayerReader[LayerId], layerId: LayerId, metadata: TileLayerMetadata[SpatialKey], extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val tiles = readTiles(reader, layerId, extent, bands)
-    if (tiles.isEmpty)
-      None
-    else
-      metadata.extent.intersection(extent) match {
-        case Some(intersectionExtent) =>
-          Some(tiles.stitch().crop(intersectionExtent))
-        case None =>
-          None
-      }
+    metadata.extent.intersection(extent) flatMap { intersectionExtent =>
+      sparseStitch(tiles, intersectionExtent).map(_.crop(intersectionExtent))
+    }
+  }
+
+  /**
+   *  The stitch method in gtcore is unable to handle missing spatialkeys correctly.
+   *  This method works around that problem by attempting to infer any missing tiles
+   **/
+  def sparseStitch(
+    tiles: Seq[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]],
+    extent: Extent
+  ): Option[Raster[MultibandTile]] = {
+    val md = tiles.metadata
+    val expectedKeys = md
+      .mapTransform(extent)
+      .coordsIter
+      .map { case (x, y) => SpatialKey(x, y) }
+      .toList
+    val actualKeys = tiles.map(_._1)
+    val missingKeys = expectedKeys diff actualKeys
+
+    val missingTiles = missingKeys.map { key =>
+      (key, MultibandTile(ArrayTile.empty(md.cellType, md.tileLayout.tileCols, md.tileLayout.tileRows)))
+    }
+    val allTiles = tiles.withContext { collection =>
+      collection.toList ::: missingTiles
+    }
+    if (allTiles.isEmpty) None
+    else Some(allTiles.stitch())
   }
 }
