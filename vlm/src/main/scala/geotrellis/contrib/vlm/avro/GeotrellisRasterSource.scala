@@ -214,7 +214,7 @@ object GeotrellisRasterSource {
     val missingKeys = expectedKeys diff actualKeys
 
     val missingTiles = missingKeys.map { key =>
-      (key, MultibandTile(ArrayTile.empty(md.cellType, 256, 256)))
+      (key, MultibandTile(ArrayTile.empty(md.cellType, md.tileLayout.tileCols, md.tileLayout.tileRows)))
     }
     val allTiles = tiles.withContext { collection =>
       collection.toList ::: missingTiles
