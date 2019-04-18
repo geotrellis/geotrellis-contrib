@@ -17,24 +17,19 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm._
-import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
-import geotrellis.raster.io.geotiff.AutoHigherResolution
 import geotrellis.raster.resample._
-import geotrellis.raster.reproject.Reproject.{Options => ReprojectOptions}
 import geotrellis.raster.testkit._
 import geotrellis.vector._
 import geotrellis.spark._
 import geotrellis.spark.tiling._
 import geotrellis.util._
-
-import com.azavea.gdal.GDALWarp
 import cats.implicits._
-
 import org.scalatest._
-
 import java.net.MalformedURLException
+
+import geotrellis.contrib.vlm.geotiff.GeoTiffRasterSource
 
 class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
 
@@ -105,6 +100,13 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
       }
     }
 
+    it("should derive a consistent extent") {
+      GDALRasterSource(uri).extent should be (GeoTiffRasterSource(uri).extent)
+
+      val p = Resource.path("img/extent-bug.tif")
+      GDALRasterSource(p).extent should be (GeoTiffRasterSource(p).extent)
+    }
+
     it("should fail on creation of the GDALRasterSource on a malformed URI") {
       an[MalformedURLException] should be thrownBy GDALRasterSource("file:/random/path/here/N49W155.hgt.gz")
     }
@@ -117,7 +119,7 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
     }
 
     cellSizes.foreach { targetCellSize =>
-      it(s"should perform a tileToLayout for cellSize: ${targetCellSize}") {
+      it(s"should perform a tileToLayout for cellSize: $targetCellSize") {
         val pe = ProjectedExtent(source.extent, source.crs)
         val scheme = FloatingLayoutScheme(256)
         val layout = scheme.levelFor(pe.extent, targetCellSize).layout
