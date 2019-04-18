@@ -29,9 +29,10 @@ import cats.implicits._
 import org.scalatest._
 import java.net.MalformedURLException
 
+import geotrellis.contrib.testkit.TestRasterData
 import geotrellis.contrib.vlm.geotiff.GeoTiffRasterSource
 
-class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
+class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen with Inspectors {
 
   val uri = Resource.path("img/aspect-tiled.tif")
 
@@ -101,10 +102,11 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
     }
 
     it("should derive a consistent extent") {
-      GDALRasterSource(uri).extent should be (GeoTiffRasterSource(uri).extent)
-
-      val p = Resource.path("img/extent-bug.tif")
-      GDALRasterSource(p).extent should be (GeoTiffRasterSource(p).extent)
+      forEvery(TestRasterData.allTifPaths) { path =>
+        withClue(path) {
+          assertSimilarExtents(GDALRasterSource(path).extent, GeoTiffRasterSource(path).extent)
+        }
+      }
     }
 
     it("should fail on creation of the GDALRasterSource on a malformed URI") {

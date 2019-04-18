@@ -87,6 +87,21 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
     }
   }
 
+  def assertSimilarExtents(actual: Extent, expected: Extent, tolerance: Double = 1e-8): Unit = {
+    withClue("xmin") {
+      actual.xmin should be (expected.xmin +- tolerance)
+    }
+    withClue("xmax") {
+      actual.xmax should be (expected.xmax +- tolerance)
+    }
+    withClue("ymin") {
+      actual.ymin should be(expected.ymin +- tolerance)
+    }
+    withClue("ymax") {
+      actual.ymax should be(expected.ymax +- tolerance)
+    }
+  }
+
   /** Renders scaled diff tiles as a clue */
   def withAsciiDiffClue[T](
     actual: MultibandTile,
