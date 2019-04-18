@@ -29,6 +29,7 @@ import cats.implicits._
 import org.scalatest._
 import java.net.MalformedURLException
 
+import com.azavea.gdal.GDALWarp
 import geotrellis.contrib.testkit.TestRasterData
 import geotrellis.contrib.vlm.geotiff.GeoTiffRasterSource
 
@@ -107,6 +108,14 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
           assertSimilarExtents(GDALRasterSource(path).extent, GeoTiffRasterSource(path).extent)
         }
       }
+    }
+
+    it("should handle bug 161") {
+      val path = VSIPath(Resource.path("img/extent-bug.tif")).vsiPath
+      val expected = Extent(703986.502389, 4249551.61978, 709549.093643, 4254601.8671)
+      val ds = GDALDataset(path)
+      assertSimilarExtents(ds.extent(GDALWarp.SOURCE), expected)
+      assertSimilarExtents(ds.extent(GDALWarp.WARPED), expected)
     }
 
     it("should fail on creation of the GDALRasterSource on a malformed URI") {

@@ -20,22 +20,20 @@ import geotrellis.contrib.vlm.gdal._
 import geotrellis.contrib.vlm.geotiff._
 import geotrellis.raster.{MultibandTile, Raster}
 import geotrellis.vector.{Extent, ProjectedExtent}
-
 import com.typesafe.scalalogging.LazyLogging
 import org.scalatest.{FunSpec, Matchers}
-
 import com.azavea.gdal.GDALWarp
+import geotrellis.contrib.testkit.TestRasterData
 
 
-class SubsceneReadingIT extends FunSpec with Matchers with LazyLogging {
+class SubsceneReadingIT extends FunSpec with Matchers with LazyLogging with TestRasterData {
   import Timing._
 
   GDALWarp.set_config_option("GDAL_DISABLE_READDIR_ON_OPEN", "YES")
   GDALWarp.set_config_option("CPL_VSIL_CURL_ALLOWED_EXTENSIONS", ".tif")
 
-  val sample = "https://s3-us-west-2.amazonaws.com/radiant-nasa-iserv/2014/02/14/IP0201402141023382027S03100E/IP0201402141023382027S03100E-COG.tif"
-  val sample2 = "s3://radiant-nasa-iserv/2014/02/14/IP0201402141023382027S03100E/IP0201402141023382027S03100E-COG.tif"
-  val samples = Set((sample, "via HTTP"), (sample2, "via S3"))
+
+  val samples = Set((pdsCogSampleHttp, "via HTTP"), (pdsCogSampleS3, "via S3"))
 
   implicit class WithSubExtent(e: Extent) {
     /** Constructs an arbitrary subextent covering 1% of base extent. */

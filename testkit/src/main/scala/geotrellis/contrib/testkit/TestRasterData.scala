@@ -18,6 +18,11 @@ package geotrellis.contrib.testkit
 import geotrellis.contrib.vlm.Resource
 
 trait TestRasterData {
+  val pdsCogSampleS3 = "s3://radiant-nasa-iserv/2014/02/14/IP0201402141023382027S03100E/IP0201402141023382027S03100E-COG.tif"
+  val pdsCogSampleHttp = "https://s3-us-west-2.amazonaws.com/radiant-nasa-iserv/2014/02/14/IP0201402141023382027S03100E/IP0201402141023382027S03100E-COG.tif"
+  val pdsModisSampleHttp = "https://modis-pds.s3.amazonaws.com/MCD43A4.006/31/11/2017158/MCD43A4.A2017158.h31v11.006.2017171203421_B01.TIF"
+  val pdsL8SampleHttp = "https://s3-us-west-2.amazonaws.com/landsat-pds/c1/L8/017/033/LC08_L1TP_017033_20181010_20181030_01_T1/LC08_L1TP_017033_20181010_20181030_01_T1_B4.TIF"
+
   val allTifExamples: Seq[String] = Seq(
     "img/all-ones.tif",
     "img/aspect-tiled-0-1-2.tif",
