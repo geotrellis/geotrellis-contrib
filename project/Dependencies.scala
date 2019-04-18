@@ -43,24 +43,25 @@ object Dependencies {
   val geotrellisVector        = "org.locationtech.geotrellis" %% "geotrellis-vector"         % Version.geotrellis
   val geotrellisUtil          = "org.locationtech.geotrellis" %% "geotrellis-util"           % Version.geotrellis
   val geotrellisShapefile     = "org.locationtech.geotrellis" %% "geotrellis-shapefile"      % Version.geotrellis
+  val slickPG                 = "com.github.tminglei"         %% "slick-pg"                  % "0.16.3"
 
-  val gdal                = "org.gdal"                    % "gdal"                     % Properties.envOrElse("GDAL_VERSION", "2.4.0")
+  val gdal                    = "org.gdal"                    % "gdal"                       % Properties.envOrElse("GDAL_VERSION", "2.4.0")
 
-  val pureconfig          = "com.github.pureconfig"      %% "pureconfig"               % "0.9.1"
-  val logging             = "com.typesafe.scala-logging" %% "scala-logging"            % "3.9.0"
-  val scalatest           = "org.scalatest"              %% "scalatest"                % "3.0.5"
-  val scalactic           = "org.scalactic"              %% "scalactic"                % "3.0.5"
-  val simulacrum          = "com.github.mpilquist"       %% "simulacrum"               % "0.15.0"
+  val pureconfig              = "com.github.pureconfig"      %% "pureconfig"                 % "0.9.1"
+  val logging                 = "com.typesafe.scala-logging" %% "scala-logging"              % "3.9.0"
+  val scalatest               = "org.scalatest"              %% "scalatest"                  % "3.0.5"
+  val scalactic               = "org.scalactic"              %% "scalactic"                  % "3.0.5"
+  val simulacrum              = "com.github.mpilquist"       %% "simulacrum"                 % "0.15.0"
 
 
-  val catsCore            = "org.typelevel"              %% "cats-core"                % "1.4.0"
-  val catsEffect          = "org.typelevel"              %% "cats-effect"              % "1.0.0"
-  val fs2Core             = "co.fs2"                     %% "fs2-core"                 % "1.0.0"
-  val fs2Io               = "co.fs2"                     %% "fs2-io"                   % "1.0.0"
+  val catsCore                = "org.typelevel"              %% "cats-core"                  % "1.4.0"
+  val catsEffect              = "org.typelevel"              %% "cats-effect"                % "1.0.0"
+  val fs2Core                 = "co.fs2"                     %% "fs2-core"                   % "1.0.0"
+  val fs2Io                   = "co.fs2"                     %% "fs2-io"                     % "1.0.0"
 
-  val sparkCore           = "org.apache.spark"           %% "spark-core"               % Version.spark
-  val sparkSQL            = "org.apache.spark"           %% "spark-sql"                % Version.spark
-  val hadoopClient        = "org.apache.hadoop"           % "hadoop-client"            % Version.hadoop
+  val sparkCore               = "org.apache.spark"           %% "spark-core"                 % Version.spark
+  val sparkSQL                = "org.apache.spark"           %% "spark-sql"                  % Version.spark
+  val hadoopClient            = "org.apache.hadoop"           % "hadoop-client"              % Version.hadoop
 
-  val squants = "org.typelevel" %% "squants" % "1.3.0"
+  val squants                 = "org.typelevel"              %% "squants"                    % "1.3.0"
 }
