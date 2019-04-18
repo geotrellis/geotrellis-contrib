@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Azavea
+ * Copyright 2019 Azavea
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ case class GDALResampleRasterSource(
     val res = resampleGrid match {
       case Dimensions(cols, rows) =>
         GDALWarpOptions(
-          dimensions = (cols, rows).some,
+          dimensions = (cols.toInt, rows.toInt).some,
           resampleMethod = resampleMethod
         )
       case _ =>
@@ -47,7 +47,7 @@ case class GDALResampleRasterSource(
         // raster extent won't be calculated if it's not called in the apply function body explicitly
         val targetRasterExtent = {
           val re = resampleGrid(rasterExtent)
-          if(options.alignTargetPixels) re.alignTargetPixels else re
+          if(options.alignTargetPixels) re.toRasterExtent.alignTargetPixels else re
         }
         GDALWarpOptions(
           te             = targetRasterExtent.extent.some,

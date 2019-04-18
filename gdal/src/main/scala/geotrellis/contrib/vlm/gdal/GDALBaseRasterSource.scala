@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Azavea
+ * Copyright 2019 Azavea
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,22 +47,17 @@ trait GDALBaseRasterSource extends RasterSource {
   val options: GDALWarpOptions
 
   // current dataset
-  @transient lazy val dataset: Long = {
-    val gdalPath = {
-      if (VSIPath.isVSIFormatted(uri))
-        uri
-      else
-        VSIPath(uri).vsiPath
-    }
-    val token = GDALWarp.get_token(gdalPath, (options).toWarpOptionsList.toArray)
-    token
+  @transient lazy val dataset: GDALDataset = {
+    val gdalPath =
+      if (VSIPath.isVSIFormatted(uri)) uri
+      else VSIPath(uri).vsiPath
+
+    GDALDataset(gdalPath, options.toWarpOptionsList.toArray)
   }
 
   lazy val bandCount: Int = dataset.bandCount
 
   lazy val crs: CRS = dataset.crs
-
-  // private lazy val reader: GDALReader = GDALReader(dataset)
 
   // noDataValue from the previous step
   lazy val noDataValue: Option[Double] = dataset.noDataValue(GDALWarp.SOURCE)
@@ -85,18 +80,18 @@ trait GDALBaseRasterSource extends RasterSource {
       .toIterator
       .flatMap { gb => gridBounds.intersection(gb) }
       .map { gb =>
-        val tile = MultibandTile(bands.map({ band => dataset.readTile(gb, band + 1) }))
-        val extent = rasterExtent.extentFor(gb)
+        val tile = dataset.readMultibandTile(gb, bands.map(_ + 1))
+        val extent = this.rasterExtent.extentFor(gb)
         convertRaster(Raster(tile, extent))
       }
   }
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource = {
-    GDALReprojectRasterSource(uri, reprojectOptions, strategy, options.reproject(rasterExtent, crs, targetCRS, reprojectOptions))
+    GDALReprojectRasterSource(uri, reprojectOptions, strategy, options.reproject(this.rasterExtent, crs, targetCRS, reprojectOptions))
   }
 
   def resample(resampleGrid: ResampleGrid, method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options.resample(rasterExtent.toGridExtent, resampleGrid))
+    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options.resample(rasterExtent, resampleGrid))
   }
 
   /** Converts the contents of the GDALRasterSource to the [[TargetCellType]].
@@ -136,7 +131,7 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   def read(bounds: GridBounds, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val it = readBounds(List(bounds).flatMap(_.intersection(this)), bands)
+    val it = readBounds(List(bounds).flatMap(_.intersection(this.gridBounds)), bands)
     if (it.hasNext) Some(it.next) else None
   }
 
@@ -145,8 +140,6 @@ trait GDALBaseRasterSource extends RasterSource {
     val bounds = extents.map(rasterExtent.gridBoundsFor(_, clamp = false))
     readBounds(bounds, 0 until bandCount)
   }
-
-  // override def close = dataset.delete
 }
 
 object GDALBaseRasterSource {

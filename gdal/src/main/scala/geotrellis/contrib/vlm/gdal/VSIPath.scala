@@ -22,10 +22,7 @@ import java.io.File
  * Parses and formats the given URI into a format that GDAL can read.
  * The [[vsiPath]] value contains this formatted string.
  */
-case class VSIPath(
-  uri: String,
-  compressedFileDelimiter: String = "!"
-) {
+case class VSIPath(uri: String, compressedFileDelimiter: String = "!") {
   import Schemes._
   import Patterns._
 

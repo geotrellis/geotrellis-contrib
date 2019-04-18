@@ -18,7 +18,6 @@ package geotrellis.contrib.vlm.gdal
 
 import com.azavea.gdal.GDALWarp
 
-
 object GDALDataType {
   val types =
     List(
