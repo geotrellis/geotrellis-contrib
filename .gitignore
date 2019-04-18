@@ -12,6 +12,8 @@ project/plugins/target
 project/target
 target
 .ensime
+*.bloop
+*.metals
 \#*#
 *~
 .#*
@@ -45,4 +47,3 @@ nohup.out
 derby.log
 metastore_db/
 *.log
-

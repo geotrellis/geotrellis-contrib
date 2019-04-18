@@ -56,7 +56,7 @@ lazy val commonSettings = Seq(
 
 lazy val root = Project("geotrellis-contrib", file(".")).
   aggregate(
-    vlm, gdal, summary
+    vlm, gdal, summary, slick
   ).
   settings(commonSettings: _*).
   settings(publish / skip := true).
@@ -129,6 +129,19 @@ lazy val gdal = project
         |import geotrellis.contrib.vlm.gdal._
       """.stripMargin
   )
+
+lazy val slick = project
+  .settings(commonSettings)
+  .settings(
+    organization := "com.azavea.geotrellis",
+    name := "geotrellis-contrib-slick",
+    libraryDependencies ++= Seq(
+      geotrellisVector,
+      slickPG,
+      scalatest % Test
+    )
+  )
+  .settings(crossScalaVersions := Seq(scalaVersion.value))
 
 lazy val testkit = project
   .settings(commonSettings)
