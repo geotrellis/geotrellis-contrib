@@ -28,7 +28,6 @@ lazy val commonSettings = Seq(
   pomIncludeRepository := { _ => false },
   addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.4" cross CrossVersion.binary),
   addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.1" cross CrossVersion.full),
-  dependencyUpdatesFilter := moduleFilter(organization = "org.scala-lang"),
   resolvers ++= Seq(
     Resolver.bintrayRepo("azavea", "geotrellis"),
     "geosolutions" at "http://maven.geo-solutions.it/",
