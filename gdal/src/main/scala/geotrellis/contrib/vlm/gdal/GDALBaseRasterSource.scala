@@ -29,9 +29,6 @@ import com.azavea.gdal.GDALWarp
 import java.net.MalformedURLException
 
 trait GDALBaseRasterSource extends RasterSource {
-  val ANSI_RESET = "\u001B[0m"
-  val ANSI_BLUE = "\u001B[34m"
-
   val vsiPath: String = if (VSIPath.isVSIFormatted(uri)) uri else try {
     VSIPath(uri).vsiPath
   } catch {
