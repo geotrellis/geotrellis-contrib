@@ -42,7 +42,7 @@ case class GDALDataset(token: Long) extends AnyVal {
     val width_height = Array.ofDim[Int](2)
     if (GDALWarp.get_transform(token, dataset, numberOfAttempts, transform) <= 0 ||
       GDALWarp.get_width_height(token, dataset, numberOfAttempts, width_height) <= 0)
-      throw new Exception("get_transform or get_widht_height")
+      throw new Exception("get_transform or get_width_height")
 
     val x1 = transform(0)
     val y1 = transform(3)
