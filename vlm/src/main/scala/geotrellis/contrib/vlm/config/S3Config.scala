@@ -16,6 +16,8 @@
 
 package geotrellis.contrib.vlm.config
 
+import pureconfig.generic.auto._
+
 case class S3Config(allowGlobalRead: Boolean, region: Option[String] = None)
 
 object S3Config {

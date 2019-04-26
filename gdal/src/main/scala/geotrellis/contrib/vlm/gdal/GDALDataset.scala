@@ -67,7 +67,7 @@ case class GDALDataset(token: Long) extends AnyVal {
     val heights = Array.ofDim[Int](N)
     val extent = this.extent(dataset)
 
-    if (GDALWarp.get_overview_widths_heights(token, dataset, numberOfAttempts, widths, heights) <= 0)
+    if (GDALWarp.get_overview_widths_heights(token, dataset, numberOfAttempts, 1, widths, heights) <= 0)
       throw new Exception("get_overview_widths_heights")
     widths.zip(heights).flatMap({ case (w, h) =>
       if (w > 0 && h > 0) Some(RasterExtent(extent, cols = w, rows = h))

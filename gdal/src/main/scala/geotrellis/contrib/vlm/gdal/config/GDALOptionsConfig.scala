@@ -17,6 +17,7 @@
 package geotrellis.contrib.vlm.gdal.config
 
 import com.azavea.gdal.GDALWarp
+import pureconfig.generic.auto._
 
 import scala.collection.concurrent.TrieMap
 
