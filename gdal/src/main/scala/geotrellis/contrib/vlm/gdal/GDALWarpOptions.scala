@@ -243,4 +243,6 @@ case class GDALWarpOptions(
       dstFile orElse dstFile
     )
   }
+
+  def isDefault: Boolean = this == GDALWarpOptions()
 }

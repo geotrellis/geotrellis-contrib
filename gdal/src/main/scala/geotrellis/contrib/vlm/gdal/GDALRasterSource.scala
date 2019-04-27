@@ -30,6 +30,11 @@ case class GDALRasterSource(
   def resampleMethod: Option[ResampleMethod] = None
   lazy val warpOptions: GDALWarpOptions = options
 
-  override lazy val gridExtent: GridExtent[Long] = dataset.rasterExtent(GDALWarp.SOURCE).toGridType[Long]
-  override lazy val resolutions: List[GridExtent[Long]] = dataset.resolutions(GDALWarp.SOURCE).map(_.toGridType[Long])
+  override lazy val gridExtent: GridExtent[Long] =
+    if(options.isDefault) dataset.rasterExtent(GDALWarp.SOURCE).toGridType[Long]
+    else dataset.rasterExtent(GDALWarp.WARPED).toGridType[Long]
+
+  override lazy val resolutions: List[GridExtent[Long]] =
+    if(options.isDefault) dataset.resolutions(GDALWarp.SOURCE).map(_.toGridType[Long])
+    else dataset.resolutions(GDALWarp.WARPED).map(_.toGridType[Long])
 }
