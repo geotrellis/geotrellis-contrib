@@ -16,7 +16,9 @@
 
 package geotrellis.contrib.vlm.gdal
 
+import geotrellis.contrib.vlm.geotiff.GeoTiffRasterSource
 import geotrellis.contrib.vlm._
+import geotrellis.proj4.WebMercator
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.resample._
@@ -29,7 +31,7 @@ import cats.implicits._
 import org.scalatest._
 import java.net.MalformedURLException
 
-import geotrellis.contrib.vlm.geotiff.GeoTiffRasterSource
+import geotrellis.raster.reproject.Reproject
 
 class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
 

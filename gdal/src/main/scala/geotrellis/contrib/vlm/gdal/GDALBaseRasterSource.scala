@@ -43,7 +43,7 @@ trait GDALBaseRasterSource extends RasterSource {
   /** options to override some values on transformation steps, should be used carefully as these params can change the behaviour significantly */
   val options: GDALWarpOptions
 
-  lazy val datasetType: Int = if(options.isDefault) GDALWarp.SOURCE else GDALWarp.WARPED
+  lazy val datasetType: Int = options.datasetType
 
   // current dataset
   @transient lazy val dataset: GDALDataset = {
@@ -86,10 +86,10 @@ trait GDALBaseRasterSource extends RasterSource {
   }
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALReprojectRasterSource(uri, reprojectOptions, strategy, options.reproject(this.gridExtent, crs, targetCRS, reprojectOptions))
+    GDALRasterSource(uri, options.reproject(gridExtent, crs, targetCRS, reprojectOptions))
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GDALResampleRasterSource(uri, resampleGrid, method, strategy, options.resample(gridExtent, resampleGrid))
+    GDALRasterSource(uri, options.resample(gridExtent, resampleGrid))
 
   /** Converts the contents of the GDALRasterSource to the [[TargetCellType]].
    *
@@ -122,6 +122,7 @@ trait GDALBaseRasterSource extends RasterSource {
       GDALBaseRasterSource
         .createConvertOptions(targetCellType, noDataValue)
         .map(_.copy(dimensions = Some(cols.toInt -> rows.toInt)))
+        .toList
 
     val targetOptions = (convertOptions :+ options).reduce { _ combine _ }
     GDALRasterSource(uri, targetOptions, Some(targetCellType))
@@ -145,146 +146,145 @@ trait GDALBaseRasterSource extends RasterSource {
 }
 
 object GDALBaseRasterSource {
-
-  def createConvertOptions(targetCellType: TargetCellType, noDataValue: Option[Double]): List[GDALWarpOptions] =
+  def createConvertOptions(targetCellType: TargetCellType, noDataValue: Option[Double]): Option[GDALWarpOptions] =
     targetCellType match {
       case ConvertTargetCellType(target) =>
         target match {
           case BitCellType => throw new Exception("Cannot convert GDALRasterSource to the BitCellType")
 
           case ByteConstantNoDataCellType =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Byte"),
               dstNoData = List(Byte.MinValue.toString),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
           case ByteCellType =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Byte"),
               dstNoData = List("None"),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
           case ByteUserDefinedNoDataCellType(value) =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Byte"),
               dstNoData = List(value.toString),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
 
           case UByteConstantNoDataCellType =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Byte"),
               dstNoData = List(0.toString),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
           case UByteCellType =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Byte"),
               dstNoData = List("none"),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
           case UByteUserDefinedNoDataCellType(value) =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Byte"),
               dstNoData = List(value.toString),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
 
           case ShortConstantNoDataCellType =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Int16"),
               dstNoData = List(Short.MinValue.toString),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
           case ShortCellType =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Int16"),
               dstNoData = List("None"),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
           case ShortUserDefinedNoDataCellType(value) =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Int16"),
               dstNoData = List(value.toString),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
 
           case UShortConstantNoDataCellType =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("UInt16"),
               dstNoData = List(0.toString),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
           case UShortCellType =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("UInt16"),
               dstNoData = List("None"),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
           case UShortUserDefinedNoDataCellType(value) =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("UInt16"),
               dstNoData = List(value.toString),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
 
           case IntConstantNoDataCellType =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Int32"),
               dstNoData = List(Int.MinValue.toString),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
           case IntCellType =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Int32"),
               dstNoData = List("None"),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
           case IntUserDefinedNoDataCellType(value) =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Int32"),
               dstNoData = List(value.toString),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
 
           case FloatConstantNoDataCellType =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Float32"),
               dstNoData = List(Float.NaN.toString),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
           case FloatCellType =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Float32"),
               dstNoData = List("NaN"),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
           case FloatUserDefinedNoDataCellType(value) =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Float32"),
               dstNoData = List(value.toString),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
 
           case DoubleConstantNoDataCellType =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Float64"),
               dstNoData = List(Double.NaN.toString),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
           case DoubleCellType =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Float64"),
               dstNoData = List("NaN"),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
           case DoubleUserDefinedNoDataCellType(value) =>
-            List(GDALWarpOptions(
+            Option(GDALWarpOptions(
               outputType = Some("Float64"),
               dstNoData = List(value.toString),
               srcNoData = noDataValue.map { _.toString }.toList
             ))
         }
-      case _ => List()
+      case _ => None
     }
 }

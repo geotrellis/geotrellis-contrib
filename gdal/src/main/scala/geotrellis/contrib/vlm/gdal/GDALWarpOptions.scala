@@ -22,6 +22,7 @@ import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.proj4.CRS
 import geotrellis.vector.Extent
 
+import com.azavea.gdal.GDALWarp
 import cats.implicits._
 
 import scala.collection.JavaConverters._
@@ -245,4 +246,5 @@ case class GDALWarpOptions(
   }
 
   def isDefault: Boolean = this == GDALWarpOptions()
+  def datasetType: Int = if(isDefault) GDALWarp.SOURCE else GDALWarp.WARPED
 }
