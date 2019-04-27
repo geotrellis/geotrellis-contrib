@@ -43,6 +43,8 @@ trait GDALBaseRasterSource extends RasterSource {
   /** options to override some values on transformation steps, should be used carefully as these params can change the behaviour significantly */
   val options: GDALWarpOptions
 
+  lazy val datasetType: Int = if(options.isDefault) GDALWarp.SOURCE else GDALWarp.WARPED
+
   // current dataset
   @transient lazy val dataset: GDALDataset = {
     val gdalPath =
@@ -63,33 +65,31 @@ trait GDALBaseRasterSource extends RasterSource {
 
   lazy val cellType: CellType = dstCellType.getOrElse(dataset.cellType)
 
-  lazy val gridExtent: GridExtent[Long] = dataset.rasterExtent.toGridType[Long]
+  lazy val gridExtent: GridExtent[Long] = dataset.rasterExtent(datasetType).toGridType[Long]
 
   /** Resolutions of available overviews in GDAL Dataset
     *
     * These resolutions could represent actual overview as seen in source file
     * or overviews of VRT that was created as result of resample operations.
     */
-  lazy val resolutions: List[GridExtent[Long]] = dataset.resolutions.map(_.toGridType[Long])
+  lazy val resolutions: List[GridExtent[Long]] = dataset.resolutions(datasetType).map(_.toGridType[Long])
 
   override def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     bounds
       .toIterator
       .flatMap { gb => gridBounds.intersection(gb) }
       .map { gb =>
-        val tile = dataset.readMultibandTile(gb.toGridType[Int], bands.map(_ + 1))
+        val tile = dataset.readMultibandTile(gb.toGridType[Int], bands.map(_ + 1), datasetType)
         val extent = this.gridExtent.extentFor(gb)
         convertRaster(Raster(tile, extent))
       }
   }
 
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource = {
+  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
     GDALReprojectRasterSource(uri, reprojectOptions, strategy, options.reproject(this.gridExtent, crs, targetCRS, reprojectOptions))
-  }
 
-  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
+  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
     GDALResampleRasterSource(uri, resampleGrid, method, strategy, options.resample(gridExtent, resampleGrid))
-  }
 
   /** Converts the contents of the GDALRasterSource to the [[TargetCellType]].
    *
@@ -117,7 +117,12 @@ trait GDALBaseRasterSource extends RasterSource {
    *  @group convert
    */
   def convert(targetCellType: TargetCellType): RasterSource = {
-    val convertOptions = GDALBaseRasterSource.createConvertOptions(targetCellType, noDataValue)
+    /** To avoid incorrect warp cellSize transformation, we need explicitly set dimensions. */
+    val convertOptions =
+      GDALBaseRasterSource
+        .createConvertOptions(targetCellType, noDataValue)
+        .map(_.copy(dimensions = Some(cols.toInt -> rows.toInt)))
+
     val targetOptions = (convertOptions :+ options).reduce { _ combine _ }
     GDALRasterSource(uri, targetOptions, Some(targetCellType))
   }

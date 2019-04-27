@@ -16,9 +16,7 @@
 
 package geotrellis.contrib.vlm.gdal
 
-import com.azavea.gdal.GDALWarp
 import geotrellis.contrib.vlm.TargetCellType
-import geotrellis.raster.GridExtent
 import geotrellis.raster.resample.ResampleMethod
 
 case class GDALRasterSource(
@@ -29,12 +27,4 @@ case class GDALRasterSource(
   val baseWarpList: List[GDALWarpOptions] = Nil
   def resampleMethod: Option[ResampleMethod] = None
   lazy val warpOptions: GDALWarpOptions = options
-
-  override lazy val gridExtent: GridExtent[Long] =
-    if(options.isDefault) dataset.rasterExtent(GDALWarp.SOURCE).toGridType[Long]
-    else dataset.rasterExtent(GDALWarp.WARPED).toGridType[Long]
-
-  override lazy val resolutions: List[GridExtent[Long]] =
-    if(options.isDefault) dataset.resolutions(GDALWarp.SOURCE).map(_.toGridType[Long])
-    else dataset.resolutions(GDALWarp.WARPED).map(_.toGridType[Long])
 }

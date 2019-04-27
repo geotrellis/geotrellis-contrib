@@ -59,22 +59,17 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
     }
   }
 
-  def assertRastersEqual(actual: Raster[MultibandTile], expected: Raster[MultibandTile]): Unit = {
-    actual.extent shouldBe expected.extent
+  def assertRastersEqual(actual: Raster[MultibandTile], expected: Raster[MultibandTile]): Unit =
+    assertRastersEqual(actual: Raster[MultibandTile], expected: Raster[MultibandTile], Eps)
 
-    actual.tile should have (
-      cellType (expected.cellType),
-      // dimensions (expected.dimensions),
-      bandCount (expected.tile.bandCount)
-    )
+  def assertRastersEqual(actual: Raster[MultibandTile], expected: Raster[MultibandTile], threshold: Double): Unit =
+    assertRastersEqual(actual: Raster[MultibandTile], expected: Raster[MultibandTile], threshold: Double, Eps)
 
-    withAsciiDiffClue(actual.tile, expected.tile){
-      assertEqual(actual.tile, expected.tile)
-    }
-  }
-
-  def assertRastersEqual(actual: Raster[MultibandTile], expected: Raster[MultibandTile], threshold: Double): Unit = {
-    actual.extent shouldBe expected.extent
+  def assertRastersEqual(actual: Raster[MultibandTile], expected: Raster[MultibandTile], threshold: Double, thresholdExtent: Double): Unit = {
+    actual.extent.xmin shouldBe expected.extent.xmin +- thresholdExtent
+    actual.extent.ymin shouldBe expected.extent.ymin +- thresholdExtent
+    actual.extent.xmax shouldBe expected.extent.xmax +- thresholdExtent
+    actual.extent.ymax shouldBe expected.extent.ymax +- thresholdExtent
 
     actual.tile should have (
       cellType (expected.cellType),
