@@ -245,6 +245,10 @@ case class GDALWarpOptions(
     )
   }
 
-  def isDefault: Boolean = this == GDALWarpOptions()
-  def datasetType: Int = if(isDefault) GDALWarp.SOURCE else GDALWarp.WARPED
+  def isEmpty: Boolean = this == GDALWarpOptions.EMPTY
+  def datasetType: Int = if(isEmpty) GDALWarp.SOURCE else GDALWarp.WARPED
+}
+
+object GDALWarpOptions {
+  val EMPTY = GDALWarpOptions()
 }
