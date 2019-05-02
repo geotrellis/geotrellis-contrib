@@ -222,7 +222,7 @@ class GDALRasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRa
         /** Functions to trigger Datasets computation */
         def ltsWithDatasetsTriggered(lts: LayoutTileSource): LayoutTileSource = { rsWithDatasetsTriggered(lts.source); lts }
         def rsWithDatasetsTriggered(rs: RasterSource): RasterSource = {
-          val brs = rs.asInstanceOf[GDALBaseRasterSource]
+          val brs = rs.asInstanceOf[GDALRasterSource]
           brs.dataset.rasterExtent
           brs.dataset.rasterExtent(GDALWarp.SOURCE)
           rs
@@ -239,7 +239,7 @@ class GDALRasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRa
 
         /** Simulate possible RF backsplash calls */
         def dirtyCalls(rs: RasterSource): RasterSource = {
-          val ds = rs.asInstanceOf[GDALBaseRasterSource].dataset
+          val ds = rs.asInstanceOf[GDALRasterSource].dataset
           ds.rasterExtent
           ds.crs
           ds.cellSize
@@ -312,10 +312,7 @@ class GDALRasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRa
 
     val noDataTile = ArrayTile.alloc(cellType, rasterSource.cols.toInt, rasterSource.rows.toInt).fill(NODATA).interpretAs(cellType)
 
-    val paths: Seq[String] =
-      0 to 5 map { index =>
-        filePathByIndex(index)
-      }
+    val paths: Seq[String] = 0 to 5 map { index => filePathByIndex(index) }
 
     val expectedMultibandTile = {
       val tiles = paths.map { MultibandGeoTiff(_, streaming = false).tile.band(0) }

@@ -22,6 +22,7 @@ import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.proj4.CRS
 import geotrellis.vector.Extent
 
+import com.azavea.gdal.GDALWarp
 import cats.implicits._
 
 import scala.collection.JavaConverters._
@@ -243,4 +244,11 @@ case class GDALWarpOptions(
       dstFile orElse dstFile
     )
   }
+
+  def isEmpty: Boolean = this == GDALWarpOptions.EMPTY
+  def datasetType: Int = if(isEmpty) GDALWarp.SOURCE else GDALWarp.WARPED
+}
+
+object GDALWarpOptions {
+  val EMPTY = GDALWarpOptions()
 }

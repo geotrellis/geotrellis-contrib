@@ -28,7 +28,7 @@ import geotrellis.spark.tiling._
   * @param source raster source that can be queried by bounding box
   * @param layout definition of a tile grid over the pixel grid
   */
-class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) extends AutoCloseable {
+class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
   LayoutTileSource.requireGridAligned(source.gridExtent, layout)
 
   def sourceColOffset: Long = ((source.extent.xmin - layout.extent.xmin) / layout.cellwidth).toLong
@@ -159,8 +159,6 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) e
           val result = rasterRegionForKey(key)
           result.map { region => (key, region) }
       }
-
-  def close = source.close()
 }
 
 object LayoutTileSource {

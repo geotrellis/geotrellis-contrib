@@ -41,7 +41,7 @@ import geotrellis.util.GetComponent
   * @groupdesc reproject Functions to resample raster data in target projection.
   * @groupprio reproject 2
   */
-trait RasterSource extends CellGrid[Long] with AutoCloseable with Serializable {
+trait RasterSource extends CellGrid[Long] with Serializable {
   def uri: String
   def crs: CRS
   def bandCount: Int
@@ -165,7 +165,7 @@ trait RasterSource extends CellGrid[Long] with AutoCloseable with Serializable {
   /**
     * @group read
     */
-  def read: Option[Raster[MultibandTile]] =
+  def read(): Option[Raster[MultibandTile]] =
     read(extent, (0 until bandCount))
 
   /**
@@ -234,8 +234,6 @@ trait RasterSource extends CellGrid[Long] with AutoCloseable with Serializable {
      */
   def convert(targetCellType: CellType): RasterSource =
     convert(ConvertTargetCellType(targetCellType))
-
-  def close = { }
 }
 
 object RasterSource {

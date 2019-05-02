@@ -22,8 +22,6 @@ import geotrellis.raster._
 import geotrellis.raster.resample._
 import geotrellis.raster.testkit._
 
-import com.azavea.gdal.GDALWarp
-
 import org.scalatest._
 
 import java.io.File

@@ -58,7 +58,7 @@ case class GDALDataset(token: Long) extends AnyVal {
     RasterExtent(e, math.abs(transform(1)), math.abs(transform(5)), width_height(0), width_height(1))
   }
 
-  def resolutions: List[RasterExtent] = resolutions(GDALWarp.WARPED)
+  def resolutions(): List[RasterExtent] = resolutions(GDALWarp.WARPED)
 
   def resolutions(dataset: Int): List[RasterExtent] = {
     require(acceptableDatasets contains dataset)
