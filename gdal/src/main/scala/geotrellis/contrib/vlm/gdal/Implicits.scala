@@ -80,6 +80,16 @@ trait Implicits extends Serializable {
           )
       }
     }
+
+    def convert(targetCellType: TargetCellType, noDataValue: Option[Double], dimensions: Option[(Int, Int)]): GDALWarpOptions = {
+      val convertOptions =
+        GDALWarpOptions
+          .createConvertOptions(targetCellType, noDataValue)
+          .map(_.copy(dimensions = dimensions))
+          .toList
+
+      (convertOptions :+ self).reduce(_ combine _)
+    }
   }
 }
 
