@@ -129,13 +129,15 @@ object RasterSummary {
     all.head
   }
 
-  def fromSeq[V <: CellGrid[Int]: GetComponent[?, ProjectedExtent]](seq: Seq[V]): RasterSummary = {
+  def fromSeq[V <: CellGrid[N]: GetComponent[?, ProjectedExtent], N: Integral](seq: Seq[V]): RasterSummary = {
     val all =
       seq
         .map { grid =>
           val ProjectedExtent(extent, crs) = grid.getComponent[ProjectedExtent]
-          val cellSize = CellSize(extent, grid.cols, grid.rows)
-          (crs, RasterSummary(crs, grid.cellType, cellSize, extent, grid.size, 1))
+          val cellwidth: Double = extent.width / grid.cols.toDouble
+          val cellheight: Double = extent.height / grid.rows.toDouble
+          val cellSize = CellSize(cellwidth, cellheight)
+          (crs, RasterSummary(crs, grid.cellType, cellSize, extent, grid.size.toLong, 1))
         }
         .groupBy(_._1)
         .map { case (_, v) => v.map(_._2).reduce(_ combine _) }
