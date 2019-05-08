@@ -160,20 +160,22 @@ object MosaicRasterSource {
 
   def apply(_sources: NonEmptyList[RasterSource], _crs: CRS) =
     new MosaicRasterSource {
-      val reprojectedExtents =
-        _sources map { source =>
-          source.gridExtent.reproject(source.crs, _crs)
-        }
-      val minCellSize: CellSize = reprojectedExtents.toList map { rasterExtent =>
-        CellSize(rasterExtent.cellwidth, rasterExtent.cellheight)
-      } minBy { _.resolution }
       val sources = _sources map { _.reprojectToGrid(_crs, _sources.head.gridExtent) }
       val crs = _crs
-      def gridExtent: GridExtent[Long] = reprojectedExtents.toList.reduce(
-        (re1: GridExtent[Long], re2: GridExtent[Long]) => {
-          re1.withResolution(minCellSize) combine re2.withResolution(minCellSize)
-        }
-      )
+      def gridExtent: GridExtent[Long] = {
+        val reprojectedExtents =
+          _sources map { source =>
+            source.gridExtent.reproject(source.crs, _crs)
+          }
+        val minCellSize: CellSize = reprojectedExtents.toList map { rasterExtent =>
+          CellSize(rasterExtent.cellwidth, rasterExtent.cellheight)
+        } minBy { _.resolution }
+        reprojectedExtents.toList.reduce(
+          (re1: GridExtent[Long], re2: GridExtent[Long]) => {
+            re1.withResolution(minCellSize) combine re2.withResolution(minCellSize)
+          }
+        )
+      }
     }
 
   @SuppressWarnings(Array("TraversableHead", "TraversableTail"))
