@@ -23,7 +23,7 @@ object Version {
   val geotrellis     = "3.0.0-M3"
   val geotrellisGdal = "0.18.5"
   val gdal           = Properties.envOrElse("GDAL_VERSION", "2.4.0")
-  val gdalWarp       = "33.2bc7bbf"
+  val gdalWarp       = "33.29f906d"
   val scala          = "2.11.12"
   val crossScala     = Seq(scala, "2.12.8")
   val hadoop         = "2.8.0"
