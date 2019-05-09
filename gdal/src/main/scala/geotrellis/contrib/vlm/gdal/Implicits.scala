@@ -85,7 +85,7 @@ trait Implicits extends Serializable {
       val convertOptions =
         GDALWarpOptions
           .createConvertOptions(targetCellType, noDataValue)
-          .map(_.copy(dimensions = dimensions))
+          .map(_.copy(dimensions = self.cellSize.fold(dimensions)(_ => None)))
           .toList
 
       (convertOptions :+ self).reduce(_ combine _)
