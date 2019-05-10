@@ -181,9 +181,10 @@ object RasterSourceRDD {
     sources: RDD[RasterSource],
     layout: LayoutDefinition,
     resampleMethod: ResampleMethod = NearestNeighbor,
+    rasterSummary: Option[RasterSummary] = None,
     partitioner: Option[Partitioner] = None
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] = {
-    val summary = RasterSummary.fromRDD[RasterSource, Long](sources)
+    val summary = rasterSummary.getOrElse(RasterSummary.fromRDD[RasterSource, Long](sources))
     val layerMetadata = summary.toTileLayerMetadata(layout, 0)._1
 
     val tiledLayoutSourceRDD =
