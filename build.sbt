@@ -131,6 +131,7 @@ lazy val gdal = project
 
 lazy val slick = project
   .settings(commonSettings)
+  .settings( publish / skip := true)
   .settings(
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-slick",
