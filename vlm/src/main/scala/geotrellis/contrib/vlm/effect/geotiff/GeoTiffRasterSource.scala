@@ -50,14 +50,14 @@ case class GeoTiffRasterSource[F[_]: GeoTiffMultibandReader: UnsafeLift](
   def bandCount: F[Int] = tiffF.map(_.bandCount)
   def cellType: F[CellType] = dstCellType.fold(tiffF.map(_.cellType))(F.pure)
 
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource[F] =
-    GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, targetCellType)
+  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): F[RasterSourceF[F]] =
+    F.pure(GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, targetCellType))
 
-  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): GeoTiffResampleRasterSource[F] =
-    GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, targetCellType)
+  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): F[RasterSourceF[F]] =
+    F.pure(GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, targetCellType))
 
-  def convert(targetCellType: TargetCellType): GeoTiffRasterSource[F] =
-    GeoTiffRasterSource(uri, Some(targetCellType))
+  def convert(targetCellType: TargetCellType): F[RasterSourceF[F]] =
+    F.pure(GeoTiffRasterSource(uri, Some(targetCellType)))
 
   def read(extent: Extent, bands: Seq[Int]): F[Raster[MultibandTile]] =
     (tiffF, gridExtent).mapN { (tiff, gridExtent) =>

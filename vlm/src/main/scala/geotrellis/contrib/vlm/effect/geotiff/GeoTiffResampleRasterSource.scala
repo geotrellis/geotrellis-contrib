@@ -62,21 +62,21 @@ case class GeoTiffResampleRasterSource[F[_]: GeoTiffMultibandReader: UnsafeLift]
   @transient protected lazy val closestTiffOverview: F[GeoTiff[MultibandTile]] =
     (tiffF, gridExtent).mapN { (tiff, gridExtent) => tiff.getClosestOverview(gridExtent.cellSize, strategy) }
 
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource[F] =
-    new GeoTiffReprojectRasterSource[F](uri, targetCRS, reprojectOptions, strategy, targetCellType) {
+  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): F[RasterSourceF[F]] =
+    F.pure(new GeoTiffReprojectRasterSource[F](uri, targetCRS, reprojectOptions, strategy, targetCellType) {
       override lazy val gridExtent: F[GridExtent[Long]] = reprojectOptions.targetRasterExtent match {
         case Some(targetRasterExtent) => F.pure(targetRasterExtent.toGridType[Long])
         case None => (this.gridExtent, this.transform).mapN { (gridExtent, transform) =>
           ReprojectRasterExtent(gridExtent, transform, this.reprojectOptions)
         }
       }
-    }
+    })
 
-  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): GeoTiffResampleRasterSource[F] =
-    GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, targetCellType)
+  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): F[RasterSourceF[F]] =
+    F.pure(GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, targetCellType))
 
-  def convert(targetCellType: TargetCellType): GeoTiffResampleRasterSource[F] =
-    GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, Some(targetCellType))
+  def convert(targetCellType: TargetCellType): F[RasterSourceF[F]] =
+    F.pure(GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, Some(targetCellType)))
 
   def read(extent: Extent, bands: Seq[Int]): F[Raster[MultibandTile]] = {
     val bounds = gridExtent.map(_.gridBoundsFor(extent, clamp = false))
