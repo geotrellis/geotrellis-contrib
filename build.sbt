@@ -80,6 +80,7 @@ lazy val vlm = project
       scalactic,
       scalaURI,
       squants,
+      catsPar,
       sparkCore % Provided,
       sparkSQL % Test,
       geotrellisSparkTestKit % Test,
