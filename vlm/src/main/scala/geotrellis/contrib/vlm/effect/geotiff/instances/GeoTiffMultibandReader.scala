@@ -17,6 +17,7 @@
 package geotrellis.contrib.vlm.effect.geotiff.instances
 
 import geotrellis.raster.io.geotiff._
+
 import cats.effect.IO
 
 trait GeoTiffMultibandReader[F[_]] {
@@ -26,6 +27,9 @@ trait GeoTiffMultibandReader[F[_]] {
 object GeoTiffMultibandReader {
   def apply[F[_]: GeoTiffMultibandReader]: GeoTiffMultibandReader[F] = implicitly[GeoTiffMultibandReader[F]]
 
+  implicit val geoTiffMultibandReaderId: GeoTiffMultibandReaderId = new GeoTiffMultibandReaderId
+  implicit val geoTiffMultibandReaderOption: GeoTiffMultibandReaderOption = new GeoTiffMultibandReaderOption
+  implicit val geoTiffMultibandReaderTry: GeoTiffMultibandReaderTry = new GeoTiffMultibandReaderTry
+  implicit val geoTiffMultibandReaderEither: GeoTiffMultibandReaderEither = new GeoTiffMultibandReaderEither
   implicit val geoTiffMultibandReaderIO: GeoTiffMultibandReaderSync[IO] = new GeoTiffMultibandReaderSync[IO]
-  implicit val geoTiffMultibandReaderId: GeoTiffMultibandReaderOption = new GeoTiffMultibandReaderOption
 }

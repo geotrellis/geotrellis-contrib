@@ -220,13 +220,13 @@ trait RasterSource extends CellGrid[Long] with Serializable {
 
   private[vlm] def targetCellType: Option[TargetCellType]
 
-  protected[vlm] lazy val dstCellType: Option[CellType] =
+  protected lazy val dstCellType: Option[CellType] =
     targetCellType match {
       case Some(target) => Some(target.cellType)
       case None => None
     }
 
-  protected[vlm] lazy val convertRaster: Raster[MultibandTile] => Raster[MultibandTile] =
+  protected lazy val convertRaster: Raster[MultibandTile] => Raster[MultibandTile] =
     targetCellType match {
       case Some(target: ConvertTargetCellType) =>
         (raster: Raster[MultibandTile]) => target(raster)

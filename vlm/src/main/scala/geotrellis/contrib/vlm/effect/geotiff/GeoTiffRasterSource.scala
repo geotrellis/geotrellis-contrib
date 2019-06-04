@@ -65,7 +65,6 @@ case class GeoTiffRasterSource[F[_]: GeoTiffMultibandReader: UnsafeLift](
         val bounds = gridExtent.gridBoundsFor(extent, clamp = false).toGridType[Int]
         val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
         UnsafeLift[F].apply {
-          // TODO: this line throws, how to handle it?
           val it = geoTiffTile.crop(List(bounds), bands.toArray).map { case (gb, tile) =>
             // TODO: shouldn't GridExtent give me Extent for types other than N ?
             Raster(tile, gridExtent.extentFor(gb.toGridType[Long], clamp = false))
@@ -78,7 +77,7 @@ case class GeoTiffRasterSource[F[_]: GeoTiffMultibandReader: UnsafeLift](
     }.flatten
 
   def read(bounds: GridBounds[Long], bands: Seq[Int]): F[Raster[MultibandTile]] =
-    readBounds(List(bounds), bands).map(_.next)
+    readBounds(List(bounds), bands) >>= (iter => UnsafeLift[F].apply { iter.next })
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): F[Iterator[Raster[MultibandTile]]] = {
     val bounds: F[List[GridBounds[Long]]] = extents.toList.traverse { e => gridExtent.map(_.gridBoundsFor(e, clamp = true)) }
@@ -89,7 +88,7 @@ case class GeoTiffRasterSource[F[_]: GeoTiffMultibandReader: UnsafeLift](
     (tiffF, gridBounds, gridExtent).mapN { (tiff, gridBounds, gridExtent) =>
       val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
       val intersectingBounds: Seq[GridBounds[Int]] =
-        bounds.flatMap(_.intersection(gridBounds)).toSeq.map(b => b.toGridType[Int])
+        bounds.flatMap(_.intersection(gridBounds)).toSeq.map(_.toGridType[Int])
 
       UnsafeLift[F].apply {
         RasterSourceF.synchronized {

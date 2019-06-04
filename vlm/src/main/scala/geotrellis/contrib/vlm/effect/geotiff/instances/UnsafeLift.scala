@@ -16,9 +16,10 @@
 
 package geotrellis.contrib.vlm.effect.geotiff.instances
 
+import cats.Id
 import cats.effect.IO
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 /** Type class that allows to handle unsafe calls */
 trait UnsafeLift[F[_]] {
@@ -28,11 +29,26 @@ trait UnsafeLift[F[_]] {
 object UnsafeLift {
   def apply[F[_]: UnsafeLift]: UnsafeLift[F] = implicitly[UnsafeLift[F]]
 
-  implicit val io: UnsafeLift[IO] = new UnsafeLift[IO] {
+  implicit val liftId: UnsafeLift[Id] = new UnsafeLift[Id] {
+    def apply[A](value: => A): Id[A] = value
+  }
+
+  implicit val liftIO: UnsafeLift[IO] = new UnsafeLift[IO] {
     def apply[A](value: => A): IO[A] = IO(value)
   }
 
-  implicit val option: UnsafeLift[Option] = new UnsafeLift[Option] {
+  implicit val liftOption: UnsafeLift[Option] = new UnsafeLift[Option] {
     def apply[A](value: => A): Option[A] = Try(value).toOption
+  }
+
+  implicit val liftEither: UnsafeLift[Either[Throwable, ?]] = new UnsafeLift[Either[Throwable, ?]] {
+    def apply[A](value: => A): Either[Throwable, A] = Try(value) match {
+      case Success(value) => Right(value)
+      case Failure(e) => Left(e)
+    }
+  }
+
+  implicit val liftTry: UnsafeLift[Try] = new UnsafeLift[Try] {
+    def apply[A](value: => A): Try[A] = Try(value)
   }
 }
