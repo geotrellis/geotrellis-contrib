@@ -33,9 +33,7 @@ import cats.syntax.functor._
 import cats.syntax.apply._
 import cats.instances.list._
 
-trait RasterSourceF[F[_]] extends Serializable {
-  implicit def F: Monad[F]
-
+abstract class RasterSourceF[F[_]: Monad] extends Serializable {
   def uri: String
   def crs: F[CRS]
   def bandCount: F[Int]

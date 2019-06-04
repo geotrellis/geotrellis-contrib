@@ -18,13 +18,13 @@ package geotrellis.contrib.vlm.effect.geotiff
 
 import geotrellis.contrib.vlm._
 import geotrellis.contrib.vlm.effect._
-import geotrellis.contrib.vlm.effect.geotiff.instances._
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiff, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
 import geotrellis.raster.reproject._
 import geotrellis.raster.resample._
 import geotrellis.vector._
+import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
 import cats._
 import cats.syntax.flatMap._
@@ -33,18 +33,18 @@ import cats.syntax.apply._
 import cats.syntax.functor._
 import cats.instances.list._
 
-case class GeoTiffReprojectRasterSource[F[_]: GeoTiffMultibandReader: UnsafeLift](
+case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
   uri: String,
   targetCRS: CRS,
   reprojectOptions: Reproject.Options = Reproject.Options.DEFAULT,
   strategy: OverviewStrategy = AutoHigherResolution,
   private[vlm] val targetCellType: Option[TargetCellType] = None
-)(implicit val F: Monad[F]) extends RasterSourceF[F] {
+) extends RasterSourceF[F] {
   def resampleMethod: Option[ResampleMethod] = Some(reprojectOptions.method)
 
-  @transient lazy val tiffF: F[MultibandGeoTiff] = GeoTiffMultibandReader[F].read(uri)
+  @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(GeoTiffReader.readMultiband(getByteReader(uri), streaming = true))
 
-  lazy val crs: F[CRS] = F.pure(targetCRS)
+  lazy val crs: F[CRS] = Monad[F].pure(targetCRS)
   protected lazy val baseCRS: F[CRS] = tiffF.map(_.crs)
   protected lazy val baseGridExtent: F[GridExtent[Long]] = tiffF.map(_.rasterExtent.toGridType[Long])
 
@@ -52,7 +52,7 @@ case class GeoTiffReprojectRasterSource[F[_]: GeoTiffMultibandReader: UnsafeLift
   protected lazy val backTransform = (crs, baseCRS).mapN((crs, baseCRS) => Transform(crs, baseCRS))
 
   override lazy val gridExtent: F[GridExtent[Long]] = reprojectOptions.targetRasterExtent match {
-    case Some(targetRasterExtent) => F.pure(targetRasterExtent.toGridType[Long])
+    case Some(targetRasterExtent) => Monad[F].pure(targetRasterExtent.toGridType[Long])
     case None =>
       (baseGridExtent, transform).mapN { (baseGridExtent, transform) =>
         ReprojectRasterExtent(baseGridExtent, transform, reprojectOptions)
@@ -82,7 +82,7 @@ case class GeoTiffReprojectRasterSource[F[_]: GeoTiffMultibandReader: UnsafeLift
   }
 
   def bandCount: F[Int] = tiffF.map(_.bandCount)
-  def cellType: F[CellType] = dstCellType.fold(tiffF.map(_.cellType))(F.pure)
+  def cellType: F[CellType] = dstCellType.fold(tiffF.map(_.cellType))(Monad[F].pure)
 
   def read(extent: Extent, bands: Seq[Int]): F[Raster[MultibandTile]] = {
     val bounds = gridExtent.map(_.gridBoundsFor(extent, clamp = false))
@@ -138,7 +138,7 @@ case class GeoTiffReprojectRasterSource[F[_]: GeoTiffMultibandReader: UnsafeLift
     }.flatten
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): F[RasterSourceF[F]] =
-    F.pure(GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, targetCellType))
+    Monad[F].pure(GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, targetCellType))
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): F[RasterSourceF[F]] =
     this.gridExtent.map { gridExtent =>
@@ -146,5 +146,5 @@ case class GeoTiffReprojectRasterSource[F[_]: GeoTiffMultibandReader: UnsafeLift
     }
 
   def convert(targetCellType: TargetCellType): F[RasterSourceF[F]] =
-    F.pure(GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, Some(targetCellType)))
+    Monad[F].pure(GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, Some(targetCellType)))
 }

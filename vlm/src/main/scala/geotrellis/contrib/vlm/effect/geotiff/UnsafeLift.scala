@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm.effect.geotiff.instances
+package geotrellis.contrib.vlm.effect.geotiff
 
 import cats.Id
 import cats.effect.IO
