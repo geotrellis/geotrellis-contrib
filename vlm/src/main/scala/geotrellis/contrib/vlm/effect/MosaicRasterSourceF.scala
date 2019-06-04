@@ -94,12 +94,12 @@ trait MosaicRasterSourceF[F[_]] extends RasterSourceF[F] {
     *
     * @see [[geotrellis.contrib.vlm.RasterSource.reproject]]
     */
-  def reproject(crs: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSourceF[F] =
-    MosaicRasterSourceF(
-      sources map { _.map(_.reproject(crs, reprojectOptions, strategy)) },
+  def reproject(crs: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): F[RasterSourceF[F]] =
+    F.pure(MosaicRasterSourceF(
+      sources map { _ >>= (_.reproject(crs, reprojectOptions, strategy)) },
       F.pure(crs),
       (gridExtent, this.crs).mapN { (gridExtent, baseCRS) => gridExtent.reproject(baseCRS, crs, reprojectOptions) }
-  )
+    ))
 
   def read(extent: Extent, bands: Seq[Int]): F[Raster[MultibandTile]] = {
     val rasters = sources map { _ >>= (_.read(extent, bands)) }
@@ -111,18 +111,17 @@ trait MosaicRasterSourceF[F[_]] extends RasterSourceF[F] {
     rasters.sequence.map(_.reduce)
   }
 
-  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSourceF[F] =
-    MosaicRasterSourceF(
-      sources map { _.map(_.resample(resampleGrid, method, strategy)) },
+  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): F[RasterSourceF[F]] =
+    F.pure(MosaicRasterSourceF(
+      sources map { _ >>= (_.resample(resampleGrid, method, strategy)) },
       crs
-    )
+    ))
 
-  def convert(targetCellType: TargetCellType): RasterSourceF[F] = {
-    MosaicRasterSourceF(
-      sources map { _.map(_.convert(targetCellType)) },
+  def convert(targetCellType: TargetCellType): F[RasterSourceF[F]] =
+    F.pure(MosaicRasterSourceF(
+      sources map { _ >>= (_.convert(targetCellType)) },
       crs
-    )
-  }
+    ))
 }
 
 object MosaicRasterSourceF {
@@ -161,7 +160,7 @@ object MosaicRasterSourceF {
       val sources = _sources map { source =>
         (source, gridExtent, crs).mapN { (source, gridExtent, crs) =>
           source.reprojectToGrid(crs, gridExtent)
-        }
+        }.flatten
       }
       val crs = _crs
       def gridExtent: F[GridExtent[Long]] = _gridExtent
@@ -173,7 +172,7 @@ object MosaicRasterSourceF {
       val sources = _sources map { source =>
         (source, _sources.head.flatMap(_.gridExtent), _crs).mapN { (source, gridExtent, crs) =>
           source.reprojectToGrid(crs, gridExtent)
-        }
+        }.flatten
       }
       val crs = _crs
       def gridExtent: F[GridExtent[Long]] = {
