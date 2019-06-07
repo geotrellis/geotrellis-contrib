@@ -30,10 +30,10 @@ case class HdfsConfig(resources: List[Path]) {
 }
 
 object HdfsConfig {
-  lazy val conf: HdfsConfig = pureconfig.loadConfigOrThrow[HdfsConfig]("vlm.geotiff.hdfs")
-  implicit def hdfsConfig(obj: HdfsConfig.type): HdfsConfig = conf
-
   implicit val hadoopPathReader = ConfigReader.fromString[Path] {
     ConvertHelpers.catchReadError(pathString => new Path(pathString))
   }
+
+  lazy val conf: HdfsConfig = pureconfig.loadConfigOrThrow[HdfsConfig]("vlm.geotiff.hdfs")
+  implicit def hdfsConfig(obj: HdfsConfig.type): HdfsConfig = conf
 }
