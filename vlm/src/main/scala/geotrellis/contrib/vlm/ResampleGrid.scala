@@ -16,10 +16,9 @@
 
 package geotrellis.contrib.vlm
 
-import geotrellis.raster.GridExtent
+import geotrellis.raster.{CellSize, GridExtent}
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
-
 import spire.math.Integral
 import spire.implicits._
 
@@ -41,6 +40,11 @@ case class TargetGrid[N: Integral](grid: GridExtent[Long]) extends ResampleGrid[
 case class TargetRegion[N: Integral](region: GridExtent[N]) extends ResampleGrid[N] {
   def apply(source: => GridExtent[N]): GridExtent[N] =
     region
+}
+
+case class TargetCellSize[N: Integral](cellSize: CellSize) extends ResampleGrid[N] {
+  def apply(source: => GridExtent[N]): GridExtent[N] =
+    source.withResolution(cellSize)
 }
 
 
@@ -74,6 +78,9 @@ object ResampleGrid {
 
       case TargetRegion(region) =>
         Reproject.Options(method = resampleMethod, targetRasterExtent = Some(region.toGridType[Int].toRasterExtent))
+
+      case TargetCellSize(cellSize) =>
+        Reproject.Options(method = resampleMethod, targetCellSize = Some(cellSize))
     }
   }
 }

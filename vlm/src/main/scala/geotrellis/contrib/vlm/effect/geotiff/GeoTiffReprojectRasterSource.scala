@@ -61,6 +61,7 @@ case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
       case Some(targetRegion: TargetRegion[Long]) => Monad[F].pure(targetRegion.region)
       case Some(targetGrid: TargetGrid[Long]) => reprojectedRasterExtent.map(targetGrid(_))
       case Some(dimensions: Dimensions[Long]) => reprojectedRasterExtent.map(dimensions(_))
+      case Some(targetCellSize: TargetCellSize[Long]) => reprojectedRasterExtent.map(targetCellSize(_))
       case _ => reprojectedRasterExtent
     }
   }

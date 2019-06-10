@@ -19,9 +19,9 @@ package geotrellis.contrib.vlm.gdal
 import geotrellis.contrib.vlm._
 import geotrellis.proj4._
 import geotrellis.raster._
-import geotrellis.raster.io.geotiff.OverviewStrategy
+import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.raster.reproject.Reproject
-import geotrellis.raster.resample.ResampleMethod
+import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector._
 
 import com.azavea.gdal.GDALWarp
@@ -70,8 +70,8 @@ case class GDALRasterSource(
       }
   }
 
-  def reprojection(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALRasterSource(dataPath, options.reproject(gridExtent, crs, targetCRS, reprojectOptions))
+  def reprojection(targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
+    GDALRasterSource(uri, options.reproject(gridExtent, crs, targetCRS, resampleGrid, method))
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
     GDALRasterSource(dataPath, options.resample(gridExtent, resampleGrid))
