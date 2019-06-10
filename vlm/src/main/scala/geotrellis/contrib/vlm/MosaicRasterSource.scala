@@ -106,8 +106,7 @@ trait MosaicRasterSource extends RasterSource {
     rasters.reduce
   }
 
-  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy)
-      : RasterSource = MosaicRasterSource(
+  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource = MosaicRasterSource(
     sources map { _.resample(resampleGrid, method, strategy) },
     crs
   )
@@ -164,9 +163,7 @@ object MosaicRasterSource {
       val crs = _crs
       def gridExtent: GridExtent[Long] = {
         val reprojectedExtents =
-          _sources map { source =>
-            source.gridExtent.reproject(source.crs, _crs)
-          }
+          _sources map { source => source.gridExtent.reproject(source.crs, _crs) }
         val minCellSize: CellSize = reprojectedExtents.toList map { rasterExtent =>
           CellSize(rasterExtent.cellwidth, rasterExtent.cellheight)
         } minBy { _.resolution }
