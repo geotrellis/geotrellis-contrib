@@ -21,10 +21,12 @@ import org.apache.hadoop.fs.Path
 import pureconfig.generic.auto._
 import pureconfig._
 
-case class HdfsConfig(resources: List[Path]) {
+import java.net.URI
+
+case class HdfsConfig(resources: List[URI]) {
   def load() = {
     val conf = new Configuration()
-    resources.foreach(conf.addResource)
+    resources.map(new Path(_)).foreach(conf.addResource)
     conf
   }
 }
@@ -34,6 +36,6 @@ object HdfsConfig {
     ConvertHelpers.catchReadError(pathString => new Path(pathString))
   }
 
-  lazy val conf: HdfsConfig = pureconfig.loadConfigOrThrow[HdfsConfig]("vlm.geotiff.hdfs")
+  private lazy val conf: HdfsConfig = pureconfig.loadConfigOrThrow[HdfsConfig]("vlm.geotiff.hdfs")
   implicit def hdfsConfig(obj: HdfsConfig.type): HdfsConfig = conf
 }
