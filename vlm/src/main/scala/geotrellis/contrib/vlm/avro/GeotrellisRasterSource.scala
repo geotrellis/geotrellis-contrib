@@ -93,15 +93,19 @@ class GeotrellisRasterSource(
 
   def reprojection(targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource = {
     if (targetCRS != this.crs) {
-      val (closestLayerId, targetGridExtent) = GeotrellisReprojectRasterSource.getClosestSourceLayer(targetCRS, sourceLayers, null /*reprojectOptions*/, strategy)
-      new GeotrellisReprojectRasterSource(attributeStore, uri, closestLayerId, sourceLayers, targetGridExtent, targetCRS, null /*reprojectOptions*/, targetCellType)
+      val reprojectOptions =
+        resampleGrid
+          .map(ResampleGrid.toReprojectOptions[Long](this.gridExtent, _, method))
+          .getOrElse(Reproject.Options.DEFAULT.copy(method = method))
+      val (closestLayerId, targetGridExtent) = GeotrellisReprojectRasterSource.getClosestSourceLayer(targetCRS, sourceLayers, reprojectOptions, strategy)
+      new GeotrellisReprojectRasterSource(attributeStore, uri, closestLayerId, sourceLayers, targetGridExtent, targetCRS, resampleGrid, targetCellType = targetCellType)
     } else {
       // TODO: add unit tests for this in particular, the behavior feels murky
-      ResampleGrid.fromReprojectOptions(null/*reprojectOptions*/) match {
+      resampleGrid match {
         case Some(resampleGrid) =>
           val resampledGridExtent = resampleGrid(this.gridExtent)
           val closestLayerId = GeotrellisRasterSource.getClosestResolution(sourceLayers.toList, resampledGridExtent.cellSize, strategy)(_.metadata.layout.cellSize).get.id
-          new GeotrellisResampleRasterSource(attributeStore, uri, closestLayerId, sourceLayers, resampledGridExtent, null /*reprojectOptions.method*/, targetCellType)
+          new GeotrellisResampleRasterSource(attributeStore, uri, closestLayerId, sourceLayers, resampledGridExtent, method, targetCellType)
         case None =>
           this // I think I was asked to do nothing
       }
