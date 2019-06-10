@@ -60,7 +60,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
 
       val sourceRDD: RDD[RasterSource] =
         sc.parallelize(files, files.length)
-          .map(uri => GeoTiffRasterSource(uri).reproject(targetCRS, method): RasterSource)
+          .map(uri => GeoTiffRasterSource(uri).reproject(targetCRS, method = method): RasterSource)
           .cache()
 
       val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
@@ -101,7 +101,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     // read sources
     val sourceRDD: RDD[RasterSource] =
       sc.parallelize(files, files.length)
-        .map(uri => GeoTiffRasterSource(uri).reproject(targetCRS, method): RasterSource)
+        .map(uri => GeoTiffRasterSource(uri).reproject(targetCRS, method = method): RasterSource)
         .cache()
 
     // collect raster summary

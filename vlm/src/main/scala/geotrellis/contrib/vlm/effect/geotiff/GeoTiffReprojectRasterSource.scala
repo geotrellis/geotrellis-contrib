@@ -36,12 +36,13 @@ import cats.instances.list._
 case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
   uri: String,
   targetCRS: CRS,
-  reprojectOptions: Reproject.Options = Reproject.Options.DEFAULT,
+  // dont pass reproject options, pass target grid and resample method
+  targetResampleGrid: Option[ResampleGrid[Long]] = None,
+  resampleMethod: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
+  errorThreshold: Double = 0.125,
   private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSourceF[F] {
-  def resampleMethod: Option[ResampleMethod] = Some(reprojectOptions.method)
-
   @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(GeoTiffReader.readMultiband(getByteReader(uri), streaming = true))
 
   lazy val crs: F[CRS] = Monad[F].pure(targetCRS)
@@ -51,13 +52,11 @@ case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
   protected lazy val transform = (baseCRS, crs).mapN((baseCRS, crs) => Transform(baseCRS, crs))
   protected lazy val backTransform = (crs, baseCRS).mapN((crs, baseCRS) => Transform(crs, baseCRS))
 
-  override lazy val gridExtent: F[GridExtent[Long]] = reprojectOptions.targetRasterExtent match {
-    case Some(targetRasterExtent) => Monad[F].pure(targetRasterExtent.toGridType[Long])
-    case None =>
-      (baseGridExtent, transform).mapN { (baseGridExtent, transform) =>
-        ReprojectRasterExtent(baseGridExtent, transform, reprojectOptions)
-      }
-
+  override lazy val gridExtent: F[GridExtent[Long]] = targetResampleGrid match {
+    case Some(targetRasterExtent) => baseGridExtent.map(targetRasterExtent(_))
+    case None => (baseGridExtent, transform).mapN {
+      ReprojectRasterExtent(_, _, Reproject.Options.DEFAULT.copy(method = resampleMethod, errorThreshold = errorThreshold))
+    }
   }
 
   lazy val resolutions: F[List[GridExtent[Long]]] =
@@ -67,10 +66,7 @@ case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
     }
 
   @transient private[vlm] lazy val closestTiffOverview: F[GeoTiff[MultibandTile]] = {
-    if (reprojectOptions.targetRasterExtent.isDefined
-      || reprojectOptions.parentGridExtent.isDefined
-      || reprojectOptions.targetCellSize.isDefined)
-    {
+    if(targetResampleGrid.isDefined) {
       (tiffF, backTransform, gridExtent).mapN { (tiff, backTransform, gridExtent) =>
         val estimatedSource = ReprojectRasterExtent(gridExtent, backTransform)
         tiff.getClosestOverview(estimatedSource.cellSize, strategy)
@@ -127,8 +123,8 @@ case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
               crs,
               targetRasterExtent,
               targetRasterExtent.extent.toPolygon,
-              reprojectOptions.method,
-              reprojectOptions.errorThreshold
+              resampleMethod,
+              errorThreshold
             )
           }.map {
             convertRaster
@@ -137,14 +133,19 @@ case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
       }
     }.flatten
 
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): F[RasterSourceF[F]] =
-    Monad[F].pure(GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, targetCellType))
+  def reproject(targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): GeoTiffReprojectRasterSource[F] =
+    GeoTiffReprojectRasterSource(uri, targetCRS, resampleGrid, method, strategy, targetCellType = targetCellType)
 
-  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): F[RasterSourceF[F]] =
-    this.gridExtent.map { gridExtent =>
-      GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions.copy(method = method, targetRasterExtent = Some(resampleGrid(gridExtent).toRasterExtent)), strategy, targetCellType)
-    }
+  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): GeoTiffReprojectRasterSource[F] =
+    GeoTiffReprojectRasterSource(
+      uri,
+      targetCRS,
+      Some(resampleGrid),
+      method,
+      strategy,
+      targetCellType = targetCellType
+    )
 
-  def convert(targetCellType: TargetCellType): F[RasterSourceF[F]] =
-    Monad[F].pure(GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, Some(targetCellType)))
+  def convert(targetCellType: TargetCellType): GeoTiffReprojectRasterSource[F] =
+    GeoTiffReprojectRasterSource(uri, targetCRS, targetResampleGrid, resampleMethod, strategy, targetCellType = Some(targetCellType))
 }

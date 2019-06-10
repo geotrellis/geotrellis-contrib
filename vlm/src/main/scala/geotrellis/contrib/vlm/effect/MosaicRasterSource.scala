@@ -23,8 +23,7 @@ import geotrellis.raster._
 import geotrellis.raster.resample._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.proj4.{CRS, WebMercator}
-import geotrellis.raster.io.geotiff.OverviewStrategy
-
+import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import cats._
 import cats.syntax.parallel._
 import cats.syntax.flatMap._
@@ -50,7 +49,7 @@ import spire.math.Integral
 abstract class MosaicRasterSource[F[_]: Monad: Par] extends RasterSourceF[F] {
   import MosaicRasterSource._
 
-  val sources: NonEmptyList[F[RasterSourceF[F]]]
+  val sources: NonEmptyList[RasterSourceF[F]]
   val crs: F[CRS]
   def gridExtent: F[GridExtent[Long]]
 
@@ -75,10 +74,10 @@ abstract class MosaicRasterSource[F[_]: Monad: Par] extends RasterSourceF[F] {
     * reads of all bands will fail. It is a client's responsibility to construct
     * mosaics that can be read.
     */
-  def bandCount: F[Int] = sources.head >>= (_.bandCount)
+  def bandCount: F[Int] = sources.head.bandCount
 
   def cellType: F[CellType] = {
-    val cellTypes = sources.parSequence >>= { _.map(_.cellType).sequence }
+    val cellTypes = sources.parTraverse(_.cellType)
     cellTypes >>= (_.tail.foldLeft(cellTypes.map(_.head)) { (l, r) => (l, Monad[F].pure(r)).mapN(_ union _) })
   }
 
@@ -88,7 +87,7 @@ abstract class MosaicRasterSource[F[_]: Monad: Par] extends RasterSourceF[F] {
     * @see [[geotrellis.contrib.vlm.RasterSource.resolutions]]
     */
   def resolutions: F[List[GridExtent[Long]]] = {
-    val resolutions: F[NonEmptyList[List[GridExtent[Long]]]] = sources.parSequence >>= (_.map(_.resolutions).parSequence)
+    val resolutions: F[NonEmptyList[List[GridExtent[Long]]]] = sources.parTraverse(_.resolutions)
     resolutions.map(_.reduce)
   }
 
@@ -97,30 +96,33 @@ abstract class MosaicRasterSource[F[_]: Monad: Par] extends RasterSourceF[F] {
     *
     * @see [[geotrellis.contrib.vlm.RasterSource.reproject]]
     */
-  def reproject(crs: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): F[RasterSourceF[F]] =
-    Monad[F].pure(MosaicRasterSource(
-      sources map { _ >>= (_.reproject(crs, reprojectOptions, strategy)) },
-      Monad[F].pure(crs),
-      (gridExtent, this.crs).mapN { (gridExtent, baseCRS) => gridExtent.reproject(baseCRS, crs, reprojectOptions) }
-    ))
+  def reproject(targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): MosaicRasterSource[F] =
+    MosaicRasterSource(
+      sources.map { _.reproject(targetCRS, resampleGrid, method, strategy) },
+      null, // crs,
+      {
+        // (gridExtent, this.crs).mapN { (gridExtent, baseCRS) => gridExtent.reproject(baseCRS, crs, reprojectOptions) }
+        null
+      }
+    )
 
   def read(extent: Extent, bands: Seq[Int]): F[Raster[MultibandTile]] =
-    sources.parTraverse { _ >>= { _.read(extent, bands) } }.map(_.reduce)
+    sources.parTraverse { _.read(extent, bands) }.map(_.reduce)
 
   def read(bounds: GridBounds[Long], bands: Seq[Int]): F[Raster[MultibandTile]] =
-    sources.parTraverse { _ >>= { _.read(bounds, bands) } }.map(_.reduce)
+    sources.parTraverse { _.read(bounds, bands) }.map(_.reduce)
 
-  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): F[RasterSourceF[F]] =
-    Monad[F].pure(MosaicRasterSource(
-      sources map { _ >>= (_.resample(resampleGrid, method, strategy)) },
-      crs
-    ))
+  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): MosaicRasterSource[F] =
+    MosaicRasterSource(
+      sources map { _.resample(resampleGrid, method, strategy) },
+      { crs; null }
+    )
 
-  def convert(targetCellType: TargetCellType): F[RasterSourceF[F]] =
-    Monad[F].pure(MosaicRasterSource(
-      sources map { _ >>= (_.convert(targetCellType)) },
-      crs
-    ))
+  def convert(targetCellType: TargetCellType): MosaicRasterSource[F] =
+    MosaicRasterSource(
+      sources map { _.convert(targetCellType) },
+      { crs; null }
+    )
 }
 
 object MosaicRasterSource {
@@ -153,32 +155,22 @@ object MosaicRasterSource {
       }
     }
 
-  def apply[F[_]: Monad: Par](sourcesList: NonEmptyList[F[RasterSourceF[F]]], sourcesCRS: F[CRS], sourcesGridExtent: F[GridExtent[Long]]) =
+  def apply[F[_]: Monad: Par](sourcesList: NonEmptyList[RasterSourceF[F]], sourcesCRS: CRS, sourcesGridExtent: GridExtent[Long]) =
     new MosaicRasterSource[F] {
-      val sources = sourcesList map { source =>
-        (source, gridExtent, sourcesCRS).mapN { (source, gridExtent, crs) =>
-          source.reprojectToGrid(crs, gridExtent)
-        }.flatten
-      }
-      val crs = sourcesCRS
-      def gridExtent: F[GridExtent[Long]] = sourcesGridExtent
+      val sources = sourcesList map { _.reprojectToGrid(sourcesCRS, sourcesGridExtent) }
+      val crs = Monad[F].pure(sourcesCRS)
+      def gridExtent: F[GridExtent[Long]] = Monad[F].pure(sourcesGridExtent)
     }
 
-  def apply[F[_]: Monad: Par](sourcesList: NonEmptyList[F[RasterSourceF[F]]], sourcesCRS: F[CRS]): MosaicRasterSource[F] =
+  def apply[F[_]: Monad: Par](sourcesList: NonEmptyList[RasterSourceF[F]], sourcesCRS: CRS): MosaicRasterSource[F] =
     new MosaicRasterSource[F] {
-      val sources = sourcesList map { source =>
-        (source, sourcesList.head.flatMap(_.gridExtent), sourcesCRS).mapN { (source, gridExtent, crs) =>
-          source.reprojectToGrid(crs, gridExtent)
-        }.flatten
-      }
-      val crs = sourcesCRS
+      val sources = sourcesList map { _.reprojectToGrid(sourcesCRS, null /*sourcesGridExtent*/) }
+      val crs = Monad[F].pure(sourcesCRS)
       def gridExtent: F[GridExtent[Long]] = {
         val reprojectedExtents =
-          sourcesList map { sourcef =>
-            sourcef >>= { source =>
-              (source.gridExtent, source.crs, sourcesCRS).mapN { (gridExtent, sourceCRS, targetCRS) =>
-                gridExtent.reproject(sourceCRS, targetCRS)
-              }
+          sourcesList map { source =>
+            (source.gridExtent, source.crs).mapN { (gridExtent, sourceCRS) =>
+              gridExtent.reproject(sourceCRS, sourcesCRS)
             }
           }
         val minCellSize =
@@ -198,14 +190,14 @@ object MosaicRasterSource {
 
   @SuppressWarnings(Array("TraversableHead", "TraversableTail"))
   def unsafeFromList[F[_]: Monad: Par](
-    sourcesList: List[F[RasterSourceF[F]]],
+    sourcesList: List[RasterSourceF[F]],
     sourcesCRS: CRS = WebMercator,
     sourcesGridExtent: Option[GridExtent[Long]]
   ): MosaicRasterSource[F] =
     new MosaicRasterSource[F] {
       val sources = NonEmptyList(sourcesList.head, sourcesList.tail)
       val crs = Monad[F].pure(sourcesCRS)
-      def gridExtent: F[GridExtent[Long]] = sourcesGridExtent.fold(sourcesList.head >>= (_.gridExtent))(Monad[F].pure)
+      def gridExtent: F[GridExtent[Long]] = sourcesGridExtent.fold(sourcesList.head.gridExtent)(Monad[F].pure)
     }
 }
 

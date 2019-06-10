@@ -17,7 +17,7 @@
 package geotrellis.contrib.vlm.geotiff
 
 import geotrellis.contrib.vlm._
-import geotrellis.vector._
+import geotrellis.vector.Extent
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.reproject.{Reproject, ReprojectRasterExtent}
@@ -55,11 +55,22 @@ case class GeoTiffResampleRasterSource(
   @transient protected lazy val closestTiffOverview: GeoTiff[MultibandTile] =
     tiff.getClosestOverview(gridExtent.cellSize, strategy)
 
-  def reprojection(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
-    new GeoTiffReprojectRasterSource(dataPath, targetCRS, reprojectOptions, strategy, targetCellType) {
-      override lazy val gridExtent: GridExtent[Long] = reprojectOptions.targetRasterExtent match {
-        case Some(targetRasterExtent) => targetRasterExtent.toGridType[Long]
-        case None => ReprojectRasterExtent(self.gridExtent, this.transform, this.reprojectOptions)
+  def reprojection(targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): GeoTiffReprojectRasterSource =
+    new GeoTiffReprojectRasterSource(uri, targetCRS, resampleGrid, method, strategy, targetCellType = targetCellType) {
+      override lazy val gridExtent: GridExtent[Long] = {
+        val reprojectedRasterExtent =
+          ReprojectRasterExtent(
+            baseGridExtent,
+            transform,
+            Reproject.Options.DEFAULT.copy(method = resampleMethod, errorThreshold = errorThreshold)
+          )
+
+        targetResampleGrid match {
+          case Some(targetRegion: TargetRegion[Long]) => targetRegion.region
+          case Some(targetGrid: TargetGrid[Long]) => targetGrid(reprojectedRasterExtent)
+          case Some(dimensions: Dimensions[Long]) => dimensions(reprojectedRasterExtent)
+          case _ => reprojectedRasterExtent
+        }
       }
     }
 

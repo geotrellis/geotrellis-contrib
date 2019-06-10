@@ -93,9 +93,9 @@ class GeotrellisResampleRasterSource(
       .flatMap(read(_, bands))
   }
 
-  def reprojection(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeotrellisReprojectRasterSource = {
-    val (closestLayerId, gridExtent) = GeotrellisReprojectRasterSource.getClosestSourceLayer(targetCRS, sourceLayers, reprojectOptions, strategy)
-    new GeotrellisReprojectRasterSource(attributeStore, dataPath, layerId, sourceLayers, gridExtent, targetCRS, reprojectOptions, targetCellType)
+  def reprojection(targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): GeotrellisReprojectRasterSource = {
+    val (closestLayerId, gridExtent) = GeotrellisReprojectRasterSource.getClosestSourceLayer(targetCRS, sourceLayers, null /*reprojectOptions*/, strategy)
+    new GeotrellisReprojectRasterSource(attributeStore, uri, layerId, sourceLayers, gridExtent, targetCRS, null /*reprojectOptions*/, targetCellType)
   }
   /** Resample underlying RasterSource to new grid extent
    * Note: ResampleGrid will be applied to GridExtent of the source layer, not the GridExtent of this RasterSource

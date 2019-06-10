@@ -20,7 +20,7 @@ import geotrellis.contrib.vlm._
 import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.{Auto, AutoHigherResolution, Base, OverviewStrategy}
 import geotrellis.raster.reproject.Reproject
-import geotrellis.raster.resample.ResampleMethod
+import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.raster.{MultibandTile, Tile, _}
 import geotrellis.spark.io._
 import geotrellis.spark.{LayerId, Metadata, SpatialKey, TileLayerMetadata}
@@ -91,17 +91,17 @@ class GeotrellisRasterSource(
   override def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
     bounds.toIterator.flatMap(_.intersection(this.gridBounds).flatMap(read(_, bands)))
 
-  def reprojection(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource = {
+  def reprojection(targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource = {
     if (targetCRS != this.crs) {
-      val (closestLayerId, targetGridExtent) = GeotrellisReprojectRasterSource.getClosestSourceLayer(targetCRS, sourceLayers, reprojectOptions, strategy)
-      new GeotrellisReprojectRasterSource(attributeStore, dataPath, closestLayerId, sourceLayers, targetGridExtent, targetCRS, reprojectOptions, targetCellType)
+      val (closestLayerId, targetGridExtent) = GeotrellisReprojectRasterSource.getClosestSourceLayer(targetCRS, sourceLayers, null /*reprojectOptions*/, strategy)
+      new GeotrellisReprojectRasterSource(attributeStore, uri, closestLayerId, sourceLayers, targetGridExtent, targetCRS, null /*reprojectOptions*/, targetCellType)
     } else {
       // TODO: add unit tests for this in particular, the behavior feels murky
-      ResampleGrid.fromReprojectOptions(reprojectOptions) match {
+      ResampleGrid.fromReprojectOptions(null/*reprojectOptions*/) match {
         case Some(resampleGrid) =>
           val resampledGridExtent = resampleGrid(this.gridExtent)
           val closestLayerId = GeotrellisRasterSource.getClosestResolution(sourceLayers.toList, resampledGridExtent.cellSize, strategy)(_.metadata.layout.cellSize).get.id
-          new GeotrellisResampleRasterSource(attributeStore, dataPath, closestLayerId, sourceLayers, resampledGridExtent, reprojectOptions.method, targetCellType)
+          new GeotrellisResampleRasterSource(attributeStore, uri, closestLayerId, sourceLayers, resampledGridExtent, null /*reprojectOptions.method*/, targetCellType)
         case None =>
           this // I think I was asked to do nothing
       }

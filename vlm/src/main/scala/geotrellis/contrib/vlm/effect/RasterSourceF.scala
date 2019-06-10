@@ -56,45 +56,33 @@ abstract class RasterSourceF[F[_]: Monad] extends Serializable {
       case None => None
     }
 
-  /** Reproject to different CRS with explicit sampling reprojectOptions.
-    * @see [[geotrellis.raster.reproject.Reproject]]
-    * @group reproject
-    */
-  def reproject(crs: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): F[RasterSourceF[F]]
-
-  /** Sampling grid is defined over the footprint of the data at default resolution
-    *
-    * When using this method the cell size in target CRS will be estimated such that
-    * each cell in target CRS has ''approximately'' the same geographic coverage as a cell in the source CRS.
-    *
-    * @group reproject
-    */
-  def reproject(crs: CRS, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): F[RasterSourceF[F]] =
-    reproject(crs, Reproject.Options(method = method), strategy)
+  def reproject(targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSourceF[F]
 
   /** Sampling grid and resolution is defined by given [[GridExtent]].
     * Resulting extent is the extent of the minimum enclosing pixel region
     *   of the data footprint in the target grid.
     * @group reproject a
     */
-  def reprojectToGrid(crs: CRS, grid: GridExtent[Long], method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): F[RasterSourceF[F]] =
-    reproject(crs, Reproject.Options(method = method, parentGridExtent = Some(grid)), strategy)
+  def reprojectToGrid(crs: CRS, grid: GridExtent[Long], method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSourceF[F] =
+    if (crs == this.crs && grid == this.gridExtent) this
+    else if (crs == this.crs) resampleToGrid(grid)
+    else reproject(crs, Some(TargetGrid[Long](grid)), method, strategy)
 
   /** Sampling grid and resolution is defined by given [[RasterExtent]] region.
     * The extent of the result is also taken from given [[RasterExtent]],
     *   this region may be larger or smaller than the footprint of the data
     * @group reproject
     */
-  def reprojectToRegion(crs: CRS, region: RasterExtent, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): F[RasterSourceF[F]] =
-    reproject(crs, Reproject.Options(method = method, targetRasterExtent = Some(region)), strategy)
+  def reprojectToRegion(crs: CRS, region: RasterExtent, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSourceF[F] =
+    reproject(crs, Some(TargetRegion[Long](region.toGridType[Long])), method, strategy)
 
 
-  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): F[RasterSourceF[F]]
+  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSourceF[F]
 
   /** Sampling grid is defined of the footprint of the data with resolution implied by column and row count.
     * @group resample
     */
-  def resample(targetCols: Long, targetRows: Long, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): F[RasterSourceF[F]] =
+  def resample(targetCols: Long, targetRows: Long, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSourceF[F] =
     resample(Dimensions(targetCols, targetRows), method, strategy)
 
   /** Sampling grid and resolution is defined by given [[GridExtent]].
@@ -102,7 +90,7 @@ abstract class RasterSourceF[F[_]: Monad] extends Serializable {
     *  of the data footprint in the target grid.
     * @group resample
     */
-  def resampleToGrid(grid: GridExtent[Long], method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): F[RasterSourceF[F]] =
+  def resampleToGrid(grid: GridExtent[Long], method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSourceF[F] =
     resample(TargetGrid[Long](grid), method, strategy)
 
   /** Sampling grid and resolution is defined by given [[RasterExtent]] region.
@@ -110,7 +98,7 @@ abstract class RasterSourceF[F[_]: Monad] extends Serializable {
     *   this region may be larger or smaller than the footprint of the data
     * @group resample
     */
-  def resampleToRegion(region: GridExtent[Long], method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): F[RasterSourceF[F]] =
+  def resampleToRegion(region: GridExtent[Long], method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSourceF[F] =
     resample(TargetRegion[Long](region), method, strategy)
 
   /** Reads a window for the extent.
@@ -187,7 +175,7 @@ abstract class RasterSourceF[F[_]: Monad] extends Serializable {
   def tileToLayout(layout: LayoutDefinition, resampleMethod: ResampleMethod = NearestNeighbor): F[LayoutTileSource] = ???
     // LayoutTileSource(resampleToGrid(layout, resampleMethod), layout)
 
-  def convert(targetCellType: TargetCellType): F[RasterSourceF[F]]
+  def convert(targetCellType: TargetCellType): RasterSourceF[F]
 
   /** Converts the values within the RasterSource from one [[CellType]] to another.
     *
@@ -197,7 +185,7 @@ abstract class RasterSourceF[F[_]: Monad] extends Serializable {
     *  Please see the convert docs for [[GDALRasterSource]] for more information.
     *  @group convert
     */
-  def convert(targetCellType: CellType): F[RasterSourceF[F]] =
+  def convert(targetCellType: CellType): RasterSourceF[F] =
     convert(ConvertTargetCellType(targetCellType))
 
   protected[vlm] lazy val convertRaster: Raster[MultibandTile] => Raster[MultibandTile] =

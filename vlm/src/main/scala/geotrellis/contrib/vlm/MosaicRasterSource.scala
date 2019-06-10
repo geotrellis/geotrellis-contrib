@@ -19,16 +19,14 @@ package geotrellis.contrib.vlm
 import cats.Semigroup
 import cats.implicits._
 import cats.data.NonEmptyList
+
 import geotrellis.vector._
 import geotrellis.raster._
-import geotrellis.raster.merge.Implicits._
 import geotrellis.raster.resample._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.proj4.{CRS, WebMercator}
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
-import geotrellis.raster.render._
-import geotrellis.spark.tiling.LayoutDefinition
-import geotrellis.util.GetComponent
+
 import spire.math.Integral
 
 /**
@@ -91,11 +89,11 @@ trait MosaicRasterSource extends RasterSource {
     *
     * @see [[geotrellis.contrib.vlm.RasterSource.reproject]]
     */
-  def reprojection(crs: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
+  def reprojection(targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
     MosaicRasterSource(
-      sources map { _.reproject(crs, reprojectOptions, strategy) },
+      sources map { _.reproject(targetCRS, resampleGrid, method, strategy) },
       crs,
-      gridExtent.reproject(this.crs, crs, reprojectOptions)
+      gridExtent.reproject(this.crs, targetCRS, Reproject.Options.DEFAULT.copy(method = method))
     )
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
@@ -151,14 +149,16 @@ object MosaicRasterSource {
       }
     }
 
-  def apply(_sources: NonEmptyList[RasterSource], _crs: CRS, _gridExtent: GridExtent[Long]) =
+  def apply(_sources: NonEmptyList[RasterSource], _crs: CRS, _gridExtent: GridExtent[Long]) = {
     new MosaicRasterSource {
       val sources = _sources map { _.reprojectToGrid(_crs, gridExtent) }
       val crs = _crs
+
       def gridExtent: GridExtent[Long] = _gridExtent
     }
+  }
 
-  def apply(_sources: NonEmptyList[RasterSource], _crs: CRS) =
+  def apply(_sources: NonEmptyList[RasterSource], _crs: CRS) = {
     new MosaicRasterSource {
       val sources = _sources map { _.reprojectToGrid(_crs, _sources.head.gridExtent) }
       val crs = _crs
@@ -177,6 +177,7 @@ object MosaicRasterSource {
         )
       }
     }
+  }
 
   @SuppressWarnings(Array("TraversableHead", "TraversableTail"))
   def unsafeFromList(_sources: List[RasterSource],
