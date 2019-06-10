@@ -23,7 +23,7 @@ import geotrellis.raster._
 import geotrellis.raster.io.geotiff._
 import geotrellis.raster.reproject.{Reproject, ReprojectRasterExtent}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
-import geotrellis.vector._
+import geotrellis.vector.Extent
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
 import cats._
@@ -63,10 +63,17 @@ case class GeoTiffResampleRasterSource[F[_]: Monad: UnsafeLift](
 
   def reproject(targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): GeoTiffReprojectRasterSource[F] =
     new GeoTiffReprojectRasterSource[F](uri, targetCRS, resampleGrid, method, strategy, targetCellType = targetCellType) {
-      override lazy val gridExtent: F[GridExtent[Long]] = targetResampleGrid match {
-        case Some(targetRasterExtent) => baseGridExtent.map(targetRasterExtent(_))
-        case None => (this.gridExtent, this.transform).mapN {
-          ReprojectRasterExtent(_, _, Reproject.Options.DEFAULT.copy(method = resampleMethod, errorThreshold = errorThreshold))
+      override lazy val gridExtent: F[GridExtent[Long]] = {
+        val reprojectedRasterExtent: F[GridExtent[Long]] =
+          (baseGridExtent, transform).mapN {
+            ReprojectRasterExtent(_, _, Reproject.Options.DEFAULT.copy(method = resampleMethod, errorThreshold = errorThreshold) )
+          }
+
+        targetResampleGrid match {
+          case Some(targetRegion: TargetRegion[Long]) => Monad[F].pure(targetRegion.region)
+          case Some(targetGrid: TargetGrid[Long]) => reprojectedRasterExtent.map(targetGrid(_))
+          case Some(dimensions: Dimensions[Long]) => reprojectedRasterExtent.map(dimensions(_))
+          case _ => reprojectedRasterExtent
         }
       }
     }

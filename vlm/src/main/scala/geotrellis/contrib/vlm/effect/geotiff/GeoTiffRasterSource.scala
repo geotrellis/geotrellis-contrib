@@ -21,7 +21,6 @@ import geotrellis.contrib.vlm.effect._
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
-import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader

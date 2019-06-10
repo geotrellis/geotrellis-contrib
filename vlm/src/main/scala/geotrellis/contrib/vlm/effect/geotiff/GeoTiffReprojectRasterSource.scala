@@ -20,10 +20,10 @@ import geotrellis.contrib.vlm._
 import geotrellis.contrib.vlm.effect._
 import geotrellis.proj4._
 import geotrellis.raster._
-import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiff, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
+import geotrellis.raster.io.geotiff._
 import geotrellis.raster.reproject._
 import geotrellis.raster.resample._
-import geotrellis.vector._
+import geotrellis.vector.Extent
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
 import cats._
@@ -36,7 +36,6 @@ import cats.instances.list._
 case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
   uri: String,
   targetCRS: CRS,
-  // dont pass reproject options, pass target grid and resample method
   targetResampleGrid: Option[ResampleGrid[Long]] = None,
   resampleMethod: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
@@ -52,10 +51,17 @@ case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
   protected lazy val transform = (baseCRS, crs).mapN((baseCRS, crs) => Transform(baseCRS, crs))
   protected lazy val backTransform = (crs, baseCRS).mapN((crs, baseCRS) => Transform(crs, baseCRS))
 
-  override lazy val gridExtent: F[GridExtent[Long]] = targetResampleGrid match {
-    case Some(targetRasterExtent) => baseGridExtent.map(targetRasterExtent(_))
-    case None => (baseGridExtent, transform).mapN {
-      ReprojectRasterExtent(_, _, Reproject.Options.DEFAULT.copy(method = resampleMethod, errorThreshold = errorThreshold))
+  override lazy val gridExtent: F[GridExtent[Long]] = {
+    lazy val reprojectedRasterExtent: F[GridExtent[Long]] =
+      (baseGridExtent, transform).mapN {
+        ReprojectRasterExtent(_, _, Reproject.Options.DEFAULT.copy(method = resampleMethod, errorThreshold = errorThreshold) )
+      }
+
+    targetResampleGrid match {
+      case Some(targetRegion: TargetRegion[Long]) => Monad[F].pure(targetRegion.region)
+      case Some(targetGrid: TargetGrid[Long]) => reprojectedRasterExtent.map(targetGrid(_))
+      case Some(dimensions: Dimensions[Long]) => reprojectedRasterExtent.map(dimensions(_))
+      case _ => reprojectedRasterExtent
     }
   }
 
