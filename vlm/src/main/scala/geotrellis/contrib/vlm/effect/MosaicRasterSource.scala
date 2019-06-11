@@ -152,31 +152,31 @@ object MosaicRasterSource {
       }
     }
 
-  def apply[F[_]: Monad: Par](sourcesList: F[NonEmptyList[RasterSourceF[F]]], sourcesCRS: F[CRS], sourcesGridExtent: F[GridExtent[Long]]) =
+  def apply[F[_]: Monad: Par](sourcesList: F[NonEmptyList[RasterSourceF[F]]], targetCRS: F[CRS], targetGridExtent: F[GridExtent[Long]]) =
     new MosaicRasterSource[F] {
-      val sources = (sourcesCRS, sourcesGridExtent).mapN { case (sourcesCRS, sourcesGridExtent) =>
-        sourcesList map { _.map(_.reprojectToGrid(sourcesCRS, sourcesGridExtent)) }
+      val sources = (targetCRS, targetGridExtent).mapN { case (targetCRS, targetGridExtent) =>
+        sourcesList map { _.map(_.reprojectToGrid(targetCRS, targetGridExtent)) }
       }.flatten
-      val crs = sourcesCRS
-      def gridExtent: F[GridExtent[Long]] = sourcesGridExtent
+      val crs = targetCRS
+      def gridExtent: F[GridExtent[Long]] = targetGridExtent
     }
 
-  def apply[F[_]: Monad: Par](sourcesList: F[NonEmptyList[RasterSourceF[F]]], sourcesCRS: F[CRS]): MosaicRasterSource[F] =
+  def apply[F[_]: Monad: Par](sourcesList: F[NonEmptyList[RasterSourceF[F]]], targetCRS: F[CRS]): MosaicRasterSource[F] =
     new MosaicRasterSource[F] {
       val sources = {
-        (sourcesList >>= (_.head.gridExtent), sourcesCRS).mapN { case (gridExtent, sourcesCRS) =>
+        (sourcesList >>= (_.head.gridExtent), targetCRS).mapN { case (gridExtent, targetCRS) =>
           sourcesList.map(_.map {
-            _.reprojectToGrid(sourcesCRS, gridExtent)
+            _.reprojectToGrid(targetCRS, gridExtent)
           })
         }.flatten
       }
-      val crs = sourcesCRS
+      val crs = targetCRS
 
       def gridExtent: F[GridExtent[Long]] = {
         val reprojectedExtents: F[NonEmptyList[GridExtent[Long]]] =
           sourcesList >>= { _.parTraverse(source =>
-            (source.gridExtent, source.crs, sourcesCRS).mapN { (gridExtent, sourceCRS, sourcesCRS) =>
-              gridExtent.reproject(sourceCRS, sourcesCRS)
+            (source.gridExtent, source.crs, targetCRS).mapN { (gridExtent, sourceCRS, targetCRS) =>
+              gridExtent.reproject(sourceCRS, targetCRS)
             }) }
         val minCellSize: F[CellSize] =
           reprojectedExtents
@@ -197,13 +197,13 @@ object MosaicRasterSource {
   @SuppressWarnings(Array("TraversableHead", "TraversableTail"))
   def unsafeFromList[F[_]: Monad: Par](
     sourcesList: List[RasterSourceF[F]],
-    sourcesCRS: CRS = WebMercator,
-    sourcesGridExtent: Option[GridExtent[Long]]
+    targetCRS: CRS = WebMercator,
+    targetGridExtent: Option[GridExtent[Long]]
   ): MosaicRasterSource[F] =
     new MosaicRasterSource[F] {
       val sources = Monad[F].pure(NonEmptyList(sourcesList.head, sourcesList.tail))
-      val crs = Monad[F].pure(sourcesCRS)
-      def gridExtent: F[GridExtent[Long]] = sourcesGridExtent.fold(sourcesList.head.gridExtent)(Monad[F].pure)
+      val crs = Monad[F].pure(targetCRS)
+      def gridExtent: F[GridExtent[Long]] = targetGridExtent.fold(sourcesList.head.gridExtent)(Monad[F].pure)
     }
 }
 

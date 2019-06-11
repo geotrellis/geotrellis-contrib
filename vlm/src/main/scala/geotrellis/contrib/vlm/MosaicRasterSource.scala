@@ -148,22 +148,22 @@ object MosaicRasterSource {
       }
     }
 
-  def apply(_sources: NonEmptyList[RasterSource], _crs: CRS, _gridExtent: GridExtent[Long]) = {
+  def apply(sourcesList: NonEmptyList[RasterSource], targetCRS: CRS, targetGridExtent: GridExtent[Long]) = {
     new MosaicRasterSource {
-      val sources = _sources map { _.reprojectToGrid(_crs, gridExtent) }
-      val crs = _crs
+      val sources = sourcesList map { _.reprojectToGrid(targetCRS, gridExtent) }
+      val crs = targetCRS
 
-      def gridExtent: GridExtent[Long] = _gridExtent
+      def gridExtent: GridExtent[Long] = targetGridExtent
     }
   }
 
-  def apply(_sources: NonEmptyList[RasterSource], _crs: CRS) = {
+  def apply(sourcesList: NonEmptyList[RasterSource], targetCRS: CRS) = {
     new MosaicRasterSource {
-      val sources = _sources map { _.reprojectToGrid(_crs, _sources.head.gridExtent) }
-      val crs = _crs
+      val sources = sourcesList map { _.reprojectToGrid(targetCRS, sourcesList.head.gridExtent) }
+      val crs = targetCRS
       def gridExtent: GridExtent[Long] = {
         val reprojectedExtents =
-          _sources map { source => source.gridExtent.reproject(source.crs, _crs) }
+          sourcesList map { source => source.gridExtent.reproject(source.crs, targetCRS) }
         val minCellSize: CellSize = reprojectedExtents.toList map { rasterExtent =>
           CellSize(rasterExtent.cellwidth, rasterExtent.cellheight)
         } minBy { _.resolution }
@@ -177,12 +177,12 @@ object MosaicRasterSource {
   }
 
   @SuppressWarnings(Array("TraversableHead", "TraversableTail"))
-  def unsafeFromList(_sources: List[RasterSource],
-                     _crs: CRS = WebMercator,
-                     _gridExtent: Option[GridExtent[Long]]) =
+  def unsafeFromList(sourcesList: List[RasterSource],
+                     targetCRS: CRS = WebMercator,
+                     targetGridExtent: Option[GridExtent[Long]]) =
     new MosaicRasterSource {
-      val sources = NonEmptyList(_sources.head, _sources.tail)
-      val crs = _crs
-      def gridExtent: GridExtent[Long] = _gridExtent getOrElse { _sources.head.gridExtent}
+      val sources = NonEmptyList(sourcesList.head, sourcesList.tail)
+      val crs = targetCRS
+      def gridExtent: GridExtent[Long] = targetGridExtent getOrElse { sourcesList.head.gridExtent}
     }
 }
