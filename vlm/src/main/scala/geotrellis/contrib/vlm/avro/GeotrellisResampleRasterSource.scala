@@ -37,7 +37,7 @@ import com.typesafe.scalalogging.LazyLogging
  * It is expected that the caller has significant pre-computed information  about the layers.
  *
  * @param attributeStore the source of metadata for the layers, used for reading
- * @param uri URI of the GeoTrellis catalog that can be read by AttributeStore
+ * @param dataPath dataPath of the GeoTrellis catalog that can format a given path to be read in by a AttributeStore
  * @param layerId The specific layer we're sampling from
  * @param sourceLayers list of layers we can can sample from for futher resample
  * @param gridExtent the desired pixel grid for the layer

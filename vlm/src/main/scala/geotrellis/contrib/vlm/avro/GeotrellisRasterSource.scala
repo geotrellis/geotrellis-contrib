@@ -35,7 +35,7 @@ case class Layer(id: LayerId, metadata: TileLayerMetadata[SpatialKey], bandCount
   * Note: GeoTrellis AttributeStore does not store the band count for the layers by default,
   *       thus they need to be provided from application configuration.
   *
-  * @param uri geotrellis catalog uri
+  * @param dataPath geotrellis catalog DataPath
   * @param layerId source layer from above catalog
   * @param bandCount number of bands for each tile in above layer
   */
