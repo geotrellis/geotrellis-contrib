@@ -42,7 +42,7 @@ import geotrellis.util.GetComponent
   * @groupprio reproject 2
   */
 trait RasterSource extends CellGrid[Long] with Serializable {
-  def uri: String
+  def dataPath: DataPath
   def crs: CRS
   def bandCount: Int
   def cellType: CellType

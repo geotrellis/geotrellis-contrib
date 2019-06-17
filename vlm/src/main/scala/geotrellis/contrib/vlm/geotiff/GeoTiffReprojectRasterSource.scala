@@ -26,7 +26,7 @@ import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiff, GeoTiffMulti
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
 case class GeoTiffReprojectRasterSource(
-  uri: String,
+  dataPath: GeoTiffDataPath,
   crs: CRS,
   reprojectOptions: Reproject.Options = Reproject.Options.DEFAULT,
   strategy: OverviewStrategy = AutoHigherResolution,
@@ -35,7 +35,7 @@ case class GeoTiffReprojectRasterSource(
   def resampleMethod: Option[ResampleMethod] = Some(reprojectOptions.method)
 
   @transient lazy val tiff: MultibandGeoTiff =
-    GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
+    GeoTiffReader.readMultiband(getByteReader(dataPath.toString), streaming = true)
 
   protected lazy val baseCRS: CRS = tiff.crs
   protected lazy val baseGridExtent: GridExtent[Long] = tiff.rasterExtent.toGridType[Long]
@@ -118,11 +118,16 @@ case class GeoTiffReprojectRasterSource(
   }
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, targetCellType)
+    GeoTiffReprojectRasterSource(dataPath, targetCRS, reprojectOptions, strategy, targetCellType)
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GeoTiffReprojectRasterSource(uri, crs, reprojectOptions.copy(method = method, targetRasterExtent = Some(resampleGrid(self.gridExtent).toRasterExtent)), strategy, targetCellType)
+    GeoTiffReprojectRasterSource(dataPath, crs, reprojectOptions.copy(method = method, targetRasterExtent = Some(resampleGrid(self.gridExtent).toRasterExtent)), strategy, targetCellType)
 
   def convert(targetCellType: TargetCellType): RasterSource =
-    GeoTiffReprojectRasterSource(uri, crs, reprojectOptions, strategy, Some(targetCellType))
+    GeoTiffReprojectRasterSource(dataPath, crs, reprojectOptions, strategy, Some(targetCellType))
+}
+
+object GeoTiffReprojectRasterSource {
+  def apply(path: String, crs: CRS): GeoTiffReprojectRasterSource =
+    GeoTiffReprojectRasterSource(GeoTiffDataPath(path), crs)
 }

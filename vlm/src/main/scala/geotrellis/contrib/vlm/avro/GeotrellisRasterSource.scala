@@ -41,24 +41,24 @@ case class Layer(id: LayerId, metadata: TileLayerMetadata[SpatialKey], bandCount
   */
 class GeotrellisRasterSource(
   val attributeStore: AttributeStore,
-  val uri: String,
+  val dataPath: GeoTrellisDataPath,
   val layerId: LayerId,
   val sourceLayers: Stream[Layer],
   val bandCount: Int,
   val targetCellType: Option[TargetCellType]
 ) extends RasterSource {
 
-  def this(attributeStore: AttributeStore, uri: String, layerId: LayerId, bandCount: Int) =
-    this(attributeStore, uri, layerId, GeotrellisRasterSource.getSourceLayersByName(attributeStore, layerId.name, bandCount), bandCount, None)
+  def this(attributeStore: AttributeStore, dataPath: GeoTrellisDataPath, layerId: LayerId, bandCount: Int) =
+    this(attributeStore, dataPath, layerId, GeotrellisRasterSource.getSouceLayersByName(attributeStore, layerId.name, bandCount), bandCount, None)
 
-  def this(uri: String, layerId: LayerId, bandCount: Int) =
-    this(AttributeStore(uri), uri, layerId, bandCount)
+  def this(dataPath: GeoTrellisDataPath, layerId: LayerId, bandCount: Int) =
+    this(AttributeStore(dataPath.toString), dataPath, layerId, bandCount)
 
-  def this(uri: String, layerId: LayerId) =
-    this(AttributeStore(uri), uri, layerId, bandCount = 1)
+  def this(dataPath: GeoTrellisDataPath, layerId: LayerId) =
+    this(AttributeStore(dataPath.toString), dataPath, layerId, bandCount = 1)
 
 
-  lazy val reader = CollectionLayerReader(attributeStore, uri)
+  lazy val reader = CollectionLayerReader(attributeStore, dataPath.toString)
 
   // read metadata directly instead of searching sourceLayers to avoid unneeded reads
   lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
@@ -92,14 +92,14 @@ class GeotrellisRasterSource(
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource = {
     if (targetCRS != this.crs) {
       val (closestLayerId, targetGridExtent) = GeotrellisReprojectRasterSource.getClosestSourceLayer(targetCRS, sourceLayers, reprojectOptions, strategy)
-      new GeotrellisReprojectRasterSource(attributeStore, uri, closestLayerId, sourceLayers, targetGridExtent, targetCRS, reprojectOptions, targetCellType)
+      new GeotrellisReprojectRasterSource(attributeStore, dataPath, closestLayerId, sourceLayers, targetGridExtent, targetCRS, reprojectOptions, targetCellType)
     } else {
       // TODO: add unit tests for this in particular, the behavior feels murky
       ResampleGrid.fromReprojectOptions(reprojectOptions) match {
         case Some(resampleGrid) =>
           val resampledGridExtent = resampleGrid(this.gridExtent)
           val closestLayerId = GeotrellisRasterSource.getClosestResolution(sourceLayers.toList, resampledGridExtent.cellSize, strategy)(_.metadata.layout.cellSize).get.id
-          new GeotrellisResampleRasterSource(attributeStore, uri, closestLayerId, sourceLayers, resampledGridExtent, reprojectOptions.method, targetCellType)
+          new GeotrellisResampleRasterSource(attributeStore, dataPath, closestLayerId, sourceLayers, resampledGridExtent, reprojectOptions.method, targetCellType)
         case None =>
           this // I think I was asked to do nothing
       }
@@ -109,14 +109,14 @@ class GeotrellisRasterSource(
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
     val resampledGridExtent = resampleGrid(this.gridExtent)
     val closestLayerId = GeotrellisRasterSource.getClosestResolution(sourceLayers.toList, resampledGridExtent.cellSize, strategy)(_.metadata.layout.cellSize).get.id
-    new GeotrellisResampleRasterSource(attributeStore, uri, closestLayerId, sourceLayers, resampledGridExtent, method, targetCellType)
+    new GeotrellisResampleRasterSource(attributeStore, dataPath, closestLayerId, sourceLayers, resampledGridExtent, method, targetCellType)
   }
 
   def convert(targetCellType: TargetCellType): RasterSource =
-    new GeotrellisRasterSource(attributeStore, uri, layerId, sourceLayers, bandCount, Some(targetCellType))
+    new GeotrellisRasterSource(attributeStore, dataPath, layerId, sourceLayers, bandCount, Some(targetCellType))
 
   override def toString: String =
-    s"GeoTrellisRasterSource($uri,$layerId)"
+    s"GeoTrellisRasterSource($dataPath,$layerId)"
 }
 
 

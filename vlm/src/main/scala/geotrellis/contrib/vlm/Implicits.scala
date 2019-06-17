@@ -22,6 +22,8 @@ import geotrellis.raster.reproject.Reproject.Options
 import geotrellis.raster.reproject.ReprojectRasterExtent
 
 trait Implicits extends Serializable {
+  implicit def toString(dataPath: DataPath): String = dataPath.toString
+
   implicit class gridExtentMethods[N: spire.math.Integral](self: GridExtent[N]) {
     def reproject(src: CRS, dest: CRS, options: Options): GridExtent[N] =
       if(src == dest) self

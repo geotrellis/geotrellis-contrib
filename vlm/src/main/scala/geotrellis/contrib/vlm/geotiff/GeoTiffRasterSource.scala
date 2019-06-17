@@ -26,13 +26,13 @@ import geotrellis.raster.io.geotiff.{GeoTiffMultibandTile, MultibandGeoTiff, Ove
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
 case class GeoTiffRasterSource(
-  uri: String,
+  dataPath: GeoTiffDataPath,
   private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource {
   def resampleMethod: Option[ResampleMethod] = None
 
   @transient lazy val tiff: MultibandGeoTiff =
-    GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
+    GeoTiffReader.readMultiband(getByteReader(dataPath.toString), streaming = true)
 
   lazy val gridExtent: GridExtent[Long] = tiff.rasterExtent.toGridType[Long]
   lazy val resolutions: List[GridExtent[Long]] = gridExtent :: tiff.overviews.map(_.rasterExtent.toGridType[Long])
@@ -42,13 +42,13 @@ case class GeoTiffRasterSource(
   def cellType: CellType = dstCellType.getOrElse(tiff.cellType)
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
-    GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, targetCellType)
+    GeoTiffReprojectRasterSource(dataPath, targetCRS, reprojectOptions, strategy, targetCellType)
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): GeoTiffResampleRasterSource =
-    GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, targetCellType)
+    GeoTiffResampleRasterSource(dataPath, resampleGrid, method, strategy, targetCellType)
 
   def convert(targetCellType: TargetCellType): GeoTiffRasterSource =
-    GeoTiffRasterSource(uri, Some(targetCellType))
+    GeoTiffRasterSource(dataPath, Some(targetCellType))
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = gridExtent.gridBoundsFor(extent, clamp = false).toGridType[Int]
@@ -80,4 +80,9 @@ case class GeoTiffRasterSource(
       convertRaster(Raster(tile, gridExtent.extentFor(gb.toGridType[Long], clamp = true)))
     }
   }
+}
+
+object GeoTiffRasterSource {
+  def apply(path: String): GeoTiffRasterSource =
+    GeoTiffRasterSource(GeoTiffDataPath(path))
 }

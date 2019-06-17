@@ -32,7 +32,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
 
   describe("Should collect GeoTiffRasterSource RasterSummary correct") {
     it("should collect summary for a raw source") {
-      val inputPath = Resource.path("img/aspect-tiled.tif")
+      val inputPath = GeoTiffDataPath(Resource.path("img/aspect-tiled.tif"))
       val files = inputPath :: Nil
 
       val sourceRDD: RDD[RasterSource] =
@@ -52,7 +52,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     }
 
     it("should collect summary for a tiled to layout source") {
-      val inputPath = Resource.path("img/aspect-tiled.tif")
+      val inputPath = GeoTiffDataPath(Resource.path("img/aspect-tiled.tif"))
       val files = inputPath :: Nil
       val targetCRS = WebMercator
       val method = Bilinear
@@ -92,7 +92,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
   }
 
   it("should create ContextRDD from RDD of GeoTiffRasterSources") {
-    val inputPath = Resource.path("img/aspect-tiled.tif")
+    val inputPath = GeoTiffDataPath(Resource.path("img/aspect-tiled.tif"))
     val files = inputPath :: Nil
     val targetCRS = WebMercator
     val method = Bilinear

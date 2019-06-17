@@ -45,7 +45,7 @@ object TestCatalog {
     // Create the writer that we will use to store the tiles in the local catalog.
     val writer = FileLayerWriter(attributeStore)
 
-    val rs = GeoTiffRasterSource(TestCatalog.filePath)
+    val rs = GeoTiffRasterSource(GeoTiffDataPath(TestCatalog.filePath))
     rs.resolutions.sortBy(_.cellSize.resolution).zipWithIndex.foreach { case (rasterExtent, index) =>
       val layout = LayoutDefinition(rasterExtent, tileSize = 256)
 
@@ -68,7 +68,7 @@ object TestCatalog {
     // Create the writer that we will use to store the tiles in the local catalog.
     val writer = FileLayerWriter(attributeStore)
 
-    val rs = GeoTiffRasterSource(TestCatalog.filePath)
+    val rs = GeoTiffRasterSource(GeoTiffDataPath(TestCatalog.filePath))
     rs.resolutions.sortBy(_.cellSize.resolution).zipWithIndex.foreach { case (rasterExtent, index) =>
       val layout = LayoutDefinition(rasterExtent, tileSize = 256)
 

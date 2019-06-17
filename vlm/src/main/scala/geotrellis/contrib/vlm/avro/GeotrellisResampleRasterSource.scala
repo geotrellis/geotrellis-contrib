@@ -46,7 +46,7 @@ import com.typesafe.scalalogging.LazyLogging
  */
 class GeotrellisResampleRasterSource(
   val attributeStore: AttributeStore,
-  val uri: String,
+  val dataPath: GeoTrellisDataPath,
   val layerId: LayerId,
   val sourceLayers: Stream[Layer],
   val gridExtent: GridExtent[Long],
@@ -54,7 +54,7 @@ class GeotrellisResampleRasterSource(
   val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource with LazyLogging { self =>
 
-  lazy val reader = CollectionLayerReader(attributeStore, uri)
+  lazy val reader = CollectionLayerReader(attributeStore, dataPath.toString)
 
   /** Source layer metadata  that needs to be resampled */
   lazy val sourceLayer: Layer = sourceLayers.find(_.id == layerId).get
@@ -72,7 +72,7 @@ class GeotrellisResampleRasterSource(
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val tileBounds = sourceLayer.metadata.mapTransform.extentToBounds(extent)
-    def msg = s"\u001b[32mread($extent)\u001b[0m = $uri ${sourceLayer.id} ${sourceLayer.metadata.cellSize} @ ${sourceLayer.metadata.crs} TO $cellSize -- reading ${tileBounds.size} tiles"
+    def msg = s"\u001b[32mread($extent)\u001b[0m = ${dataPath.toString} ${sourceLayer.id} ${sourceLayer.metadata.cellSize} @ ${sourceLayer.metadata.crs} TO $cellSize -- reading ${tileBounds.size} tiles"
     if (tileBounds.size < 1024) // Assuming 256x256 tiles this would be a very large request
       logger.debug(msg)
     else
@@ -95,7 +95,7 @@ class GeotrellisResampleRasterSource(
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeotrellisReprojectRasterSource = {
     val (closestLayerId, gridExtent) = GeotrellisReprojectRasterSource.getClosestSourceLayer(targetCRS, sourceLayers, reprojectOptions, strategy)
-    new GeotrellisReprojectRasterSource(attributeStore, uri, layerId, sourceLayers, gridExtent, targetCRS, reprojectOptions, targetCellType)
+    new GeotrellisReprojectRasterSource(attributeStore, dataPath, layerId, sourceLayers, gridExtent, targetCRS, reprojectOptions, targetCellType)
   }
   /** Resample underlying RasterSource to new grid extent
    * Note: ResampleGrid will be applied to GridExtent of the source layer, not the GridExtent of this RasterSource
@@ -104,11 +104,11 @@ class GeotrellisResampleRasterSource(
     val resampledGridExtent = resampleGrid(this.gridExtent)
     val closestLayer = GeotrellisRasterSource.getClosestResolution(sourceLayers.toSeq, resampledGridExtent.cellSize, strategy)(_.metadata.layout.cellSize).get
     // TODO: if closestLayer is w/in some marging of desired CellSize, return GeoTrellisRasterSource instead
-    new GeotrellisResampleRasterSource(attributeStore, uri, closestLayer.id, sourceLayers, resampledGridExtent, method, targetCellType)
+    new GeotrellisResampleRasterSource(attributeStore, dataPath, closestLayer.id, sourceLayers, resampledGridExtent, method, targetCellType)
   }
 
   def convert(targetCellType: TargetCellType): GeotrellisResampleRasterSource = {
-    new GeotrellisResampleRasterSource(attributeStore, uri, layerId, sourceLayers, gridExtent, resampleMethod, Some(targetCellType))
+    new GeotrellisResampleRasterSource(attributeStore, dataPath, layerId, sourceLayers, gridExtent, resampleMethod, Some(targetCellType))
   }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
@@ -118,5 +118,5 @@ class GeotrellisResampleRasterSource(
     bounds.toIterator.flatMap(_.intersection(this.gridBounds).flatMap(read(_, bands)))
 
   override def toString: String =
-    s"GeoTrellisResampleRasterSource($uri,$layerId,$gridExtent,$resampleMethod)"
+    s"GeoTrellisResampleRasterSource(${dataPath.toString},$layerId,$gridExtent,$resampleMethod)"
 }
