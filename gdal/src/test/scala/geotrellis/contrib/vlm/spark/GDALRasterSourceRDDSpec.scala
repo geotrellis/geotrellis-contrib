@@ -32,7 +32,6 @@ import com.azavea.gdal.GDALWarp
 import cats.effect.{ContextShift, IO}
 import cats.implicits._
 import spire.syntax.cfor._
-import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
 import org.scalatest.Inspectors._
 import org.scalatest._

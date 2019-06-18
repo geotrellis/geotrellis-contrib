@@ -127,6 +127,11 @@ class GeotrellisRasterSource(
 
 
 object GeotrellisRasterSource {
+  // stable identifiers to match in a readTiles function
+  private val SpatialKeyClass    = classOf[SpatialKey]
+  private val TileClass          = classOf[Tile]
+  private val MultibandTileClass = classOf[MultibandTile]
+
   def getClosestResolution[T](
     grids: Seq[T],
     cellSize: CellSize,
@@ -166,8 +171,8 @@ object GeotrellisRasterSource {
 
   def readTiles(reader: CollectionLayerReader[LayerId], layerId: LayerId, extent: Extent, bands: Seq[Int]): Seq[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]] = {
     val header = reader.attributeStore.readHeader[LayerHeader](layerId)
-    (header.keyClass, header.valueClass) match {
-      case ("geotrellis.layer.SpatialKey", "geotrellis.raster.Tile") => {
+    (Class.forName(header.keyClass), Class.forName(header.valueClass)) match {
+      case (SpatialKeyClass, TileClass) =>
         reader.query[SpatialKey, Tile, TileLayerMetadata[SpatialKey]](layerId)
           .where(Intersects(extent))
           .result
@@ -175,15 +180,13 @@ object GeotrellisRasterSource {
             // Convert single band tiles to multiband
             tiles.map{ case(key, tile) => (key, MultibandTile(tile)) }
           )
-      }
-      case ("geotrellis.layer.SpatialKey", "geotrellis.raster.MultibandTile") => {
+      case (SpatialKeyClass, MultibandTileClass) =>
         reader.query[SpatialKey, MultibandTile, TileLayerMetadata[SpatialKey]](layerId)
           .where(Intersects(extent))
           .result
           .withContext(tiles =>
             tiles.map{ case(key, tile) => (key, tile.subsetBands(bands)) }
           )
-      }
       case _ =>
         throw new Exception(s"Unable to read single or multiband tiles from file: ${(header.keyClass, header.valueClass)}")
     }

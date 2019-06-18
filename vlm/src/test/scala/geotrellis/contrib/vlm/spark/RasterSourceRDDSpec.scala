@@ -27,7 +27,6 @@ import geotrellis.spark.store.hadoop._
 import geotrellis.store.hadoop._
 import geotrellis.spark.testkit._
 
-import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
 import org.scalatest.Inspectors._
 import org.scalatest._

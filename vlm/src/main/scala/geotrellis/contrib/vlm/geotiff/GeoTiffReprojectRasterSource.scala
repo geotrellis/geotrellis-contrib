@@ -17,7 +17,7 @@
 package geotrellis.contrib.vlm.geotiff
 
 import geotrellis.contrib.vlm._
-import geotrellis.vector.{Extent}
+import geotrellis.vector.Extent
 import geotrellis.raster._
 import geotrellis.raster.reproject._
 import geotrellis.raster.resample._
