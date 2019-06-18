@@ -23,7 +23,7 @@ import geotrellis.raster._
 import geotrellis.raster.resample.Bilinear
 import geotrellis.spark._
 import geotrellis.spark.testkit._
-import geotrellis.spark.tiling._
+import geotrellis.layer._
 
 import org.apache.spark.rdd._
 import org.scalatest._

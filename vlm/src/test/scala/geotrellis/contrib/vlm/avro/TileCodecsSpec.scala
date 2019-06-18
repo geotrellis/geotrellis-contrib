@@ -19,7 +19,7 @@ package geotrellis.contrib.vlm.avro
 import geotrellis.contrib.vlm.{BetterRasterMatchers, PaddedTile}
 import geotrellis.raster.testkit.RasterMatchers
 import geotrellis.raster.{ByteArrayTile, MultibandTile, Tile}
-import geotrellis.spark.io.avro.AvroRecordCodec
+import geotrellis.store.avro.AvroRecordCodec
 
 import org.scalatest._
 

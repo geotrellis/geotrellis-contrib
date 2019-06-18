@@ -18,7 +18,7 @@ package geotrellis.contrib.vlm
 
 import geotrellis.proj4.CRS
 import geotrellis.raster.CellSize
-import geotrellis.spark.tiling.{FloatingLayoutScheme, LayoutDefinition, LayoutLevel, ZoomedLayoutScheme}
+import geotrellis.layer.{FloatingLayoutScheme, LayoutDefinition, LayoutLevel, ZoomedLayoutScheme}
 import geotrellis.vector.Extent
 
 /** Strategy for selecting LayoutScheme before metadata is collected */
@@ -31,7 +31,7 @@ sealed trait LayoutType {
     layoutDefinitionWithZoom(crs, extent, cellSize)._1
 }
 
-/** @see [[geotrellis.spark.tiling.ZoomedLayoutScheme]] */
+/** @see [[geotrellis.layer.ZoomedLayoutScheme]] */
 case class GlobalLayout(tileSize: Int, zoom: Int, threshold: Double)  extends LayoutType {
   def layoutDefinitionWithZoom(crs: CRS, extent: Extent, cellSize: CellSize) = {
     val scheme = new ZoomedLayoutScheme(crs, tileSize, threshold)
@@ -45,7 +45,7 @@ case class GlobalLayout(tileSize: Int, zoom: Int, threshold: Double)  extends La
   }
 }
 
-/** @see [[geotrellis.spark.tiling.FloatingLayoutScheme]] */
+/** @see [[geotrellis.layer.FloatingLayoutScheme]] */
 case class LocalLayout(tileCols: Int, tileRows: Int) extends LayoutType {
   def layoutDefinitionWithZoom(crs: CRS, extent: Extent, cellSize: CellSize) = {
     val scheme = new FloatingLayoutScheme(tileCols, tileRows)

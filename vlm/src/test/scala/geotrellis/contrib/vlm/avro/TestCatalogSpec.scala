@@ -18,10 +18,10 @@ package geotrellis.contrib.vlm.avro
 
 import geotrellis.contrib.vlm.geotiff._
 
-import geotrellis.spark.io.{ValueReader, CollectionLayerReader}
+import geotrellis.store.{ValueReader, CollectionLayerReader}
 import geotrellis.raster.{Tile, MultibandTile}
-import geotrellis.spark._
-import geotrellis.spark.io._
+import geotrellis.store._
+import geotrellis.layer._
 
 import java.io.File
 import org.scalatest.FunSpec

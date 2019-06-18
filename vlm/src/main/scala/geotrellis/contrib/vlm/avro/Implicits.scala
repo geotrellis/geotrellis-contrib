@@ -18,8 +18,8 @@ package geotrellis.contrib.vlm.avro
 
 import geotrellis.contrib.vlm.PaddedTile
 import geotrellis.raster.{ArrayMultibandTile, MultibandTile, Tile}
-import geotrellis.spark.io.avro._
-import geotrellis.spark.io.avro.codecs.Implicits._
+import geotrellis.store.avro._
+import geotrellis.store.avro.codecs.Implicits._
 import geotrellis.vector.Extent
 
 import org.apache.avro._
@@ -37,7 +37,7 @@ trait Implicits extends Serializable {
     def schema = SchemaBuilder
       .record("PaddedTile").namespace("geotrellis.contrib.vlm")
       .fields()
-      .name("chunk").`type`(geotrellis.spark.io.tileUnionCodec.schema).noDefault()
+      .name("chunk").`type`(geotrellis.store.tileUnionCodec.schema).noDefault()
       .name("colOffset").`type`().intType().noDefault()
       .name("rowOffset").`type`().intType().noDefault()
       .name("cols").`type`().intType().noDefault()
@@ -45,7 +45,7 @@ trait Implicits extends Serializable {
       .endRecord()
 
     def encode(tile: PaddedTile, rec: GenericRecord) = {
-      rec.put("chunk", geotrellis.spark.io.tileUnionCodec.encode(tile.chunk))
+      rec.put("chunk", geotrellis.store.tileUnionCodec.encode(tile.chunk))
       rec.put("colOffset", tile.colOffset)
       rec.put("rowOffset", tile.rowOffset)
       rec.put("cols", tile.cols)
@@ -53,7 +53,7 @@ trait Implicits extends Serializable {
     }
 
     def decode(rec: GenericRecord) = {
-      val chunk     = geotrellis.spark.io.tileUnionCodec.decode(rec[GenericRecord]("chunk"))
+      val chunk     = geotrellis.store.tileUnionCodec.decode(rec[GenericRecord]("chunk"))
       val colOffset = rec[Int]("colOffset")
       val rowOffset = rec[Int]("rowOffset")
       val cols      = rec[Int]("cols")

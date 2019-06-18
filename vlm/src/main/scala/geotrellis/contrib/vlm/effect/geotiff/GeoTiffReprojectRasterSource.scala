@@ -25,6 +25,7 @@ import geotrellis.raster.reproject._
 import geotrellis.raster.resample._
 import geotrellis.vector.Extent
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
+import geotrellis.util.RangeReader
 
 import cats._
 import cats.syntax.flatMap._
@@ -42,7 +43,7 @@ case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
   errorThreshold: Double = 0.125,
   private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSourceF[F] {
-  @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(GeoTiffReader.readMultiband(getByteReader(uri), streaming = true))
+  @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(GeoTiffReader.readMultiband(RangeReader(uri), streaming = true))
 
   lazy val crs: F[CRS] = Monad[F].pure(targetCRS)
   protected lazy val baseCRS: F[CRS] = tiffF.map(_.crs)

@@ -24,6 +24,7 @@ import geotrellis.raster.testkit._
 import geotrellis.vector._
 import geotrellis.spark._
 import geotrellis.spark.tiling._
+import geotrellis.layer._
 import geotrellis.util._
 
 import org.scalatest._

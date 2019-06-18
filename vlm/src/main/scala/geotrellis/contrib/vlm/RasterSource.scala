@@ -19,10 +19,9 @@ package geotrellis.contrib.vlm
 import geotrellis.vector._
 import geotrellis.raster._
 import geotrellis.raster.resample._
-import geotrellis.raster.reproject.Reproject
 import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
-import geotrellis.spark.tiling.LayoutDefinition
+import geotrellis.layer.LayoutDefinition
 import geotrellis.util.GetComponent
 
 import java.util.ServiceLoader

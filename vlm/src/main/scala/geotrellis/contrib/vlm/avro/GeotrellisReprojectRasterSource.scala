@@ -23,8 +23,8 @@ import geotrellis.raster.reproject._
 import geotrellis.raster.resample._
 import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
-import geotrellis.spark._
-import geotrellis.spark.io._
+import geotrellis.store._
+
 import com.typesafe.scalalogging.LazyLogging
 import scala.io.AnsiColor._
 

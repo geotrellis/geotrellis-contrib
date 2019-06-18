@@ -17,13 +17,13 @@
 package geotrellis.contrib.vlm.spark
 
 import com.typesafe.scalalogging.LazyLogging
-import geotrellis.contrib.vlm.{LayoutType, ResampleGrid, TargetGrid}
+import geotrellis.contrib.vlm.{LayoutType, ResampleGrid}
 import geotrellis.proj4.CRS
-import geotrellis.raster.{CellGrid, CellSize, CellType, RasterExtent, GridExtent}
-import geotrellis.spark._
-import geotrellis.spark.tiling.{LayoutDefinition, LayoutLevel, LayoutScheme}
+import geotrellis.raster.{CellGrid, CellSize, CellType, GridExtent}
+import geotrellis.layer._
 import geotrellis.util._
 import geotrellis.vector.{Extent, ProjectedExtent}
+
 import org.apache.spark.rdd.RDD
 import spire.math.Integral
 import spire.implicits._

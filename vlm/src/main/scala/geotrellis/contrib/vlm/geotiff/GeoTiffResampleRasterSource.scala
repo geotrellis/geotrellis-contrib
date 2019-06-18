@@ -24,6 +24,7 @@ import geotrellis.raster.reproject.{Reproject, ReprojectRasterExtent}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiff, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
+import geotrellis.util.RangeReader
 
 case class GeoTiffResampleRasterSource(
   dataPath: GeoTiffDataPath,
@@ -36,7 +37,7 @@ case class GeoTiffResampleRasterSource(
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
   @transient lazy val tiff: MultibandGeoTiff =
-    baseTiff.getOrElse(GeoTiffReader.readMultiband(getByteReader(dataPath.path), streaming = true))
+    baseTiff.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.path), streaming = true))
 
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount
@@ -56,7 +57,7 @@ case class GeoTiffResampleRasterSource(
     tiff.getClosestOverview(gridExtent.cellSize, strategy)
 
   def reprojection(targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): GeoTiffReprojectRasterSource =
-    new GeoTiffReprojectRasterSource(uri, targetCRS, resampleGrid, method, strategy, targetCellType = targetCellType) {
+    new GeoTiffReprojectRasterSource(dataPath, targetCRS, resampleGrid, method, strategy, targetCellType = targetCellType) {
       override lazy val gridExtent: GridExtent[Long] = {
         val reprojectedRasterExtent =
           ReprojectRasterExtent(

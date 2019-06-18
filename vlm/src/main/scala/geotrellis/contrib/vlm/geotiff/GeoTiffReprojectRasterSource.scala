@@ -24,6 +24,7 @@ import geotrellis.raster.resample._
 import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiff, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
+import geotrellis.util.RangeReader
 
 case class GeoTiffReprojectRasterSource(
   dataPath: GeoTiffDataPath,
@@ -36,7 +37,7 @@ case class GeoTiffReprojectRasterSource(
   private val baseTiff: Option[MultibandGeoTiff] = None
 ) extends RasterSource { self =>
   @transient lazy val tiff: MultibandGeoTiff =
-    baseTiff.getOrElse(GeoTiffReader.readMultiband(getByteReader(dataPath.path), streaming = true))
+    baseTiff.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.path), streaming = true))
 
   protected lazy val baseCRS: CRS = tiff.crs
   protected lazy val baseGridExtent: GridExtent[Long] = tiff.rasterExtent.toGridType[Long]
@@ -131,11 +132,11 @@ case class GeoTiffReprojectRasterSource(
   }
 
   def reprojection(targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
-    GeoTiffReprojectRasterSource(uri, targetCRS, resampleGrid, method, strategy, targetCellType = targetCellType, baseTiff = Some(tiff))
+    GeoTiffReprojectRasterSource(dataPath, targetCRS, resampleGrid, method, strategy, targetCellType = targetCellType, baseTiff = Some(tiff))
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
     GeoTiffReprojectRasterSource(
-      uri,
+      dataPath,
       crs,
       Some(resampleGrid),
       method,
@@ -145,5 +146,5 @@ case class GeoTiffReprojectRasterSource(
     )
 
   def convert(targetCellType: TargetCellType): RasterSource =
-    GeoTiffReprojectRasterSource(uri, crs, targetResampleGrid, resampleMethod, strategy, targetCellType = Some(targetCellType))
+    GeoTiffReprojectRasterSource(dataPath, crs, targetResampleGrid, resampleMethod, strategy, targetCellType = Some(targetCellType))
 }

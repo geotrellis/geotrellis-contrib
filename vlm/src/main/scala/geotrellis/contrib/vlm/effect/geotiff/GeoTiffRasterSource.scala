@@ -24,6 +24,8 @@ import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiffMultibandTile,
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
+import geotrellis.util.RangeReader
+
 import cats._
 import cats.syntax.flatMap._
 import cats.syntax.traverse._
@@ -35,7 +37,7 @@ case class GeoTiffRasterSource[F[_]: Monad: UnsafeLift](
   uri: String,
   private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSourceF[F] {
-  @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(GeoTiffReader.readMultiband(getByteReader(uri), streaming = true))
+  @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(GeoTiffReader.readMultiband(RangeReader(uri), streaming = true))
 
   lazy val gridExtent: F[GridExtent[Long]] = tiffF.map(_.rasterExtent.toGridType[Long])
   lazy val resolutions: F[List[GridExtent[Long]]] = tiffF.map { tiff =>

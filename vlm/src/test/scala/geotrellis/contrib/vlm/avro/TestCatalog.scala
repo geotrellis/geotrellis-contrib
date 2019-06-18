@@ -18,17 +18,16 @@ package geotrellis.contrib.vlm.avro
 
 import geotrellis.contrib.vlm.geotiff._
 import geotrellis.contrib.vlm.spark.RasterSourceRDD
-
 import geotrellis.raster._
 import geotrellis.spark._
-import geotrellis.spark.io._
-import geotrellis.spark.io.avro.codecs.Implicits._
-import geotrellis.spark.io.file._
-import geotrellis.spark.io.index._
-import geotrellis.spark.tiling._
+import geotrellis.store._
+import geotrellis.store.avro.codecs.Implicits._
+import geotrellis.spark.store.file._
+import geotrellis.store.file._
+import geotrellis.store.index._
+import geotrellis.layer._
 
 import org.apache.spark._
-
 import java.io.File
 
 object TestCatalog {

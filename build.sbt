@@ -86,9 +86,22 @@ lazy val vlm = project
       geotrellisSparkTestKit % Test,
       scalatest % Test
     ),
+    // caused by the AWS SDK v2
+    dependencyOverrides ++= {
+      val deps = Seq(
+        jacksonCore,
+        jacksonDatabind,
+        jacksonAnnotations
+      )
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        // if Scala 2.12+ is used
+        case Some((2, scalaMajor)) if scalaMajor >= 12 => deps
+        case _ => deps :+ jacksonModuleScala
+      }
+    },
     Test / fork := true,
     Test / parallelExecution := false,
-    Test / testOptions += Tests.Argument("-oDF"),
+    Test / testOptions += Tests.Argument("-oDF")
   )
   .settings(
     initialCommands in console :=
@@ -117,6 +130,19 @@ lazy val gdal = project
       scalatest % Test,
       gdalBindings % Test
     ),
+    // caused by the AWS SDK v2
+    dependencyOverrides ++= {
+      val deps = Seq(
+        jacksonCore,
+        jacksonDatabind,
+        jacksonAnnotations
+      )
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        // if Scala 2.12+ is used
+        case Some((2, scalaMajor)) if scalaMajor >= 12 => deps
+        case _ => deps :+ jacksonModuleScala
+      }
+    },
     Test / fork := true,
     Test / parallelExecution := false,
     Test / testOptions += Tests.Argument("-oDF"),

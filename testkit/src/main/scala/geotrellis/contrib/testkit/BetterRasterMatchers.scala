@@ -6,8 +6,7 @@ import geotrellis.vector._
 import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.render.png.{PngColorEncoding, RgbaPngEncoding}
-import geotrellis.spark.{SpatialKey, Bounds}
-import geotrellis.spark.tiling.LayoutDefinition
+import geotrellis.layer.{SpatialKey, Bounds, LayoutDefinition}
 import geotrellis.raster.testkit.RasterMatchers
 import geotrellis.raster.render.ascii._
 

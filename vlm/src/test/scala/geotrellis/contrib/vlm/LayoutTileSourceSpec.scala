@@ -19,9 +19,7 @@ package geotrellis.contrib.vlm
 import geotrellis.contrib.vlm.geotiff._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader._
-import geotrellis.proj4.{CRS, WebMercator}
-import geotrellis.spark._
-import geotrellis.spark.tiling._
+import geotrellis.layer._
 import geotrellis.raster.testkit.RasterMatchers
 
 import org.scalatest._
@@ -81,13 +79,17 @@ class LayoutTileSourceSpec extends FunSpec with RasterMatchers with BetterRaster
       cellwidth = mbLayout.cellwidth,
       cellheight = mbLayout.cellheight,
       cols = mbLayout.tileCols,
-      rows = mbLayout.tileRows)
+      rows = mbLayout.tileRows
+    )
 
     withClue(s"$key:") {
       val tile = mbSource.read(key, Seq(1, 2)).get
       val actual = Raster(tile, re.extent)
       val expected = Raster(
-        mbTiff.crop(rasterExtent = re).tile.subsetBands(1, 2),
+        mbTiff
+          .crop(rasterExtent = re.copy(extent = re.extent.buffer(re.cellSize.resolution / 4)))
+          .tile
+          .subsetBands(1, 2),
         re.extent
       )
       withGeoTiffClue(actual, expected, mbSource.source.crs) {

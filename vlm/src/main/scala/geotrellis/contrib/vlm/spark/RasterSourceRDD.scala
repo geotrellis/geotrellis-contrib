@@ -15,11 +15,13 @@
  */
 
 package geotrellis.contrib.vlm.spark
+
 import geotrellis.contrib.vlm.{LayoutTileSource, RasterRegion, RasterSource, ReadingSource}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.raster.{ArrayTile, MultibandTile, NODATA, Tile}
-import geotrellis.spark.tiling.LayoutDefinition
-import geotrellis.spark.{ContextRDD, KeyBounds, MultibandTileLayerRDD, SpatialKey, TileLayerMetadata}
+import geotrellis.layer._
+import geotrellis.spark.{ContextRDD, MultibandTileLayerRDD}
+
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Partitioner, SparkContext}
 

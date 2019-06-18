@@ -16,7 +16,6 @@
 
 package geotrellis.contrib.vlm.spark
 
-import geotrellis.contrib.vlm._
 import geotrellis.contrib.vlm.gdal._
 import geotrellis.contrib.vlm.geotiff._
 import geotrellis.contrib.vlm.{BetterRasterMatchers, LayoutTileSource, RasterSource, ReadingSource}
@@ -24,28 +23,27 @@ import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff._
 import geotrellis.spark._
-import geotrellis.spark.io.hadoop._
+import geotrellis.spark.store.hadoop._
 import geotrellis.spark.testkit._
-import geotrellis.spark.tiling._
+import geotrellis.store.hadoop._
+import geotrellis.layer._
 
 import com.azavea.gdal.GDALWarp
 import cats.effect.{ContextShift, IO}
 import cats.implicits._
+import spire.syntax.cfor._
+import org.apache.hadoop.fs.Path
 import org.apache.spark.rdd.RDD
 import org.scalatest.Inspectors._
 import org.scalatest._
 
-import spire.syntax.cfor._
-
 import java.io.File
 import java.util.concurrent.Executors
-
 import scala.concurrent.ExecutionContext
 
 class GDALRasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with BeforeAndAfterAll {
-  val filePath = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled.tif"
+  val uri = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled.tif"
   def filePathByIndex(i: Int): String = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled-$i.tif"
-  val uri = s"file://$filePath"
   lazy val rasterSource = GeoTiffRasterSource(uri)
   val targetCRS = CRS.fromEpsgCode(3857)
   val scheme = ZoomedLayoutScheme(targetCRS)
@@ -194,7 +192,7 @@ class GDALRasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRa
       val expectedFilePath = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled-near-merc-rdd.tif"
 
       it("should reproduce tileToLayout") {
-        val rasterSource = GDALRasterSource(filePath)
+        val rasterSource = GDALRasterSource(uri)
 
         // This should be the same as result of .tileToLayout(md.layout)
         val rasterSourceRDD: MultibandTileLayerRDD[SpatialKey] = RasterSourceRDD(rasterSource, md.layout)
@@ -207,7 +205,7 @@ class GDALRasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRa
       it("should reproduce tileToLayout followed by reproject GDAL") {
         val expectedRasterSource = GDALRasterSource(expectedFilePath)
         val reprojectedExpectedRDDGDAL: MultibandTileLayerRDD[SpatialKey] = RasterSourceRDD(expectedRasterSource, layout)
-        val rasterSource = GDALRasterSource(filePath)
+        val rasterSource = GDALRasterSource(uri)
         val reprojectedRasterSource = rasterSource.reprojectToGrid(targetCRS, layout)
 
         // This should be the same as .tileToLayout(md.layout).reproject(crs, layout)

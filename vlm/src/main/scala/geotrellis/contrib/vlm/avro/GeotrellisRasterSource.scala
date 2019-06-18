@@ -22,8 +22,8 @@ import geotrellis.raster.io.geotiff.{Auto, AutoHigherResolution, Base, OverviewS
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.raster.{MultibandTile, Tile, _}
-import geotrellis.spark.io._
-import geotrellis.spark.{LayerId, Metadata, SpatialKey, TileLayerMetadata}
+import geotrellis.store._
+import geotrellis.layer._
 import geotrellis.vector._
 
 
@@ -167,7 +167,7 @@ object GeotrellisRasterSource {
   def readTiles(reader: CollectionLayerReader[LayerId], layerId: LayerId, extent: Extent, bands: Seq[Int]): Seq[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]] = {
     val header = reader.attributeStore.readHeader[LayerHeader](layerId)
     (header.keyClass, header.valueClass) match {
-      case ("geotrellis.spark.SpatialKey", "geotrellis.raster.Tile") => {
+      case ("geotrellis.layer.SpatialKey", "geotrellis.raster.Tile") => {
         reader.query[SpatialKey, Tile, TileLayerMetadata[SpatialKey]](layerId)
           .where(Intersects(extent))
           .result
@@ -176,7 +176,7 @@ object GeotrellisRasterSource {
             tiles.map{ case(key, tile) => (key, MultibandTile(tile)) }
           )
       }
-      case ("geotrellis.spark.SpatialKey", "geotrellis.raster.MultibandTile") => {
+      case ("geotrellis.layer.SpatialKey", "geotrellis.raster.MultibandTile") => {
         reader.query[SpatialKey, MultibandTile, TileLayerMetadata[SpatialKey]](layerId)
           .where(Intersects(extent))
           .result
@@ -184,9 +184,8 @@ object GeotrellisRasterSource {
             tiles.map{ case(key, tile) => (key, tile.subsetBands(bands)) }
           )
       }
-      case _ => {
-        throw new Exception("Unable to read single or multiband tiles from file")
-      }
+      case _ =>
+        throw new Exception(s"Unable to read single or multiband tiles from file: ${(header.keyClass, header.valueClass)}")
     }
   }
 

@@ -19,6 +19,7 @@ package geotrellis.contrib.vlm
 import geotrellis.raster.{CellSize, GridExtent}
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
+
 import spire.math.Integral
 import spire.implicits._
 

@@ -23,8 +23,8 @@ import geotrellis.raster._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
-import geotrellis.spark.{LayerId, SpatialKey, TileLayerMetadata}
-import geotrellis.spark.io._
+import geotrellis.store._
+
 import com.typesafe.scalalogging.LazyLogging
 
 

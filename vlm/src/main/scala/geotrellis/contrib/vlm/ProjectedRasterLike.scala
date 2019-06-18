@@ -15,6 +15,7 @@
  */
 
 package geotrellis.contrib.vlm
+
 import geotrellis.proj4.CRS
 import geotrellis.raster.CellGrid
 import geotrellis.vector.Extent

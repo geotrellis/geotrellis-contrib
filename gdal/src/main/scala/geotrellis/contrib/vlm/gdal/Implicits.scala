@@ -20,9 +20,10 @@ import geotrellis.contrib.vlm._
 import geotrellis.raster._
 import geotrellis.proj4.CRS
 import geotrellis.raster.reproject.Reproject.{Options => ReprojectOptions}
-import geotrellis.vector.Extent
-import cats.syntax.option._
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
+import geotrellis.vector.Extent
+
+import cats.syntax.option._
 
 trait Implicits extends Serializable {
   implicit class GDALRasterExtentMethods(val self: RasterExtent) {

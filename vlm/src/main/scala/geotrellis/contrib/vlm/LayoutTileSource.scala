@@ -17,10 +17,7 @@
 package geotrellis.contrib.vlm
 
 import geotrellis.raster._
-import geotrellis.vector.Extent
-import geotrellis.vector.io._
-import geotrellis.spark.SpatialKey
-import geotrellis.spark.tiling._
+import geotrellis.layer._
 
 /** Reads tiles by key from a [[RasterSource]] as keyed by a [[LayoutDefinition]]
   * @note It is required that the [[RasterSource]] is pixel aligned with the [[LayoutDefinition]]
