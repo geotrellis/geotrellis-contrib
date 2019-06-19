@@ -1,15 +1,15 @@
 package geotrellis.contrib.vlm
 
-import java.net.{URI, URL}
+import java.net.URI
 
 
 trait DataPath {
   def path: String
-  def targetPath: String
+  def formattedPath: String
 
-  protected def servicePrefix: String
+  def servicePrefix: String
 
-  override def toString: String = targetPath
-  def toURI: URI = new URI(targetPath)
-  def toURL: URL = new URL(targetPath)
+  override def toString: String = path
+
+  def toURI: URI = new URI(path)
 }
