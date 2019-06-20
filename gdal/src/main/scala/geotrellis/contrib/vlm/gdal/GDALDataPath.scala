@@ -34,7 +34,7 @@ case class GDALDataPath(
   import Schemes._
   import Patterns._
 
-  def servicePrefixes: List[String] =
+  private val servicePrefixes: List[String] =
     List(
       "gdal+",
       "zip+",
