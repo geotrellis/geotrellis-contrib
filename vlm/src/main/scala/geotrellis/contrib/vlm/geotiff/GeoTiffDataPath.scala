@@ -4,11 +4,16 @@ import geotrellis.contrib.vlm.DataPath
 
 
 case class GeoTiffDataPath(val path: String) extends DataPath {
-  protected def servicePrefix: String = "gtiff+"
+  def servicePrefixes: List[String] = List("gtiff+")
 
-  def targetPath: String =
-    if (path.startsWith(servicePrefix))
-      path.splitAt(servicePrefix.size)._2
+  def geoTiffPath: String =
+    if (path.startsWith(servicePrefixes.head))
+      path.splitAt(servicePrefixes.head.size)._2
     else
       path
+}
+
+object GeoTiffDataPath {
+  implicit def toGeoTiffDataPath(path: String): GeoTiffDataPath =
+    GeoTiffDataPath(path)
 }

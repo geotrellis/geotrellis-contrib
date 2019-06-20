@@ -35,7 +35,7 @@ case class GeoTiffResampleRasterSource(
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
   @transient lazy val tiff: MultibandGeoTiff =
-    GeoTiffReader.readMultiband(getByteReader(dataPath.toString), streaming = true)
+    GeoTiffReader.readMultiband(getByteReader(dataPath.geoTiffPath), streaming = true)
 
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount
@@ -107,9 +107,4 @@ case class GeoTiffResampleRasterSource(
       ).resample(targetRasterExtent.cols, targetRasterExtent.rows, method)
     }
   }
-}
-
-object GeoTiffResampleRasterSource {
-  def apply(path: String, resampleGrid: ResampleGrid[Long]): GeoTiffResampleRasterSource =
-    GeoTiffResampleRasterSource(GeoTiffDataPath(path), resampleGrid)
 }

@@ -54,7 +54,7 @@ class GeotrellisResampleRasterSource(
   val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource with LazyLogging { self =>
 
-  lazy val reader = CollectionLayerReader(attributeStore, dataPath.toString)
+  lazy val reader = CollectionLayerReader(attributeStore, dataPath.catalogPath)
 
   /** Source layer metadata  that needs to be resampled */
   lazy val sourceLayer: Layer = sourceLayers.find(_.id == layerId).get

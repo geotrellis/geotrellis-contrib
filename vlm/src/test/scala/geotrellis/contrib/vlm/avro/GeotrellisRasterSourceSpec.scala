@@ -31,9 +31,9 @@ import geotrellis.vector.Extent
 import org.scalatest.{FunSpec, GivenWhenThen}
 
 class GeotrellisRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen with CatalogTestEnvironment {
-  val uriMultiband = GeoTrellisDataPath(s"file://${TestCatalog.multibandOutputPath}")
-  val uriSingleband = GeoTrellisDataPath(s"file://${TestCatalog.singlebandOutputPath}")
   val layerId = LayerId("landsat", 0)
+  val uriMultiband = GeoTrellisDataPath(s"file://${TestCatalog.multibandOutputPath}?layer_name=${layerId.name}&zoom=${layerId.zoom}")
+  val uriSingleband = GeoTrellisDataPath(s"file://${TestCatalog.singlebandOutputPath}?layer_name=${layerId.name}&zoom=${layerId.zoom}")
   lazy val sourceMultiband = new GeotrellisRasterSource(uriMultiband, layerId)
   lazy val sourceSingleband = new GeotrellisRasterSource(uriSingleband, layerId)
 

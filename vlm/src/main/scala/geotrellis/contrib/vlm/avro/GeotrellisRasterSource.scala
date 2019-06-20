@@ -52,13 +52,13 @@ class GeotrellisRasterSource(
     this(attributeStore, dataPath, layerId, GeotrellisRasterSource.getSouceLayersByName(attributeStore, layerId.name, bandCount), bandCount, None)
 
   def this(dataPath: GeoTrellisDataPath, layerId: LayerId, bandCount: Int) =
-    this(AttributeStore(dataPath.toString), dataPath, layerId, bandCount)
+    this(AttributeStore(dataPath.catalogPath), dataPath, layerId, bandCount)
 
   def this(dataPath: GeoTrellisDataPath, layerId: LayerId) =
-    this(AttributeStore(dataPath.toString), dataPath, layerId, bandCount = 1)
+    this(AttributeStore(dataPath.catalogPath), dataPath, layerId, bandCount = 1)
 
 
-  lazy val reader = CollectionLayerReader(attributeStore, dataPath.toString)
+  lazy val reader = CollectionLayerReader(attributeStore, dataPath.catalogPath)
 
   // read metadata directly instead of searching sourceLayers to avoid unneeded reads
   lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
@@ -116,7 +116,7 @@ class GeotrellisRasterSource(
     new GeotrellisRasterSource(attributeStore, dataPath, layerId, sourceLayers, bandCount, Some(targetCellType))
 
   override def toString: String =
-    s"GeoTrellisRasterSource($dataPath,$layerId)"
+    s"GeoTrellisRasterSource(${dataPath.toString},$layerId)"
 }
 
 

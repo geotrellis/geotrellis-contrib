@@ -32,7 +32,7 @@ case class GeoTiffRasterSource(
   def resampleMethod: Option[ResampleMethod] = None
 
   @transient lazy val tiff: MultibandGeoTiff =
-    GeoTiffReader.readMultiband(getByteReader(dataPath.toString), streaming = true)
+    GeoTiffReader.readMultiband(getByteReader(dataPath.geoTiffPath), streaming = true)
 
   lazy val gridExtent: GridExtent[Long] = tiff.rasterExtent.toGridType[Long]
   lazy val resolutions: List[GridExtent[Long]] = gridExtent :: tiff.overviews.map(_.rasterExtent.toGridType[Long])
@@ -80,9 +80,4 @@ case class GeoTiffRasterSource(
       convertRaster(Raster(tile, gridExtent.extentFor(gb.toGridType[Long], clamp = true)))
     }
   }
-}
-
-object GeoTiffRasterSource {
-  def apply(path: String): GeoTiffRasterSource =
-    GeoTiffRasterSource(GeoTiffDataPath(path))
 }

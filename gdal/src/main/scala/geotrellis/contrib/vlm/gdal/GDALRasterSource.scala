@@ -31,7 +31,7 @@ case class GDALRasterSource(
   options: GDALWarpOptions = GDALWarpOptions.EMPTY,
   private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource {
-  val vsiPath: String = dataPath.formattedPath
+  val vsiPath: String = dataPath.vsiPath
 
   lazy val datasetType: Int = options.datasetType
 

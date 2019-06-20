@@ -5,9 +5,8 @@ import java.net.URI
 
 trait DataPath {
   def path: String
-  def formattedPath: String
 
-  def servicePrefix: String
+  def servicePrefixes: List[String]
 
   override def toString: String = path
 
