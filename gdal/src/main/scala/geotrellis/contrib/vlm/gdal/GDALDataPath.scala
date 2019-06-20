@@ -26,17 +26,30 @@ import java.net.MalformedURLException
  * Parses and formats the given path into a format that GDAL can read.
  * The [[vsiPath]] value contains this formatted string.
  */
-case class GDALDataPath(val path: String, compressedFileDelimiter: String = "!") {
+case class GDALDataPath(
+  val path: String,
+  compressedFileDelimiter: String = "!"
+) extends DataPath {
+
   import Schemes._
   import Patterns._
 
-  def servicePrefix: String = "gdal+"
+  def servicePrefixes: List[String] =
+    List(
+      "gdal+",
+      "zip+",
+      "gzip+",
+      "gz+",
+      "tar+"
+    )
 
   private val strippedPath: String =
-    if (path.startsWith(servicePrefix))
-      path.splitAt(servicePrefix.size)._2
-    else
-      path
+    servicePrefixes
+      .filter { path.startsWith }
+      .headOption match {
+        case Some(prefix) => path.splitAt(prefix.size)._2
+        case None => path
+      }
 
   val scheme: Option[String] =
     SCHEME_PATTERN.findFirstIn(strippedPath)
@@ -223,7 +236,7 @@ case class GDALDataPath(val path: String, compressedFileDelimiter: String = "!")
         s"/vsiaz/$userInfoString/$azurePath"
       case HDFS =>
         if (targetsCompressedFile)
-          s"/vsihdfs/$formattedPathString"
+          s"/vsihdfs/hdfs://$formattedPathString"
         else
           s"/vsihdfs/$strippedPath"
       case FILE =>
@@ -235,10 +248,10 @@ case class GDALDataPath(val path: String, compressedFileDelimiter: String = "!")
     }
   }
 
-  val formattedPath: String = firstVSIScheme + secondVSIScheme
+  val vsiPath: String = firstVSIScheme + secondVSIScheme
 }
 
-object VSIPath {
+object GDALDataPath {
   def isVSIFormatted(target: String): Boolean =
     Patterns.VSI_PATTERN.findFirstIn(target) match {
       case Some(_) => true
