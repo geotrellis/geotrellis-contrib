@@ -35,4 +35,6 @@ object Patterns {
   final val WINDOWS_LOCAL_PATH_PATTERN: Regex = """(?<=(?:(\/))).+""".r
 
   final val VSI_PATTERN: Regex = """/vsi[a-zA-Z].+/""".r
+
+  final val QUERY_PARAMS_PATTERN: Regex = """\?.+""".r
 }

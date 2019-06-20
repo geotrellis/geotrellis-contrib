@@ -6,13 +6,14 @@ import geotrellis.contrib.vlm.DataPath
 case class GeoTrellisDataPath(val path: String) extends DataPath {
   private val servicePrefix: String = "gt+"
 
-  private val layerNameParam: String = "layer="
-  private val zoomLevelParam: String = "zoom="
+  private val layerNameParam: String = "layer"
+  private val zoomLevelParam: String = "zoom"
+  private val bandCountParam: String = "band_count"
 
-  require(path.contains(layerNameParam), s"The layer query parameter must be in the given path: $path")
+  require(path.contains(s"$layerNameParam="), s"The layer query parameter must be in the given path: $path")
 
   // TODO: Support having the zoom parameter be optional
-  require(path.contains(zoomLevelParam), s"The zoom query parameter must be in the given path: $path")
+  require(path.contains(s"$zoomLevelParam="), s"The zoom query parameter must be in the given path: $path")
 
   private val strippedPath: String =
     if (path.startsWith(servicePrefix))
@@ -20,22 +21,28 @@ case class GeoTrellisDataPath(val path: String) extends DataPath {
     else
       path
 
-  val Array(catalogPath, queryParameters) = strippedPath.split('?')
+  val Array(catalogPath, queryParams) = strippedPath.split('?')
 
-  private val splitQueryParameters: List[String] = queryParameters.split('&').toList
+  private val brokenUpParams: Array[(String, String)] =
+    queryParams
+      .split('&')
+      .map {
+        _.split('=') match {
+          case Array(k, v) => (k, v)
+        }
+      }
 
-  val layerName: String =
-    splitQueryParameters
+  val layerName =
+    brokenUpParams
+      .filter { case (k, _) => k == layerNameParam }
       .head
-      .splitAt(layerNameParam.size)
       ._2
 
-  val zoomLevel: Option[Int] =
-    splitQueryParameters.tail match {
-      case List() => None
-      case zoom :: _ =>
-        Some(zoom.splitAt(zoomLevelParam.size)._2.toInt)
-    }
+  private val mappedQueryParams: Map[String, Int] =
+    (brokenUpParams.toMap - layerNameParam).mapValues { _.toInt }
+
+  val zoomLevel: Option[Int] = mappedQueryParams.get(zoomLevelParam)
+  val bandCount: Option[Int] = mappedQueryParams.get(bandCountParam)
 }
 
 object GeoTrellisDataPath {

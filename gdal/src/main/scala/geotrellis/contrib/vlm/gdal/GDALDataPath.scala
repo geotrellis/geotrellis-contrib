@@ -34,6 +34,30 @@ case class GDALDataPath(
   import Schemes._
   import Patterns._
 
+  private val badPrefixes: List[String] =
+    List("gt+", "gtiff+")
+
+  private val wrongUtility: Boolean =
+    badPrefixes
+      .map { path.startsWith }
+      .reduce { _ || _ }
+
+  require(
+    !wrongUtility,
+    s"The given path is specified for a different RasterSource type: $path"
+  )
+
+  private val pointsToCatalog: Boolean =
+    QUERY_PARAMS_PATTERN.findFirstIn(path) match {
+      case Some(_) => true
+      case None => false
+    }
+
+  require(
+    !pointsToCatalog,
+    s"Cannot create a GDALDataPath that points to a GeoTrellis catalog: $path"
+  )
+
   private val servicePrefixes: List[String] =
     List(
       "gdal+",

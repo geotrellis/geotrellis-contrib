@@ -25,6 +25,9 @@ import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.spark.tiling.LayoutDefinition
 import geotrellis.util.GetComponent
 
+import java.util.ServiceLoader
+
+
 /**
   * Single threaded instance of a reader that is able to read windows from larger raster.
   * Some initilization step is expected to provide metadata about source raster
@@ -239,4 +242,16 @@ trait RasterSource extends CellGrid[Long] with Serializable {
 object RasterSource {
   implicit def projectedExtentComponent[T <: RasterSource]: GetComponent[T, ProjectedExtent] =
     GetComponent(rs => ProjectedExtent(rs.extent, rs.crs))
+
+  def apply(path: String): RasterSource = {
+    import scala.collection.JavaConverters._
+
+    ServiceLoader
+      .load(classOf[RasterSourceProvider])
+      .iterator()
+      .asScala
+      .find(_.canProcess(path))
+      .getOrElse(throw new RuntimeException(s"Unable to find RasterSource for $path"))
+      .rasterSource(path)
+  }
 }
