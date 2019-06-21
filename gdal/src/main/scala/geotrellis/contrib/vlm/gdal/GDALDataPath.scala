@@ -22,9 +22,22 @@ import java.io.File
 import java.net.MalformedURLException
 
 
-/*
- * Parses and formats the given path into a format that GDAL can read.
- * The [[vsiPath]] value contains this formatted string.
+/** Represents and formats a path that points to a files to be read by GDAL.
+ *
+ *  @param path Path to the file. This path can be formatted in the following
+ *    styles: `VSI`, `URI`, or relative path if the file is local. In addition,
+ *    this path can be prefixed with, '''gdal+''' to signify that the target GeoTiff
+ *    is to be read in only by [[GDALRasterSource]].
+ *  @example "/vsizip//vsicurl/http://localhost:8000/files.zip"
+ *  @example "s3://bucket/prefix/data.tif"
+ *  @example "gdal+file:///tmp/data.tiff"
+ *  @note Under normal usage, GDAL requires that all paths to be read be given in its
+ *    `VSI Format`. Thus, if given another format type, this class will format it
+ *    so that it can be read.
+ *
+ *  @param compressedFileDelimiter `String` used to represent a file that's to be read
+ *    from a compressed.
+ *  @example "zip+s3://bucket/prefix/zipped-data.zip!data.tif"
  */
 case class GDALDataPath(
   val path: String,
@@ -272,6 +285,7 @@ case class GDALDataPath(
     }
   }
 
+  /** The given [[path]] in the `VSI` format */
   val vsiPath: String = firstVSIScheme + secondVSIScheme
 }
 

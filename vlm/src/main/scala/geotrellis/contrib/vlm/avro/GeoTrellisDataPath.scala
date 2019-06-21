@@ -3,6 +3,22 @@ package geotrellis.contrib.vlm.avro
 import geotrellis.contrib.vlm.DataPath
 
 
+/** Represents a path that points to a GeoTrellis layer saved in a catalog.
+ *
+ *  @param path Path to the layer. This can be either an Avro or COG layer.
+ *    The given path needs to be in a `URI` format that include the following query
+ *    parameters:
+ *      - '''layer''': The name of the layer.
+ *      - '''zoom''': The zoom level to be read.
+ *      - '''band_count''': The number of bands of each Tile in the layer.
+ *    Of the above three parameters, `layer` and `zoom` are required. In addition,
+ *    this path can be prefixed with, '''gt+''' to signify that the target path
+ *    is to be read in only by [[GeotrellisRasterSource]].
+ *  @example "s3://bucket/catalog?layer=layer_name&zoom=10"
+ *  @example "hdfs://data-folder/catalog?layer=name&zoom-12&band_count=5"
+ *  @example "gt+file:///tmp/catalog?layer=name&zoom=5"
+ *  @note The order of the query parameters does not matter.
+ */
 case class GeoTrellisDataPath(val path: String) extends DataPath {
   private val servicePrefix: String = "gt+"
 
@@ -32,6 +48,7 @@ case class GeoTrellisDataPath(val path: String) extends DataPath {
         }
       }
 
+  /** The name of the target layer */
   val layerName =
     brokenUpParams
       .filter { case (k, _) => k == layerNameParam }
@@ -41,7 +58,10 @@ case class GeoTrellisDataPath(val path: String) extends DataPath {
   private val mappedQueryParams: Map[String, Int] =
     (brokenUpParams.toMap - layerNameParam).mapValues { _.toInt }
 
+  /** The zoom level of the target layer */
   val zoomLevel: Option[Int] = mappedQueryParams.get(zoomLevelParam)
+
+  /** The band count of the target layer */
   val bandCount: Option[Int] = mappedQueryParams.get(bandCountParam)
 }
 
