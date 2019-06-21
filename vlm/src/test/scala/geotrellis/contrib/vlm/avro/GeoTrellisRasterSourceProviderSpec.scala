@@ -5,7 +5,7 @@ import geotrellis.contrib.vlm.RasterSource
 import org.scalatest._
 
 
-class GeoTrellisRasterSourceProviderSpec extends FunSpec {
+class GeoTrellisRasterSourceProviderSpec extends FunSpec with CatalogTestEnvironment {
   describe("GeoTrellisRasterSourceProvider") {
     val provider = new GeoTrellisRasterSourceProvider()
 
@@ -30,7 +30,9 @@ class GeoTrellisRasterSourceProviderSpec extends FunSpec {
     }
 
     it("should produce a GeoTrellisRasterSource from a string") {
-      assert(RasterSource("s3://fast/bulbous/catalog?layer=fast&zoom=10").isInstanceOf[GeotrellisRasterSource])
+      val params = s"?layer=landsat&zoom=0"
+      val uriMultiband = s"file://${TestCatalog.multibandOutputPath}$params"
+      assert(RasterSource(uriMultiband).isInstanceOf[GeotrellisRasterSource])
     }
   }
 }

@@ -17,6 +17,14 @@ class GeoTiffRasterSourceProviderSpec extends FunSpec {
       assert(provider.canProcess("gtiff+s3://my-files/tiffs/big-tiff.TIFF"))
     }
 
+    it("should process a non-prefixed relative path") {
+      assert(provider.canProcess("../../my-file.tif"))
+    }
+
+    it("should process a prefixed relative path") {
+      assert(provider.canProcess("gtiff+../../my-file.tif"))
+    }
+
     it("should not be able to process a path that doesn't point to a GeoTiff") {
       assert(!provider.canProcess("s3://path/to/my/fav/files/cool-image.jp2"))
     }
