@@ -36,5 +36,5 @@ object Patterns {
 
   final val VSI_PATTERN: Regex = """/vsi[a-zA-Z].+/""".r
 
-  final val QUERY_PARAMS_PATTERN: Regex = """\?.+""".r
+  final val QUERY_PARAMS_PATTERN: Regex = """\?.+\=.+\&.+""".r
 }
