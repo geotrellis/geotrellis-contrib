@@ -44,9 +44,15 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
   }
 
   def assertTilesEqual(actual: Tile, expected: Tile): Unit =
-    assertTilesEqual(MultibandTile(actual), MultibandTile(expected))
+    assertTilesEqual(actual, expected, Eps)
 
-  def assertTilesEqual(actual: MultibandTile, expected: MultibandTile): Unit = {
+  def assertTilesEqual(actual: Tile, expected: Tile, threshold: Double): Unit =
+    assertTilesEqual(MultibandTile(actual), MultibandTile(expected), threshold: Double)
+
+  def assertTilesEqual(actual: MultibandTile, expected: MultibandTile): Unit =
+    assertTilesEqual(actual, expected, Eps)
+
+  def assertTilesEqual(actual: MultibandTile, expected: MultibandTile, threshold: Double): Unit = {
     actual should have (
       cellType (expected.cellType),
       // dimensions (expected.dimensions),
@@ -54,9 +60,18 @@ trait BetterRasterMatchers { self: Matchers with FunSpec with RasterMatchers =>
     )
 
     withAsciiDiffClue(actual, expected){
-      assertEqual(actual, expected)
+      assertEqual(actual, expected, threshold)
     }
   }
+
+  def assertRastersEqual(actual: Raster[Tile], expected: Raster[MultibandTile])(implicit d: DummyImplicit): Unit =
+    assertRastersEqual(actual.mapTile(MultibandTile(_)), expected)
+
+  def assertRastersEqual(actual: Raster[Tile], expected: Raster[MultibandTile], threshold: Double)(implicit d: DummyImplicit): Unit =
+    assertRastersEqual(actual.mapTile(MultibandTile(_)), expected, threshold)
+
+  def assertRastersEqual(actual: Raster[Tile], expected: Raster[MultibandTile], threshold: Double, thresholdExtent: Double)(implicit d: DummyImplicit): Unit =
+    assertRastersEqual(actual.mapTile(MultibandTile(_)), expected, threshold, thresholdExtent)
 
   def assertRastersEqual(actual: Raster[MultibandTile], expected: Raster[MultibandTile]): Unit =
     assertRastersEqual(actual: Raster[MultibandTile], expected: Raster[MultibandTile], Eps)
