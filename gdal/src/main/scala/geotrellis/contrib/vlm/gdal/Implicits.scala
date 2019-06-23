@@ -66,7 +66,7 @@ trait Implicits extends Serializable {
     def resample(gridExtent: => GridExtent[Long], resampleGrid: ResampleGrid[Long]): GDALWarpOptions = {
       resampleGrid match {
         case Dimensions(cols, rows) =>
-          self.copy(te = None, cellSize = None, dimensions = (cols.toInt, rows.toInt).some)
+          self.copy(te = gridExtent.extent.some, cellSize = None, dimensions = (cols.toInt, rows.toInt).some)
 
         case _ =>
           val re = {
@@ -74,10 +74,7 @@ trait Implicits extends Serializable {
             if(self.alignTargetPixels) targetRasterExtent.alignTargetPixels else targetRasterExtent
           }
 
-          self.copy(
-            te       = re.extent.some,
-            cellSize = re.cellSize.some
-          )
+          self.copy(te = re.extent.some, cellSize = re.cellSize.some)
       }
     }
 
