@@ -35,8 +35,8 @@ import geotrellis.contrib.vlm.DataPath
  *  @note Capitalization of the extension is not regarded.
  */
 case class GeoTiffDataPath(
-  val path: String,
-  val tiffExtensions: List[String] = List(".tiff", ".tif")
+  path: String,
+  tiffExtensions: List[String] = List(".tiff", ".tif")
 ) extends DataPath {
   private val pointsToTiff: Boolean = {
     val lowerCase = path.toLowerCase

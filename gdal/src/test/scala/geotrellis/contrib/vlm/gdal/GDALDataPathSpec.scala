@@ -69,9 +69,6 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val url = s"zip+http://$filePath"
         val expectedPath = s"/vsizip//vsicurl/http://$filePath"
 
-        println(s"\n\nexpectedPath: $expectedPath")
-        println(s"actualPath: ${GDALDataPath(url).vsiPath}\n\n")
-
         GDALDataPath(url).vsiPath should be (expectedPath)
       }
 

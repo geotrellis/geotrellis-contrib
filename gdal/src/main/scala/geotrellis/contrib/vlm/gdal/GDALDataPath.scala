@@ -40,7 +40,7 @@ import java.net.MalformedURLException
  *  @example "zip+s3://bucket/prefix/zipped-data.zip!data.tif"
  */
 case class GDALDataPath(
-  val path: String,
+  path: String,
   compressedFileDelimiter: String = "!"
 ) extends DataPath {
 

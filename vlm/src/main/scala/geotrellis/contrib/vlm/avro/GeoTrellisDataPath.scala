@@ -35,7 +35,7 @@ import geotrellis.contrib.vlm.DataPath
  *  @example "gt+file:///tmp/catalog?layer=name&zoom=5"
  *  @note The order of the query parameters does not matter.
  */
-case class GeoTrellisDataPath(val path: String) extends DataPath {
+case class GeoTrellisDataPath(path: String) extends DataPath {
   private val servicePrefix: String = "gt+"
 
   private val layerNameParam: String = "layer"
