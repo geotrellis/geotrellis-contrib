@@ -49,7 +49,7 @@ class GeotrellisRasterSource(
 ) extends RasterSource {
 
   def this(attributeStore: AttributeStore, uri: String, layerId: LayerId, bandCount: Int) =
-    this(attributeStore, uri, layerId, GeotrellisRasterSource.getSouceLayersByName(attributeStore, layerId.name, bandCount), bandCount, None)
+    this(attributeStore, uri, layerId, GeotrellisRasterSource.getSourceLayersByName(attributeStore, layerId.name, bandCount), bandCount, None)
 
   def this(uri: String, layerId: LayerId, bandCount: Int) =
     this(AttributeStore(uri), uri, layerId, bandCount)
@@ -146,7 +146,7 @@ object GeotrellisRasterSource {
   }
 
   /** Read metadata for all layers that share a name and sort them by their resolution */
-  def getSouceLayersByName(attributeStore: AttributeStore, layerName: String, bandCount: Int): Stream[Layer] = {
+  def getSourceLayersByName(attributeStore: AttributeStore, layerName: String, bandCount: Int): Stream[Layer] = {
     attributeStore.
       layerIds.
       filter(_.name == layerName).
