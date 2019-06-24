@@ -19,7 +19,7 @@ package geotrellis.contrib.vlm
 import geotrellis.contrib.vlm.geotiff._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader._
-
+import geotrellis.proj4.{CRS, WebMercator}
 import geotrellis.spark._
 import geotrellis.spark.tiling._
 import geotrellis.raster.testkit.RasterMatchers
@@ -92,6 +92,39 @@ class LayoutTileSourceSpec extends FunSpec with RasterMatchers with BetterRaster
       )
       withGeoTiffClue(actual, expected, mbSource.source.crs) {
         assertRastersEqual(actual, expected)
+      }
+    }
+  }
+
+  describe("should read by key on high zoom levels properly // see issue-116") {
+    val crs: CRS = WebMercator
+
+    val tmsLevels: Array[LayoutDefinition] = {
+      val scheme = ZoomedLayoutScheme(crs, 256)
+      for (zoom <- 0 to 64) yield scheme.levelForZoom(zoom).layout
+    }.toArray
+
+    val path = Resource.path("img/issue-116-cog.tif")
+    val subsetBands = List(0, 1, 2)
+
+    val layoutDefinition = tmsLevels(22)
+
+
+    for(c <- 1249656 to 1249658; r <- 1520655 to 1520658) {
+      it(s"reading 22/$c/$r") {
+        val result =
+          GeoTiffRasterSource(path)
+            .reproject(WebMercator)
+            .tileToLayout(layoutDefinition)
+            .read(SpatialKey(c, r), subsetBands)
+            .get
+
+
+        result.bands.foreach { band =>
+          (1 until band.rows).foreach { r =>
+            band.getDouble(band.cols - 1, r) shouldNot be(0d)
+          }
+        }
       }
     }
   }
