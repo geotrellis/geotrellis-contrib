@@ -23,7 +23,7 @@ class GeoTiffRasterSourceProvider extends RasterSourceProvider {
   def canProcess(path: String): Boolean =
     try {
       GeoTiffDataPath(path)
-      return true
+      true
     } catch {
       case _: Throwable => false
     }

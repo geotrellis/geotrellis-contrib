@@ -26,8 +26,6 @@ import geotrellis.spark.io._
 import geotrellis.spark.{LayerId, Metadata, SpatialKey, TileLayerMetadata}
 import geotrellis.vector._
 
-import java.net.URI
-
 
 case class Layer(id: LayerId, metadata: TileLayerMetadata[SpatialKey], bandCount: Int) {
   /** GridExtent of the data pixels in the layer */
@@ -119,7 +117,7 @@ class GeotrellisRasterSource(
     new GeotrellisRasterSource(attributeStore, dataPath, layerId, sourceLayers, bandCount, Some(targetCellType))
 
   override def toString: String =
-    s"GeoTrellisRasterSource(${dataPath.toString},$layerId)"
+    s"GeoTrellisRasterSource($dataPath, $layerId)"
 }
 
 

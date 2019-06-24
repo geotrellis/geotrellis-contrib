@@ -23,7 +23,7 @@ class GDALRasterSourceProvider extends RasterSourceProvider {
   def canProcess(path: String): Boolean =
     try {
       GDALDataPath(path)
-      return true
+      true
     } catch {
       case _: Throwable => false
     }

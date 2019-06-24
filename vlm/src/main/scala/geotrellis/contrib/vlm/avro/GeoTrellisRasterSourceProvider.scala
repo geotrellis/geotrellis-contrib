@@ -24,7 +24,7 @@ class GeoTrellisRasterSourceProvider extends RasterSourceProvider {
   def canProcess(path: String): Boolean =
     try {
       GeoTrellisDataPath(path)
-      return true
+      true
     } catch {
       case _: Throwable => false
     }
