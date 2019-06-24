@@ -50,7 +50,7 @@ class GeotrellisRasterSource(
 ) extends RasterSource {
 
   def this(attributeStore: AttributeStore, dataPath: GeoTrellisDataPath, layerId: LayerId, bandCount: Int) =
-    this(attributeStore, dataPath, layerId, GeotrellisRasterSource.getSouceLayersByName(attributeStore, layerId.name, bandCount), bandCount, None)
+    this(attributeStore, dataPath, layerId, GeotrellisRasterSource.getSourceLayersByName(attributeStore, layerId.name, bandCount), bandCount, None)
 
   def this(dataPath: GeoTrellisDataPath, layerId: LayerId, bandCount: Int) =
     this(AttributeStore(dataPath.catalogPath), dataPath, layerId, bandCount)
