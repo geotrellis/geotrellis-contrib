@@ -6,13 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- VLM: Created the `DataPath` type which the `RasterSource`s now take
+- VLM: Created an SPI interface for `RasterSource`
 
 ## [3.15.0] - 2019-06-22
 ### Added
 - Fix GDAL resampling with Dimensions resampleGrid
 - CHANGELOG based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - VLM: Add support for ByteReaders backed by HDFS
-- VLM: Created the `DataPath` type which the `RasterSource`s now take
 
 ## [3.14.0] - 2019-05-17
 ### Added
