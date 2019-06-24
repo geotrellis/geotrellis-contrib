@@ -26,13 +26,13 @@ import geotrellis.vector._
 import org.scalatest._
 
 class GeoTiffConvertedRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
-  lazy val url = GeoTiffDataPath(Resource.path("img/aspect-tiled.tif"))
+  lazy val url = Resource.path("img/aspect-tiled.tif")
 
   lazy val source: GeoTiffRasterSource = new GeoTiffRasterSource(url)
 
   lazy val expectedRaster: Raster[MultibandTile] =
     GeoTiffReader
-      .readMultiband(url.toString, streaming = false)
+      .readMultiband(url, streaming = false)
       .raster
 
   describe("Converting to a different CellType") {

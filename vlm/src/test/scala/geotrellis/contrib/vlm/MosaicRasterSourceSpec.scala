@@ -28,9 +28,9 @@ class MosaicRasterSourceSpec extends FunSpec with Matchers {
 
   describe("union operations") {
     // With Extent(0, 0, 1, 1)
-    val inputPath1 = GeoTiffDataPath(Resource.path("img/geotiff-at-origin.tif"))
+    val inputPath1 = Resource.path("img/geotiff-at-origin.tif")
     // With Extent(1, 0, 2, 1)
-    val inputPath2 = GeoTiffDataPath(Resource.path("img/geotiff-off-origin.tif"))
+    val inputPath2 = Resource.path("img/geotiff-off-origin.tif")
 
     val gtRasterSource1 = GeoTiffRasterSource(inputPath1)
     val gtRasterSource2 = GeoTiffRasterSource(inputPath2)

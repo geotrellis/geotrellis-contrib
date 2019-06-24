@@ -35,7 +35,7 @@ import geotrellis.raster.reproject.Reproject
 
 class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
 
-  val uri = GDALDataPath(Resource.path("img/aspect-tiled.tif"))
+  val uri = Resource.path("img/aspect-tiled.tif")
 
   describe("GDALRasterSource") {
 
@@ -57,7 +57,7 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
       // read in the whole file and resample the pixels in memory
       val expected: Raster[MultibandTile] =
         GeoTiffReader
-          .readMultiband(uri.toString, streaming = false)
+          .readMultiband(uri, streaming = false)
           .raster
           .resample((source.cols * 0.95).toInt , (source.rows * 0.95).toInt, NearestNeighbor)
       // resample to 0.9 so we RasterSource picks the base layer and not an overview
@@ -103,7 +103,7 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
     }
 
     it("should derive a consistent extent") {
-      GDALRasterSource(uri).extent should be (GeoTiffRasterSource(uri.toString).extent)
+      GDALRasterSource(uri).extent should be (GeoTiffRasterSource(uri).extent)
 
       val p = Resource.path("img/extent-bug.tif")
       GDALRasterSource(GDALDataPath(p)).extent should be (GeoTiffRasterSource(p).extent)
@@ -114,7 +114,7 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
     }
 
     val cellSizes = {
-      val tiff = GeoTiffReader.readMultiband(uri.toString)
+      val tiff = GeoTiffReader.readMultiband(uri)
         (tiff +: tiff.overviews).map(_.rasterExtent.cellSize).map { case CellSize(w, h) =>
           CellSize(w + 1, h + 1)
         }

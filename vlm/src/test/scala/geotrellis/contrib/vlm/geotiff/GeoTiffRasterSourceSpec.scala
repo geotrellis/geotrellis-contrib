@@ -29,7 +29,7 @@ import geotrellis.util._
 import org.scalatest._
 
 class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
-  lazy val url = GeoTiffDataPath(Resource.path("img/aspect-tiled.tif"))
+  lazy val url = Resource.path("img/aspect-tiled.tif")
 
   lazy val source: GeoTiffRasterSource = new GeoTiffRasterSource(url)
 
@@ -55,7 +55,7 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
     // read in the whole file and resample the pixels in memory
     val expected: Raster[MultibandTile] =
       GeoTiffReader
-        .readMultiband(url.toString, streaming = false)
+        .readMultiband(url, streaming = false)
         .raster
         .resample((source.cols * 0.95).toInt , (source.rows * 0.95).toInt, NearestNeighbor)
         // resample to 0.9 so we RasterSource picks the base layer and not an overview
@@ -83,7 +83,7 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
 
   describe("should perform a tileToLayout") {
     val cellSizes = {
-      val tiff = GeoTiffReader.readMultiband(url.toString)
+      val tiff = GeoTiffReader.readMultiband(url)
       (tiff +: tiff.overviews).map(_.rasterExtent.cellSize).map { case CellSize(w, h) =>
         CellSize(w + 1, h + 1)
       }

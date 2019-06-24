@@ -30,7 +30,7 @@ class GeotrellisConvertedRasterSourceSpec extends FunSpec with RasterMatchers wi
   val layerId = LayerId("landsat", 0)
   val uriMultiband = s"file://${TestCatalog.multibandOutputPath}?layer=${layerId.name}&zoom=${layerId.zoom}"
 
-  lazy val source = new GeotrellisRasterSource(GeoTrellisDataPath(uriMultiband), layerId)
+  lazy val source = new GeotrellisRasterSource(uriMultiband, layerId)
 
   lazy val expectedRaster: Raster[MultibandTile] =
     GeoTiffReader
