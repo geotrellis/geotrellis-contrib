@@ -17,6 +17,7 @@
 package geotrellis.contrib.vlm.avro
 
 import geotrellis.contrib.vlm.DataPath
+import geotrellis.spark.LayerId
 
 
 /** Represents a path that points to a GeoTrellis layer saved in a catalog.
@@ -79,6 +80,8 @@ case class GeoTrellisDataPath(path: String) extends DataPath {
 
   /** The band count of the target layer */
   val bandCount: Option[Int] = mappedQueryParams.get(bandCountParam)
+
+  val layerId: LayerId = LayerId(layerName, zoomLevel.get)
 }
 
 object GeoTrellisDataPath {

@@ -37,26 +37,27 @@ case class Layer(id: LayerId, metadata: TileLayerMetadata[SpatialKey], bandCount
   *       thus they need to be provided from application configuration.
   *
   * @param dataPath geotrellis catalog DataPath
-  * @param layerId source layer from above catalog
-  * @param bandCount number of bands for each tile in above layer
   */
 class GeotrellisRasterSource(
   val attributeStore: AttributeStore,
   val dataPath: GeoTrellisDataPath,
-  val layerId: LayerId,
   val sourceLayers: Stream[Layer],
-  val bandCount: Int,
   val targetCellType: Option[TargetCellType]
 ) extends RasterSource {
+  val layerId: LayerId = dataPath.layerId
 
-  def this(attributeStore: AttributeStore, dataPath: GeoTrellisDataPath, layerId: LayerId, bandCount: Int) =
-    this(attributeStore, dataPath, layerId, GeotrellisRasterSource.getSourceLayersByName(attributeStore, layerId.name, bandCount), bandCount, None)
+  val bandCount: Int = dataPath.bandCount.getOrElse(1)
 
-  def this(dataPath: GeoTrellisDataPath, layerId: LayerId, bandCount: Int) =
-    this(AttributeStore(dataPath.catalogPath), dataPath, layerId, bandCount)
+  def this(attributeStore: AttributeStore, dataPath: GeoTrellisDataPath) =
+    this(
+      attributeStore,
+      dataPath,
+      GeotrellisRasterSource.getSourceLayersByName(attributeStore, dataPath.layerName, dataPath.bandCount.getOrElse(1)),
+      None
+    )
 
-  def this(dataPath: GeoTrellisDataPath, layerId: LayerId) =
-    this(AttributeStore(dataPath.catalogPath), dataPath, layerId, bandCount = 1)
+  def this(dataPath: GeoTrellisDataPath) =
+    this(AttributeStore(dataPath.catalogPath), dataPath)
 
 
   lazy val reader = CollectionLayerReader(attributeStore, dataPath.catalogPath)
@@ -114,7 +115,7 @@ class GeotrellisRasterSource(
   }
 
   def convert(targetCellType: TargetCellType): RasterSource =
-    new GeotrellisRasterSource(attributeStore, dataPath, layerId, sourceLayers, bandCount, Some(targetCellType))
+    new GeotrellisRasterSource(attributeStore, dataPath, sourceLayers, Some(targetCellType))
 
   override def toString: String =
     s"GeoTrellisRasterSource($dataPath, $layerId)"
