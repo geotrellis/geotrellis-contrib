@@ -26,6 +26,7 @@ import geotrellis.spark.io._
 import geotrellis.spark.{LayerId, Metadata, SpatialKey, TileLayerMetadata}
 import geotrellis.vector._
 
+
 case class Layer(id: LayerId, metadata: TileLayerMetadata[SpatialKey], bandCount: Int) {
   /** GridExtent of the data pixels in the layer */
   def gridExtent: GridExtent[Long] = metadata.layout.createAlignedGridExtent(metadata.extent)
@@ -35,30 +36,31 @@ case class Layer(id: LayerId, metadata: TileLayerMetadata[SpatialKey], bandCount
   * Note: GeoTrellis AttributeStore does not store the band count for the layers by default,
   *       thus they need to be provided from application configuration.
   *
-  * @param uri geotrellis catalog uri
-  * @param layerId source layer from above catalog
-  * @param bandCount number of bands for each tile in above layer
+  * @param dataPath geotrellis catalog DataPath
   */
 class GeotrellisRasterSource(
   val attributeStore: AttributeStore,
-  val uri: String,
-  val layerId: LayerId,
+  val dataPath: GeoTrellisDataPath,
   val sourceLayers: Stream[Layer],
-  val bandCount: Int,
   val targetCellType: Option[TargetCellType]
 ) extends RasterSource {
+  val layerId: LayerId = dataPath.layerId
 
-  def this(attributeStore: AttributeStore, uri: String, layerId: LayerId, bandCount: Int) =
-    this(attributeStore, uri, layerId, GeotrellisRasterSource.getSourceLayersByName(attributeStore, layerId.name, bandCount), bandCount, None)
+  val bandCount: Int = dataPath.bandCount.getOrElse(1)
 
-  def this(uri: String, layerId: LayerId, bandCount: Int) =
-    this(AttributeStore(uri), uri, layerId, bandCount)
+  def this(attributeStore: AttributeStore, dataPath: GeoTrellisDataPath) =
+    this(
+      attributeStore,
+      dataPath,
+      GeotrellisRasterSource.getSourceLayersByName(attributeStore, dataPath.layerName, dataPath.bandCount.getOrElse(1)),
+      None
+    )
 
-  def this(uri: String, layerId: LayerId) =
-    this(AttributeStore(uri), uri, layerId, bandCount = 1)
+  def this(dataPath: GeoTrellisDataPath) =
+    this(AttributeStore(dataPath.catalogPath), dataPath)
 
 
-  lazy val reader = CollectionLayerReader(attributeStore, uri)
+  lazy val reader = CollectionLayerReader(attributeStore, dataPath.catalogPath)
 
   // read metadata directly instead of searching sourceLayers to avoid unneeded reads
   lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
@@ -92,14 +94,14 @@ class GeotrellisRasterSource(
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource = {
     if (targetCRS != this.crs) {
       val (closestLayerId, targetGridExtent) = GeotrellisReprojectRasterSource.getClosestSourceLayer(targetCRS, sourceLayers, reprojectOptions, strategy)
-      new GeotrellisReprojectRasterSource(attributeStore, uri, closestLayerId, sourceLayers, targetGridExtent, targetCRS, reprojectOptions, targetCellType)
+      new GeotrellisReprojectRasterSource(attributeStore, dataPath, closestLayerId, sourceLayers, targetGridExtent, targetCRS, reprojectOptions, targetCellType)
     } else {
       // TODO: add unit tests for this in particular, the behavior feels murky
       ResampleGrid.fromReprojectOptions(reprojectOptions) match {
         case Some(resampleGrid) =>
           val resampledGridExtent = resampleGrid(this.gridExtent)
           val closestLayerId = GeotrellisRasterSource.getClosestResolution(sourceLayers.toList, resampledGridExtent.cellSize, strategy)(_.metadata.layout.cellSize).get.id
-          new GeotrellisResampleRasterSource(attributeStore, uri, closestLayerId, sourceLayers, resampledGridExtent, reprojectOptions.method, targetCellType)
+          new GeotrellisResampleRasterSource(attributeStore, dataPath, closestLayerId, sourceLayers, resampledGridExtent, reprojectOptions.method, targetCellType)
         case None =>
           this // I think I was asked to do nothing
       }
@@ -109,14 +111,14 @@ class GeotrellisRasterSource(
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource = {
     val resampledGridExtent = resampleGrid(this.gridExtent)
     val closestLayerId = GeotrellisRasterSource.getClosestResolution(sourceLayers.toList, resampledGridExtent.cellSize, strategy)(_.metadata.layout.cellSize).get.id
-    new GeotrellisResampleRasterSource(attributeStore, uri, closestLayerId, sourceLayers, resampledGridExtent, method, targetCellType)
+    new GeotrellisResampleRasterSource(attributeStore, dataPath, closestLayerId, sourceLayers, resampledGridExtent, method, targetCellType)
   }
 
   def convert(targetCellType: TargetCellType): RasterSource =
-    new GeotrellisRasterSource(attributeStore, uri, layerId, sourceLayers, bandCount, Some(targetCellType))
+    new GeotrellisRasterSource(attributeStore, dataPath, sourceLayers, Some(targetCellType))
 
   override def toString: String =
-    s"GeoTrellisRasterSource($uri,$layerId)"
+    s"GeoTrellisRasterSource($dataPath, $layerId)"
 }
 
 

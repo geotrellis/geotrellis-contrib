@@ -31,11 +31,12 @@ import geotrellis.vector.Extent
 import org.scalatest.{FunSpec, GivenWhenThen}
 
 class GeotrellisRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen with CatalogTestEnvironment {
-  val uriMultiband = s"file://${TestCatalog.multibandOutputPath}"
-  val uriSingleband = s"file://${TestCatalog.singlebandOutputPath}"
   val layerId = LayerId("landsat", 0)
-  lazy val sourceMultiband = new GeotrellisRasterSource(uriMultiband, layerId)
-  lazy val sourceSingleband = new GeotrellisRasterSource(uriSingleband, layerId)
+  val uriMultibandNoParams = s"file://${TestCatalog.multibandOutputPath}"
+  val uriMultiband = s"file://${TestCatalog.multibandOutputPath}?layer=${layerId.name}&zoom=${layerId.zoom}"
+  val uriSingleband = s"file://${TestCatalog.singlebandOutputPath}?layer=${layerId.name}&zoom=${layerId.zoom}"
+  lazy val sourceMultiband = new GeotrellisRasterSource(uriMultiband)
+  lazy val sourceSingleband = new GeotrellisRasterSource(uriSingleband)
 
   describe("geotrellis raster source") {
 
@@ -118,10 +119,10 @@ class GeotrellisRasterSourceSpec extends FunSpec with RasterMatchers with Better
     it("should have resolutions only for given layer name") {
       assert(
         sourceMultiband.resolutions.length ===
-          CollectionLayerReader(uriMultiband).attributeStore.layerIds.filter(_.name == layerId.name).length
+          CollectionLayerReader(uriMultibandNoParams).attributeStore.layerIds.filter(_.name == layerId.name).length
       )
       assert(
-        new GeotrellisRasterSource(uriMultiband, LayerId("bogusLayer", 0)).resolutions.length === 0
+        new GeotrellisRasterSource(s"$uriMultibandNoParams?layer=bogusLayer&zoom=0").resolutions.length === 0
       )
     }
 

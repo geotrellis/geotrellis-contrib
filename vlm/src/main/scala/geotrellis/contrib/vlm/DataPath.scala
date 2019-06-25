@@ -16,17 +16,22 @@
 
 package geotrellis.contrib.vlm
 
-import geotrellis.spark.io.hadoop.HdfsRangeReader
+import java.net.URI
 
-import org.scalatest._
 
-import java.net.ConnectException
+/**
+ * Represents the path to data that is to be read.
+ */
+trait DataPath {
+  /**
+   * The given path to the data. This can be formatted in a number of different
+   * ways depending on which [[RasterSource]] is to be used. For more information
+   * on the different ways of formatting this string, see the docs on the
+   * DataPath for that given soure.
+   */
+  def path: String
 
-class VlmByteReaderSpec extends FlatSpec with Matchers {
-  it should "summon an hdfs rangereader" in {
-    // If it gets as far as attempting (and failing) a connection, it created a bytereader
-    assertThrows[ConnectException] {
-      getByteReader("hdfs://localhost:7777/file123").asInstanceOf[HdfsRangeReader]
-    }
-  }
+  override def toString: String = path
+
+  def toURI: URI = new URI(path)
 }

@@ -16,18 +16,80 @@
 
 package geotrellis.contrib.vlm.gdal
 
-import java.io.File
+import geotrellis.contrib.vlm.DataPath
 
-/*
- * Parses and formats the given URI into a format that GDAL can read.
- * The [[vsiPath]] value contains this formatted string.
+import java.io.File
+import java.net.MalformedURLException
+
+
+/** Represents and formats a path that points to a files to be read by GDAL.
+ *
+ *  @param path Path to the file. This path can be formatted in the following
+ *    styles: `VSI`, `URI`, or relative path if the file is local. In addition,
+ *    this path can be prefixed with, '''gdal+''' to signify that the target GeoTiff
+ *    is to be read in only by [[GDALRasterSource]].
+ *  @example "/vsizip//vsicurl/http://localhost:8000/files.zip"
+ *  @example "s3://bucket/prefix/data.tif"
+ *  @example "gdal+file:///tmp/data.tiff"
+ *  @note Under normal usage, GDAL requires that all paths to be read be given in its
+ *    `VSI Format`. Thus, if given another format type, this class will format it
+ *    so that it can be read.
+ *
+ *  @param compressedFileDelimiter `String` used to represent a file that's to be read
+ *    from a compressed.
+ *  @example "zip+s3://bucket/prefix/zipped-data.zip!data.tif"
  */
-case class VSIPath(uri: String, compressedFileDelimiter: String = "!") {
+case class GDALDataPath(
+  path: String,
+  compressedFileDelimiter: String = "!"
+) extends DataPath {
+
   import Schemes._
   import Patterns._
 
+  private val badPrefixes: List[String] =
+    List("gt+", "gtiff+")
+
+  private val wrongUtility: Boolean =
+    badPrefixes
+      .map { path.startsWith }
+      .reduce { _ || _ }
+
+  require(
+    !wrongUtility,
+    s"The given path is specified for a different RasterSource type: $path"
+  )
+
+  private val pointsToCatalog: Boolean =
+    QUERY_PARAMS_PATTERN.findFirstIn(path) match {
+      case Some(_) => true
+      case None => false
+    }
+
+  require(
+    !pointsToCatalog,
+    s"Cannot create a GDALDataPath that points to a GeoTrellis catalog: $path"
+  )
+
+  private val servicePrefixes: List[String] =
+    List(
+      "gdal+",
+      "zip+",
+      "gzip+",
+      "gz+",
+      "tar+"
+    )
+
+  private val strippedPath: String =
+    servicePrefixes
+      .filter { path.startsWith }
+      .headOption match {
+        case Some(prefix) => path.splitAt(prefix.size)._2
+        case None => path
+      }
+
   val scheme: Option[String] =
-    SCHEME_PATTERN.findFirstIn(uri)
+    SCHEME_PATTERN.findFirstIn(strippedPath)
 
   private val schemeString: String =
     scheme match {
@@ -48,17 +110,22 @@ case class VSIPath(uri: String, compressedFileDelimiter: String = "!") {
     scheme match {
       case Some(_) =>
         if (onLocalWindows)
-          WINDOWS_LOCAL_PATH_PATTERN.findFirstIn(uri)
+          WINDOWS_LOCAL_PATH_PATTERN.findFirstIn(strippedPath)
         else
-          DEFAULT_PATH_PATTERN.findFirstIn(uri)
+          DEFAULT_PATH_PATTERN.findFirstIn(strippedPath)
       case None =>
-        Some(uri)
+        Some(strippedPath)
     }
 
   private val targetPathString: String =
     targetPath match {
       case Some(pathString) => pathString
-      case None => throw new Exception(s"Could not determine the paths for: $uri")
+      case None =>
+        throw new MalformedURLException(
+          s"Invalid URI passed into the GDALRasterSource constructor: ${strippedPath}." +
+          s"Check geotrellis.contrib.vlm.gdal.VSIPath constrains, " +
+          s"or pass VSI formatted String into the GDALRasterSource constructor manually."
+        )
     }
 
   val targetFileName: String = {
@@ -83,7 +150,7 @@ case class VSIPath(uri: String, compressedFileDelimiter: String = "!") {
     targetFileName.contains(compressedFileDelimiter)
 
   val authority: Option[String] =
-    AUTHORITY_PATTERN.findFirstIn(uri)
+    AUTHORITY_PATTERN.findFirstIn(strippedPath)
 
   private val authorityString: String =
     authority match {
@@ -92,7 +159,7 @@ case class VSIPath(uri: String, compressedFileDelimiter: String = "!") {
     }
 
   val userInfo: Option[String] =
-    USER_INFO_PATTERN.findFirstIn(uri)
+    USER_INFO_PATTERN.findFirstIn(strippedPath)
 
   private val userInfoString: String =
     userInfo match {
@@ -133,7 +200,7 @@ case class VSIPath(uri: String, compressedFileDelimiter: String = "!") {
     // within a compressed file itself.
     if (schemeString.contains("+")) {
       val firstScheme = FIRST_SCHEME_PATTERN.findFirstIn(schemeString)
-      val secondScheme = SECOND_SCHEME_PATTERN.findFirstIn(uri)
+      val secondScheme = SECOND_SCHEME_PATTERN.findFirstIn(strippedPath)
 
       (firstScheme, secondScheme)
 
@@ -190,7 +257,7 @@ case class VSIPath(uri: String, compressedFileDelimiter: String = "!") {
         if (targetsCompressedFile)
           s"/vsicurl/$secondSchemeString://$formattedPathString"
         else
-          s"/vsicurl/$uri"
+          s"/vsicurl/$strippedPath"
       case S3 =>
         s"/vsis3/$formattedPathString"
       case GS =>
@@ -206,25 +273,29 @@ case class VSIPath(uri: String, compressedFileDelimiter: String = "!") {
         s"/vsiaz/$userInfoString/$azurePath"
       case HDFS =>
         if (targetsCompressedFile)
-          s"/vsihdfs/$formattedPathString"
+          s"/vsihdfs/hdfs://$formattedPathString"
         else
-          s"/vsihdfs/$uri"
+          s"/vsihdfs/$strippedPath"
       case FILE =>
         formattedPathString
       case _ =>
-        // If no scheme is found, assume the uri is
+        // If no scheme is found, assume the path is
         // a relative path to a file
         formattedPathString
     }
   }
 
-  val vsiPath:String = firstVSIScheme + secondVSIScheme
+  /** The given [[path]] in the `VSI` format */
+  val vsiPath: String = firstVSIScheme + secondVSIScheme
 }
 
-object VSIPath {
+object GDALDataPath {
   def isVSIFormatted(target: String): Boolean =
     Patterns.VSI_PATTERN.findFirstIn(target) match {
       case Some(_) => true
       case None => false
     }
+
+  implicit def toGDALDataPath(path: String): GDALDataPath =
+    GDALDataPath(path)
 }

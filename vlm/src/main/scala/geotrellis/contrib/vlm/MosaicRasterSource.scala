@@ -54,9 +54,9 @@ trait MosaicRasterSource extends RasterSource {
     *
     * It doesn't make sense to access "the" URI for a collection, so this throws an exception.
     */
-  def uri: String = throw new NotImplementedError(
+  def dataPath: DataPath = throw new NotImplementedError(
     """
-      | MosaicRasterSources don't have a single uri. Perhaps you wanted the uri from
+      | MosaicRasterSources don't have a single dataPath. Perhaps you wanted the dataPath from
       | one of this MosaicRasterSource's sources?
     """.trim.stripMargin
   )

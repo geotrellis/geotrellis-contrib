@@ -106,11 +106,11 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
       GDALRasterSource(uri).extent should be (GeoTiffRasterSource(uri).extent)
 
       val p = Resource.path("img/extent-bug.tif")
-      GDALRasterSource(p).extent should be (GeoTiffRasterSource(p).extent)
+      GDALRasterSource(GDALDataPath(p)).extent should be (GeoTiffRasterSource(p).extent)
     }
 
     it("should fail on creation of the GDALRasterSource on a malformed URI") {
-      an[MalformedURLException] should be thrownBy GDALRasterSource("file:/random/path/here/N49W155.hgt.gz")
+      an[MalformedURLException] should be thrownBy GDALRasterSource(GDALDataPath("file:/random/path/here/N49W155.hgt.gz"))
     }
 
     val cellSizes = {

@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
+package geotrellis.contrib.vlm.geotiff
 
-import geotrellis.spark.io.hadoop.HdfsRangeReader
+import geotrellis.contrib.vlm._
 
-import org.scalatest._
 
-import java.net.ConnectException
-
-class VlmByteReaderSpec extends FlatSpec with Matchers {
-  it should "summon an hdfs rangereader" in {
-    // If it gets as far as attempting (and failing) a connection, it created a bytereader
-    assertThrows[ConnectException] {
-      getByteReader("hdfs://localhost:7777/file123").asInstanceOf[HdfsRangeReader]
+class GeoTiffRasterSourceProvider extends RasterSourceProvider {
+  def canProcess(path: String): Boolean =
+    try {
+      GeoTiffDataPath(path)
+      true
+    } catch {
+      case _: Throwable => false
     }
-  }
+
+  def rasterSource(path: String): RasterSource =
+    GeoTiffRasterSource(path)
 }

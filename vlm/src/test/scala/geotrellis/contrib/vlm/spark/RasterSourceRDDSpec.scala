@@ -41,7 +41,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
   val filePath = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled.tif"
   def filePathByIndex(i: Int): String = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled-$i.tif"
   val uri = s"file://$filePath"
-  lazy val rasterSource = GeoTiffRasterSource(uri)
+  lazy val rasterSource = GeoTiffRasterSource(GeoTiffDataPath(uri))
   lazy val targetCRS = CRS.fromEpsgCode(3857)
   lazy val scheme = ZoomedLayoutScheme(targetCRS)
   lazy val layout = scheme.levelForZoom(13).layout
@@ -191,17 +191,17 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
     val cellType = rasterSource.cellType
 
-    val multibandTilePath = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled-0-1-2.tif"
+    val multibandTilePath = GeoTiffDataPath(s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled-0-1-2.tif")
 
     val noDataTile = ArrayTile.alloc(cellType, rasterSource.cols.toInt, rasterSource.rows.toInt).fill(NODATA).interpretAs(cellType)
 
-    val paths: Seq[String] =
+    val paths: Seq[GeoTiffDataPath] =
       0 to 5 map { index =>
-        filePathByIndex(index)
+        GeoTiffDataPath(filePathByIndex(index))
       }
 
     val expectedMultibandTile = {
-      val tiles = paths.map { MultibandGeoTiff(_, streaming = false).tile.band(0) }
+      val tiles = paths.map { path => MultibandGeoTiff(path.toString, streaming = false).tile.band(0) }
 
       MultibandTile(tiles)
     }

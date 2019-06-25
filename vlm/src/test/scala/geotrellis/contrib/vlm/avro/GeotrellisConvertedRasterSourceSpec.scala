@@ -28,9 +28,9 @@ import org.scalatest.{FunSpec, GivenWhenThen}
 
 class GeotrellisConvertedRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen with CatalogTestEnvironment {
   val layerId = LayerId("landsat", 0)
-  val uriMultiband = s"file://${TestCatalog.multibandOutputPath}"
+  val uriMultiband = s"file://${TestCatalog.multibandOutputPath}?layer=${layerId.name}&zoom=${layerId.zoom}"
 
-  lazy val source = new GeotrellisRasterSource(uriMultiband, layerId)
+  lazy val source = new GeotrellisRasterSource(uriMultiband)
 
   lazy val expectedRaster: Raster[MultibandTile] =
     GeoTiffReader

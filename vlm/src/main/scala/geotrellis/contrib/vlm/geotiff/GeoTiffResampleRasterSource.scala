@@ -26,7 +26,7 @@ import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiff, GeoTiffMulti
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 
 case class GeoTiffResampleRasterSource(
-  uri: String,
+  dataPath: GeoTiffDataPath,
   resampleGrid: ResampleGrid[Long],
   method: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
@@ -35,7 +35,7 @@ case class GeoTiffResampleRasterSource(
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
   @transient lazy val tiff: MultibandGeoTiff =
-    GeoTiffReader.readMultiband(getByteReader(uri), streaming = true)
+    GeoTiffReader.readMultiband(getByteReader(dataPath.geoTiffPath), streaming = true)
 
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount
@@ -55,7 +55,7 @@ case class GeoTiffResampleRasterSource(
     tiff.getClosestOverview(gridExtent.cellSize, strategy)
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
-    new GeoTiffReprojectRasterSource(uri, targetCRS, reprojectOptions, strategy, targetCellType) {
+    new GeoTiffReprojectRasterSource(dataPath, targetCRS, reprojectOptions, strategy, targetCellType) {
       override lazy val gridExtent: GridExtent[Long] = reprojectOptions.targetRasterExtent match {
         case Some(targetRasterExtent) => targetRasterExtent.toGridType[Long]
         case None => ReprojectRasterExtent(self.gridExtent, this.transform, this.reprojectOptions)
@@ -63,10 +63,10 @@ case class GeoTiffResampleRasterSource(
     }
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, targetCellType)
+    GeoTiffResampleRasterSource(dataPath, resampleGrid, method, strategy, targetCellType)
 
   def convert(targetCellType: TargetCellType): RasterSource =
-    GeoTiffResampleRasterSource(uri, resampleGrid, method, strategy, Some(targetCellType))
+    GeoTiffResampleRasterSource(dataPath, resampleGrid, method, strategy, Some(targetCellType))
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = gridExtent.gridBoundsFor(extent, clamp = false)

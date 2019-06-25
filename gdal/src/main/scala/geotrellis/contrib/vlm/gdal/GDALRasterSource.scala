@@ -26,34 +26,18 @@ import geotrellis.vector._
 
 import com.azavea.gdal.GDALWarp
 
-import java.net.MalformedURLException
-
 case class GDALRasterSource(
-  uri: String,
+  dataPath: GDALDataPath,
   options: GDALWarpOptions = GDALWarpOptions.EMPTY,
   private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource {
-  val vsiPath: String = if (VSIPath.isVSIFormatted(uri)) uri else try {
-    VSIPath(uri).vsiPath
-  } catch {
-    case _: Throwable =>
-      throw new MalformedURLException(
-          s"Invalid URI passed into the GDALRasterSource constructor: ${uri}." +
-          s"Check geotrellis.contrib.vlm.gdal.VSIPath constrains, " +
-          s"or pass VSI formatted String into the GDALRasterSource constructor manually."
-      )
-  }
+  val vsiPath: String = dataPath.vsiPath
 
   lazy val datasetType: Int = options.datasetType
 
   // current dataset
-  @transient lazy val dataset: GDALDataset = {
-    val gdalPath =
-      if (VSIPath.isVSIFormatted(uri)) uri
-      else VSIPath(uri).vsiPath
-
-    GDALDataset(gdalPath, options.toWarpOptionsList.toArray)
-  }
+  @transient lazy val dataset: GDALDataset =
+    GDALDataset(vsiPath, options.toWarpOptionsList.toArray)
 
   lazy val bandCount: Int = dataset.bandCount
 
@@ -87,10 +71,10 @@ case class GDALRasterSource(
   }
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALRasterSource(uri, options.reproject(gridExtent, crs, targetCRS, reprojectOptions))
+    GDALRasterSource(dataPath, options.reproject(gridExtent, crs, targetCRS, reprojectOptions))
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GDALRasterSource(uri, options.resample(gridExtent, resampleGrid))
+    GDALRasterSource(dataPath, options.resample(gridExtent, resampleGrid))
 
   /** Converts the contents of the GDALRasterSource to the [[TargetCellType]].
    *
@@ -119,7 +103,7 @@ case class GDALRasterSource(
    */
   def convert(targetCellType: TargetCellType): RasterSource = {
     /** To avoid incorrect warp cellSize transformation, we need explicitly set target dimensions. */
-    GDALRasterSource(uri, options.convert(targetCellType, noDataValue, Some(cols.toInt -> rows.toInt)), Some(targetCellType))
+    GDALRasterSource(dataPath, options.convert(targetCellType, noDataValue, Some(cols.toInt -> rows.toInt)), Some(targetCellType))
   }
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
