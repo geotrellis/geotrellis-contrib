@@ -14,7 +14,7 @@ sealed trait GDALPathType {
   def secondScheme: String
 }
 
-case class LocalPath(localPath: Path) extends GDALPathType {
+case class RelativePath(localPath: Path) extends GDALPathType {
   import Schemes._
 
   def path: String = localPath.toString

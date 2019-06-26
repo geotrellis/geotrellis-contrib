@@ -50,7 +50,7 @@ case class GDALDataPath(
   val gdalPath =
     UrlWithAuthority.parseOption(path) match {
       case Some(uri) => URIPath(uri)
-      case None => LocalPath(Path.parse(path))
+      case None => RelativePath(Path.parse(path))
     }
 
   private val badPrefixes: List[String] =
@@ -89,7 +89,7 @@ case class GDALDataPath(
   private val onLocalWindows: Boolean =
     System.getProperty("os.name").toLowerCase == "win" && isLocal
 
-  private val formattedPathString: String =
+  private val formattedPath: String =
     if (gdalPath.targetsNestedFile) {
       val formattedFileName =
         if (onLocalWindows)
@@ -112,12 +112,12 @@ case class GDALDataPath(
 
   private val secondVSIScheme: String = {
     secondScheme match {
-      case (FTP | HTTP | HTTPS) => s"/vsicurl/$formattedPathString"
-      case S3 => s"/vsis3/$formattedPathString"
-      case GS => s"/vsigs/$formattedPathString"
-      case (WASB | WASBS) => s"/vsiaz/$formattedPathString"
-      case HDFS => s"/vsihdfs/$formattedPathString"
-      case _ => formattedPathString
+      case (FTP | HTTP | HTTPS) => s"/vsicurl/$formattedPath"
+      case S3 => s"/vsis3/$formattedPath"
+      case GS => s"/vsigs/$formattedPath"
+      case (WASB | WASBS) => s"/vsiaz/$formattedPath"
+      case HDFS => s"/vsihdfs/$formattedPath"
+      case _ => formattedPath
     }
   }
 
