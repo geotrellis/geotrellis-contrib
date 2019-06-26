@@ -42,7 +42,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
 
       it("http that points to gzip with ! url") {
         val filePath = "www.radomdata.com/test-files/data.gzip"
-        val url = s"http://$filePath!$fileName"
+        val url = s"gzip+http://$filePath!$fileName"
         val expectedPath = s"/vsigzip//vsicurl/http://$filePath/$fileName"
 
         GDALDataPath(url).vsiPath should be (expectedPath)
@@ -52,14 +52,6 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val filePath = "www.radomdata.com/test-files/data.gz"
         val url = s"http://$filePath"
         val expectedPath = s"/vsigzip//vsicurl/$url"
-
-        GDALDataPath(url).vsiPath should be (expectedPath)
-      }
-
-      it("http that points to gz with ! url") {
-        val filePath = "www.radomdata.com/test-files/data.gz"
-        val url = s"http://$filePath!$fileName"
-        val expectedPath = s"/vsigzip//vsicurl/http://$filePath/$fileName"
 
         GDALDataPath(url).vsiPath should be (expectedPath)
       }
@@ -98,14 +90,6 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         GDALDataPath(uri).vsiPath should be (expectedPath)
       }
 
-      it("file that points to zip with ! uri") {
-        val filePath = "/home/jake/Documents/test-files/files.zip"
-        val uri = s"file://$filePath!$fileName"
-        val expectedPath = s"/vsizip/$filePath/$fileName"
-
-        GDALDataPath(uri).vsiPath should be (expectedPath)
-      }
-
       it("zip+file uri") {
         val path = "/tmp/some/data/data.zip"
         val uri = s"zip+file://$path"
@@ -140,14 +124,6 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         GDALDataPath(uri).vsiPath should be (expectedPath)
       }
 
-      it("s3 that points to gzip with uri") {
-        val filePath = "test-files/nlcd/data/data.gzip"
-        val uri = s"s3://$filePath!$fileName"
-        val expectedPath = s"/vsigzip//vsis3/$filePath/$fileName"
-
-        GDALDataPath(uri).vsiPath should be (expectedPath)
-      }
-
       it("gzip+s3 uri") {
         val path = "some/bucket/data/data.gzip"
         val uri = s"gzip+s3://$path"
@@ -168,14 +144,6 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val filePath = "test-files/nlcd/data/data.gz"
         val uri = s"s3://$filePath"
         val expectedPath = s"/vsigzip//vsis3/$filePath"
-
-        GDALDataPath(uri).vsiPath should be (expectedPath)
-      }
-
-      it("s3 that points to gz with uri") {
-        val filePath = "test-files/nlcd/data/data.gz"
-        val uri = s"s3://$filePath!$fileName"
-        val expectedPath = s"/vsigzip//vsis3/$filePath/$fileName"
 
         GDALDataPath(uri).vsiPath should be (expectedPath)
       }
@@ -214,14 +182,6 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         GDALDataPath(uri).vsiPath should be (expectedPath)
       }
 
-      it("hdfs that points to tgz with ! uri") {
-        val filePath = "test-files/nlcd/data/my_data.tgz"
-        val uri = s"hdfs://$filePath!$fileName"
-        val expectedPath = s"/vsitar//vsihdfs/hdfs://$filePath/$fileName"
-
-        GDALDataPath(uri).vsiPath should be (expectedPath)
-      }
-
       it("zip+hdfs uri") {
         val filePath = "hdfs://test-files/nlcd/data/data.zip"
         val uri = s"zip+$filePath"
@@ -252,14 +212,6 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val filePath = "test-files/nlcd/data/data.tar"
         val uri = s"gs://$filePath"
         val expectedPath = s"/vsitar//vsigs/$filePath"
-
-        GDALDataPath(uri).vsiPath should be (expectedPath)
-      }
-
-      it("Google Cloud Storage that points to tar with ! uri") {
-        val filePath = "test-files/nlcd/data/data.tar"
-        val uri = s"gs://$filePath!$fileName"
-        val expectedPath = s"/vsitar//vsigs/$filePath/$fileName"
 
         GDALDataPath(uri).vsiPath should be (expectedPath)
       }
@@ -296,13 +248,6 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         GDALDataPath(uri).vsiPath should be (expectedPath)
       }
 
-      it("Azure that points to kmz with ! uri") {
-        val uri = s"wasb://test-files@myaccount.blah.core.net/nlcd/data/info.kmz!$fileName"
-        val expectedPath = s"/vsizip//vsiaz/test-files/nlcd/data/info.kmz/$fileName"
-
-        GDALDataPath(uri).vsiPath should be (expectedPath)
-      }
-
       it("wasb+zip uri") {
         val uri = "zip+wasb://test-files@myaccount.blah.core.net/nlcd/data/info.zip"
         val expectedPath = "/vsizip//vsiaz/test-files/nlcd/data/info.zip"
@@ -335,32 +280,24 @@ class GDALDataPathSpec extends FunSpec with Matchers {
 
         GDALDataPath(uri).vsiPath should be (expectedPath)
       }
+    }
 
-      it("relative path that points to zip with ! uri") {
-        val filePath = "../../test-files/data.zip"
-        val uri = s"$filePath!$fileName"
-        val expectedPath = s"/vsizip/$filePath/$fileName"
+    describe("Formatting the given uris - edge cases") {
+      ignore("should parse a path with uncommon characters") {
+        val filePath = """data/jake__user--data!@#$%^&*()`~{}[]\|=+,?';<>;/files/my-data.tif"""
+        val uri = s"s3://$filePath"
+        val expectedPath = s"/vsis3/$filePath"
 
         GDALDataPath(uri).vsiPath should be (expectedPath)
       }
-    }
-  }
 
-  describe("Formatting the given uris - edge cases") {
-    it("should parse a path with uncommon characters") {
-      val filePath = """data/jake__user--data!@#$%^&*()`~{}[]\|=+,?';<>;/files/my-data.tif"""
-      val uri = s"s3://$filePath"
-      val expectedPath = s"/vsis3/$filePath"
+      it("should parse a targeted compressed file with a differenct delimiter") {
+        val filePath = "data/my-data/data!.zip"
+        val uri = s"zip+s3://$filePath/$fileName"
+        val expectedPath = s"/vsizip//vsis3/$filePath/$fileName"
 
-      GDALDataPath(uri).vsiPath should be (expectedPath)
-    }
-
-    it("should parse a targeted compressed file with a differenct delimiter") {
-      val filePath = "data/my-data/data!.zip"
-      val uri = s"s3://$filePath/$fileName"
-      val expectedPath = s"/vsis3/$filePath/$fileName"
-
-      GDALDataPath(uri, "/").vsiPath should be (expectedPath)
+        GDALDataPath(uri, "/").vsiPath should be (expectedPath)
+      }
     }
   }
 }
