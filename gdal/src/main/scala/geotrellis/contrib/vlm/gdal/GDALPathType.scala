@@ -14,6 +14,10 @@ sealed trait GDALPathType {
   def secondScheme: String
 }
 
+/** Represents a relative path to be read in by GDAL. Cannot
+ *  be prefixed with a scheme. If that's desired, than use
+ *  `file://` `URI` pattern.
+ */
 case class RelativePath(localPath: Path) extends GDALPathType {
   import Schemes._
 
@@ -32,6 +36,8 @@ case class RelativePath(localPath: Path) extends GDALPathType {
   def scheme: String = "file"
 
   val (firstScheme, secondScheme): (Option[String], String) =
+    // While it can be prefixed, the path can still point to a compressed
+    // file, so we need to check and see if it does.
     if (targetsCompressedFile) {
       val Array(_, extension) =
         targetFile
@@ -49,6 +55,9 @@ case class RelativePath(localPath: Path) extends GDALPathType {
       (None, scheme)
 }
 
+/** Represents a non-relative path to be read in by GDAL. Unlike
+ *  `RelativePath`, this can be prefixed with one or two schemes.
+ */
 case class URIPath(uri: UrlWithAuthority) extends GDALPathType {
   import Schemes._
 
