@@ -45,9 +45,7 @@ case class GDALDataPath(
   path: String,
   compressedFileDelimiter: String = "!"
 ) extends DataPath {
-
   import Schemes._
-  import Patterns._
 
   val gdalPath =
     UrlWithAuthority.parseOption(path) match {
@@ -69,7 +67,7 @@ case class GDALDataPath(
   )
 
   private val pointsToCatalog: Boolean =
-    QUERY_PARAMS_PATTERN.findFirstIn(path) match {
+    Patterns.QUERY_PARAMS_PATTERN.findFirstIn(path) match {
       case Some(_) => true
       case None => false
     }
