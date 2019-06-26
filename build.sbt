@@ -78,6 +78,7 @@ lazy val vlm = project
       geotrellisS3,
       geotrellisUtil,
       scalactic,
+      scalaURI,
       squants,
       sparkCore % Provided,
       sparkSQL % Test,
