@@ -181,7 +181,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
 
         GDALDataPath(uri).vsiPath should be (expectedPath)
       }
-
+      
       it("zip+hdfs uri") {
         val filePath = "hdfs://test-files/nlcd/data/data.zip"
         val uri = s"zip+$filePath"
@@ -280,6 +280,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
 
         GDALDataPath(uri).vsiPath should be (expectedPath)
       }
+
     }
 
     describe("Formatting the given uris - edge cases") {

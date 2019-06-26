@@ -118,6 +118,7 @@ case class GDALDataPath(
       case (WASB | WASBS) => s"/vsiaz/$formattedPath"
       case HDFS => s"/vsihdfs/$formattedPath"
       case _ => formattedPath
+
     }
   }
 
