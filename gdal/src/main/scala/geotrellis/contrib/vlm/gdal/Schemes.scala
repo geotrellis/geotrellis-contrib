@@ -51,14 +51,14 @@ object Schemes {
 
   final val COMPRESSED_FILE_TYPES =
     Array(
-      s".$TAR",
-      s".$TGZ",
-      s".$ZIP",
-      s".$KMZ",
-      s".$ODS",
-      s".$XLSX",
-      s".$GZIP",
-      s".$GZ"
+      TAR,
+      TGZ,
+      ZIP,
+      KMZ,
+      ODS,
+      XLSX,
+      GZIP,
+      GZ
     )
 
   final val FILE_TYPE_TO_SCHEME =
