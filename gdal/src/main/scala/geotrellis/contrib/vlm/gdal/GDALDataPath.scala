@@ -79,27 +79,7 @@ case class GDALDataPath(
     s"Cannot create a GDALDataPath that points to a GeoTrellis catalog: $path"
   )
 
-  val firstScheme: Option[String] =
-    gdalPath.firstScheme match {
-      case Some(_) => gdalPath.firstScheme
-      case None =>
-        val Array(_, extension) =
-          gdalPath
-            .targetFile
-            .split('.')
-            .map { _.toLowerCase }
-
-        val extensionScheme: Option[String] =
-          if (gdalPath.targetsCompressedFile)
-            COMPRESSED_FILE_TYPES
-              .filter { fileType => fileType == extension }
-              .headOption
-          else
-            None
-
-        extensionScheme.flatMap { FILE_TYPE_TO_SCHEME.get }
-    }
-
+  val firstScheme: Option[String] = gdalPath.firstScheme
   val secondScheme: String = gdalPath.secondScheme
 
   private val isLocal: Boolean =

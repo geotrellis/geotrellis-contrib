@@ -15,6 +15,8 @@ sealed trait GDALPathType {
 }
 
 case class LocalPath(localPath: Path) extends GDALPathType {
+  import Schemes._
+
   def path: String = localPath.toString
 
   private val pathParts: Vector[String] = localPath.parts
@@ -28,8 +30,23 @@ case class LocalPath(localPath: Path) extends GDALPathType {
   def targetsNestedFile: Boolean = false
 
   def scheme: String = "file"
-  def firstScheme: Option[String] = None
-  def secondScheme: String = scheme
+
+  val (firstScheme, secondScheme): (Option[String], String) =
+    if (targetsCompressedFile) {
+      val Array(_, extension) =
+        targetFile
+          .split('.')
+          .map { _.toLowerCase }
+
+      val extensionScheme =
+        COMPRESSED_FILE_TYPES
+          .filter { fileType => fileType == extension }
+          .headOption
+          .flatMap { FILE_TYPE_TO_SCHEME.get }
+
+      (extensionScheme, scheme)
+    } else
+      (None, scheme)
 }
 
 case class URIPath(uri: UrlWithAuthority) extends GDALPathType {
@@ -56,6 +73,19 @@ case class URIPath(uri: UrlWithAuthority) extends GDALPathType {
     if (scheme.contains("+")) {
       val Array(first, second) = scheme.split('+')
       (Some(first), second)
+    } else if (targetsCompressedFile) {
+      val Array(_, extension) =
+        targetFile
+          .split('.')
+          .map { _.toLowerCase }
+
+      val extensionScheme =
+        COMPRESSED_FILE_TYPES
+          .filter { fileType => fileType == extension }
+          .headOption
+          .flatMap { FILE_TYPE_TO_SCHEME.get }
+
+      (extensionScheme, scheme)
     } else
       (None, scheme)
 
