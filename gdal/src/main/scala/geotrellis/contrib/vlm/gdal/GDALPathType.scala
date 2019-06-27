@@ -33,16 +33,18 @@ case class RelativePath(localPath: Path) extends GDALPathType {
 
   def targetsNestedFile: Boolean = false
 
-  def scheme: String = "file"
+  val secondScheme: String = "file"
 
-  val (firstScheme, secondScheme): (Option[String], String) =
+  val firstScheme: Option[String] =
     // While it can be prefixed, the path can still point to a compressed
     // file, so we need to check and see if it does.
     if (targetsCompressedFile) {
-      val Array(_, extension) =
+      val mappedParts: Array[String] =
         targetFile
           .split('.')
           .map { _.toLowerCase }
+
+      val extension: String = mappedParts(mappedParts.size - 1)
 
       val extensionScheme =
         COMPRESSED_FILE_TYPES
@@ -50,9 +52,15 @@ case class RelativePath(localPath: Path) extends GDALPathType {
           .headOption
           .flatMap { FILE_TYPE_TO_SCHEME.get }
 
-      (extensionScheme, scheme)
+      extensionScheme
     } else
-      (None, scheme)
+      None
+
+  def scheme: String =
+    firstScheme match {
+      case Some(sch) => s"$sch+$secondScheme"
+      case None => secondScheme
+    }
 }
 
 /** Represents a non-relative path to be read in by GDAL. Unlike
@@ -83,10 +91,12 @@ case class URIPath(uri: UrlWithAuthority) extends GDALPathType {
       val Array(first, second) = scheme.split('+')
       (Some(first), second)
     } else if (targetsCompressedFile) {
-      val Array(_, extension) =
+      val mappedParts: Array[String] =
         targetFile
           .split('.')
           .map { _.toLowerCase }
+
+      val extension: String = mappedParts(mappedParts.size - 1)
 
       val extensionScheme =
         COMPRESSED_FILE_TYPES

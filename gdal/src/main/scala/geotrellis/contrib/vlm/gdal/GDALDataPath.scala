@@ -48,10 +48,19 @@ case class GDALDataPath(
   import Schemes._
 
   val gdalPath =
-    UrlWithAuthority.parseOption(path) match {
-      case Some(uri) => URIPath(uri)
-      case None => RelativePath(Path.parse(path))
-    }
+    try {
+      UrlWithAuthority.parseOption(path) match {
+        case Some(uri) => URIPath(uri)
+        case None => RelativePath(Path.parse(path))
+      }
+    } catch {
+      case _: Throwable =>
+        throw new MalformedURLException(
+          s"Invalid URI passed into the GDALRasterSource constructor: ${path}." +
+          s"Check geotrellis.contrib.vlm.gdal.VSIPath constrains, " +
+          s"or pass VSI formatted String into the GDALRasterSource constructor manually."
+        )
+      }
 
   private val badPrefixes: List[String] =
     List("gt+", "gtiff+")
