@@ -51,7 +51,7 @@ object Dependencies {
   val logging                 = "com.typesafe.scala-logging" %% "scala-logging"              % "3.9.0"
   val scalatest               = "org.scalatest"              %% "scalatest"                  % "3.0.5"
   val scalactic               = "org.scalactic"              %% "scalactic"                  % "3.0.5"
-  val scalaURI                = "io.lemonlabs"               %% "scala-uri"                  % "1.4.8"
+  val scalaURI                = "io.lemonlabs"               %% "scala-uri"                  % "1.4.9"
   val simulacrum              = "com.github.mpilquist"       %% "simulacrum"                 % "0.15.0"
 
 
