@@ -20,9 +20,6 @@ import geotrellis.contrib.vlm.DataPath
 
 import io.lemonlabs.uri._
 
-import java.io.File
-import java.net.MalformedURLException
-
 
 /** Represents and formats a path that points to a files to be read by GDAL.
  *
@@ -47,22 +44,24 @@ case class GDALDataPath(
 ) extends DataPath {
   import Schemes._
 
+  val isVSIFormatted: Boolean =
+    path.startsWith("/vsi")
+
   // scala-uri has problems encoding/decoding certain characters,
   // so to account for that, we check to see if the path can
   // be parsed at all. If it can't then we use the UrlPath
   // to encode the path so that it can be used by the
   // classes in the library
-  private val configuredPath: String =
-    Url.parseOption(path) match {
-      case Some(_) => path
-      case None => UrlPath.fromRaw(path).toString
-    }
-
-  val gdalPath =
-    UrlWithAuthority.parseOption(configuredPath) match {
-      case Some(uri) => URIPath(uri)
-      case None => RelativePath(Path.parse(configuredPath))
-    }
+  private val gdalPath =
+    if (isVSIFormatted)
+      VSIPath(path)
+    else
+      Url.parseOption(path) match {
+        case Some(uri) => URIPath(uri)
+        case None =>
+          val encodedPath = UrlPath.fromRaw(path).toString
+          URIPath(Url.parse(encodedPath))
+      }
 
   private val badPrefixes: List[String] =
     List("gt+", "gtiff+")
@@ -104,7 +103,7 @@ case class GDALDataPath(
   // must convert that character into its respective path character.
   // Otherwise, the path can be used as is.
   private val formattedPath: String =
-    if (gdalPath.targetsNestedFile) {
+    if (gdalPath.targetsNestedFile && !isVSIFormatted) {
       val formattedFileName =
         if (onLocalWindows)
           gdalPath.targetFile.replace(compressedFileDelimiter, """\\""")
@@ -120,24 +119,29 @@ case class GDALDataPath(
 
   private val firstVSIScheme: String =
     firstScheme match {
-      case Some(firstHalf) => s"/vsi$firstHalf/"
+      case Some(firstHalf) =>
+        if (isVSIFormatted)
+          firstHalf
+        else
+          s"/vsi$firstHalf/"
       case None => ""
     }
 
-  private val secondVSIScheme: String = {
-    secondScheme match {
-      case (FTP | HTTP | HTTPS) => s"/vsicurl/$formattedPath"
-      case S3 => s"/vsis3/$formattedPath"
-      case GS => s"/vsigs/$formattedPath"
-      case (WASB | WASBS) => s"/vsiaz/$formattedPath"
-      case HDFS => s"/vsihdfs/$formattedPath"
-      case _ => formattedPath
-
-    }
-  }
+  private val secondVSIScheme: String =
+    if (!isVSIFormatted)
+      secondScheme match {
+        case (FTP | HTTP | HTTPS) => "/vsicurl/"
+        case S3 => "/vsis3/"
+        case GS => "/vsigs/"
+        case (WASB | WASBS) => "/vsiaz/"
+        case HDFS => s"/vsihdfs/"
+        case _ => ""
+      }
+    else
+      secondScheme
 
   /** The given [[path]] in the `VSI` format */
-  val vsiPath: String = firstVSIScheme + secondVSIScheme
+  val vsiPath: String = firstVSIScheme + secondVSIScheme + formattedPath
 }
 
 object GDALDataPath {

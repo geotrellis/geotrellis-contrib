@@ -280,25 +280,40 @@ class GDALDataPathSpec extends FunSpec with Matchers {
 
         GDALDataPath(uri).vsiPath should be (expectedPath)
       }
+    }
+  }
 
+  describe("Formatting VSI paths") {
+    ignore("should parse a VSI path") {
+      val filePath = "data/my-data/data.tif"
+      val expectedPath = s"/vsihdfs/hdfs://$filePath"
+
+      GDALDataPath(expectedPath).vsiPath should be (expectedPath)
     }
 
-    describe("Formatting the given uris - edge cases") {
-      it("should parse a path with uncommon characters") {
-        val filePath = """data/jake__user--data!@#$%^&*()`~{}[]\|=+,?';<>;/files/my-data.tif"""
-        val uri = s"s3://$filePath"
-        val expectedPath = s"/vsis3/$filePath"
+    ignore("should parse a chained VSI path") {
+      val filePath = "data/my-data/data.zip"
+      val expectedPath = s"/vsizip//vsis3/$filePath"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
-      }
+      GDALDataPath(expectedPath).vsiPath should be (expectedPath)
+    }
+  }
 
-      it("should parse a targeted compressed file with a differenct delimiter") {
-        val filePath = "data/my-data/data!.zip"
-        val uri = s"zip+s3://$filePath/$fileName"
-        val expectedPath = s"/vsizip//vsis3/$filePath/$fileName"
+  describe("Formatting the given uris - edge cases") {
+    it("should parse a path with uncommon characters") {
+      val filePath = """data/jake__user--data!@#$%^&*()`~{}[]\|=+,?';<>;/files/my-data.tif"""
+      val uri = s"s3://$filePath"
+      val expectedPath = s"/vsis3/$filePath"
 
-        GDALDataPath(uri, "/").vsiPath should be (expectedPath)
-      }
+      GDALDataPath(uri).vsiPath should be (expectedPath)
+    }
+
+    it("should parse a targeted compressed file with a differenct delimiter") {
+      val filePath = "data/my-data/data!.zip"
+      val uri = s"zip+s3://$filePath/$fileName"
+      val expectedPath = s"/vsizip//vsis3/$filePath/$fileName"
+
+      GDALDataPath(uri, "/").vsiPath should be (expectedPath)
     }
   }
 }
