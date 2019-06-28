@@ -16,8 +16,7 @@
 
 package geotrellis.contrib.vlm.effect
 
-import geotrellis.contrib.vlm.Implicits._
-import geotrellis.contrib.vlm.{ResampleGrid, TargetCellType}
+import geotrellis.contrib.vlm._
 import geotrellis.vector._
 import geotrellis.raster._
 import geotrellis.raster.resample._
@@ -58,9 +57,9 @@ abstract class MosaicRasterSource[F[_]: Monad: Par] extends RasterSourceF[F] {
     *
     * It doesn't make sense to access "the" URI for a collection, so this throws an exception.
     */
-  def uri: String = throw new NotImplementedError(
+  def dataPath: DataPath = throw new NotImplementedError(
     """
-      | MosaicRasterSources don't have a single uri. Perhaps you wanted the uri from
+      | MosaicRasterSources don't have a single dataPath. Perhaps you wanted the dataPath from
       | one of this MosaicRasterSource's sources?
     """.trim.stripMargin
   )
@@ -96,7 +95,7 @@ abstract class MosaicRasterSource[F[_]: Monad: Par] extends RasterSourceF[F] {
     *
     * @see [[geotrellis.contrib.vlm.RasterSource.reproject]]
     */
-  def reproject(targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): MosaicRasterSource[F] =
+  def reproject(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): MosaicRasterSource[F] =
     MosaicRasterSource(
       sources.map(_.map { _.reproject(targetCRS, resampleGrid, method, strategy) }),
       crs,

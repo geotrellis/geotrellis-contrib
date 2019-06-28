@@ -67,7 +67,7 @@ class GDALWarpOptionsSpec extends FunSpec with RasterMatchers with BetterRasterM
           rasterExtent = GridExtent(Extent(630000.0, 215000.0, 645000.0, 228500.0), 10, 10),
           CRS.fromString("+proj=lcc +lat_1=36.16666666666666 +lat_2=34.33333333333334 +lat_0=33.75 +lon_0=-79 +x_0=609601.22 +y_0=0 +datum=NAD83 +units=m +no_defs "),
           WebMercator,
-          TargetCellSize[Long](CellSize(10, 10)).some
+          TargetCellSize[Long](CellSize(10, 10))
         )
     rasterSourceFromUriOptions(uri, opts)
   }
@@ -80,7 +80,7 @@ class GDALWarpOptionsSpec extends FunSpec with RasterMatchers with BetterRasterM
           rasterExtent = GridExtent(Extent(630000.0, 215000.0, 645000.0, 228500.0), 10, 10),
           CRS.fromString("+proj=lcc +lat_1=36.16666666666666 +lat_2=34.33333333333334 +lat_0=33.75 +lon_0=-79 +x_0=609601.22 +y_0=0 +datum=NAD83 +units=m +no_defs "),
           WebMercator,
-          TargetCellSize[Long](CellSize(10, 10)).some
+          TargetCellSize[Long](CellSize(10, 10))
         )
         .resample(
           GridExtent(Extent(-8769160.0, 4257700.0, -8750630.0, 4274460.0), CellSize(10, 10)),

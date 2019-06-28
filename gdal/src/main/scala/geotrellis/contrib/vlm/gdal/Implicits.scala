@@ -19,7 +19,6 @@ package geotrellis.contrib.vlm.gdal
 import geotrellis.contrib.vlm._
 import geotrellis.raster._
 import geotrellis.proj4.CRS
-import geotrellis.raster.reproject.Reproject.{Options => ReprojectOptions}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector.Extent
 
@@ -53,8 +52,8 @@ trait Implicits extends Serializable {
 
 
   implicit class GDALWarpOptionsMethodExtension(val self: GDALWarpOptions) {
-    def reproject(rasterExtent: GridExtent[Long], sourceCRS: CRS, targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, resampleMethod: ResampleMethod = NearestNeighbor): GDALWarpOptions = {
-      val reprojectOptions = resampleGrid.map(ResampleGrid.toReprojectOptions[Long](rasterExtent, _, resampleMethod)).getOrElse(ReprojectOptions.DEFAULT.copy(method = resampleMethod))
+    def reproject(rasterExtent: GridExtent[Long], sourceCRS: CRS, targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, resampleMethod: ResampleMethod = NearestNeighbor): GDALWarpOptions = {
+      val reprojectOptions = ResampleGrid.toReprojectOptions[Long](rasterExtent, resampleGrid, resampleMethod)
       val re = rasterExtent.reproject(sourceCRS, targetCRS, reprojectOptions)
 
       self.copy(

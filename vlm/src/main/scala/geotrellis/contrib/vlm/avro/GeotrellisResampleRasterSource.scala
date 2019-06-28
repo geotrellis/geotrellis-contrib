@@ -33,7 +33,7 @@ import com.typesafe.scalalogging.LazyLogging
  * Note:
  * The constructor is unfriendly.
  * This class is not intended to constructed directly by the users.
- * Refer to [[GeoTrellisRasterSource]] for example of correct setup.
+ * Refer to [[GeotrellisRasterSource]] for example of correct setup.
  * It is expected that the caller has significant pre-computed information  about the layers.
  *
  * @param attributeStore the source of metadata for the layers, used for reading
@@ -41,7 +41,6 @@ import com.typesafe.scalalogging.LazyLogging
  * @param layerId The specific layer we're sampling from
  * @param sourceLayers list of layers we can can sample from for futher resample
  * @param gridExtent the desired pixel grid for the layer
- * @param resampleGrid Target pixel grid to which the layer will be resampled
  * @param resampleMethod Resampling method used when fitting data to target grid
  */
 class GeotrellisResampleRasterSource(
@@ -93,14 +92,10 @@ class GeotrellisResampleRasterSource(
       .flatMap(read(_, bands))
   }
 
-  def reprojection(targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): GeotrellisReprojectRasterSource = {
-    val reprojectOptions =
-      resampleGrid
-        .map(ResampleGrid.toReprojectOptions[Long](this.gridExtent, _, method))
-        .getOrElse(Reproject.Options.DEFAULT.copy(method = method))
-
+  def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): GeotrellisReprojectRasterSource = {
+    val reprojectOptions = ResampleGrid.toReprojectOptions[Long](this.gridExtent, resampleGrid, method)
     val (closestLayerId, gridExtent) = GeotrellisReprojectRasterSource.getClosestSourceLayer(targetCRS, sourceLayers, reprojectOptions, strategy)
-    new GeotrellisReprojectRasterSource(attributeStore, uri, layerId, sourceLayers, gridExtent, targetCRS, resampleGrid, targetCellType = targetCellType)
+    new GeotrellisReprojectRasterSource(attributeStore, dataPath, layerId, sourceLayers, gridExtent, targetCRS, resampleGrid, targetCellType = targetCellType)
   }
   /** Resample underlying RasterSource to new grid extent
    * Note: ResampleGrid will be applied to GridExtent of the source layer, not the GridExtent of this RasterSource

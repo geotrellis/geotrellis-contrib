@@ -29,7 +29,7 @@ import geotrellis.util.RangeReader
 case class GeoTiffReprojectRasterSource(
   dataPath: GeoTiffDataPath,
   crs: CRS,
-  targetResampleGrid: Option[ResampleGrid[Long]] = None,
+  targetResampleGrid: ResampleGrid[Long] = IdentityResampleGrid,
   resampleMethod: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
   errorThreshold: Double = 0.125,
@@ -54,10 +54,10 @@ case class GeoTiffReprojectRasterSource(
       )
 
     targetResampleGrid match {
-      case Some(targetRegion: TargetRegion[Long]) => targetRegion.region
-      case Some(targetGrid: TargetGrid[Long]) => targetGrid(reprojectedRasterExtent)
-      case Some(dimensions: Dimensions[Long]) => dimensions(reprojectedRasterExtent)
-      case Some(targetCellSize: TargetCellSize[Long]) => targetCellSize(reprojectedRasterExtent)
+      case targetRegion: TargetRegion[Long] => targetRegion.region
+      case targetGrid: TargetGrid[Long] => targetGrid(reprojectedRasterExtent)
+      case dimensions: Dimensions[Long] => dimensions(reprojectedRasterExtent)
+      case targetCellSize: TargetCellSize[Long] => targetCellSize(reprojectedRasterExtent)
       case _ => reprojectedRasterExtent
     }
   }
@@ -66,12 +66,12 @@ case class GeoTiffReprojectRasterSource(
       gridExtent :: tiff.overviews.map(ovr => ReprojectRasterExtent(ovr.rasterExtent.toGridType[Long], transform))
 
   @transient private[vlm] lazy val closestTiffOverview: GeoTiff[MultibandTile] = {
-    if(targetResampleGrid.isDefined) {
-      // we're asked to match specific target resolution, estimate what resolution we need in source to sample it
-      val estimatedSource = ReprojectRasterExtent(gridExtent, backTransform)
-      tiff.getClosestOverview(estimatedSource.cellSize, strategy)
-    } else {
-      tiff.getClosestOverview(baseGridExtent.cellSize, strategy)
+    targetResampleGrid match {
+      case IdentityResampleGrid => tiff.getClosestOverview(baseGridExtent.cellSize, strategy)
+      case _ =>
+        // we're asked to match specific target resolution, estimate what resolution we need in source to sample it
+        val estimatedSource = ReprojectRasterExtent(gridExtent, backTransform)
+        tiff.getClosestOverview(estimatedSource.cellSize, strategy)
     }
   }
 
@@ -131,19 +131,11 @@ case class GeoTiffReprojectRasterSource(
     }.map { convertRaster }
   }
 
-  def reprojection(targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
+  def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
     GeoTiffReprojectRasterSource(dataPath, targetCRS, resampleGrid, method, strategy, targetCellType = targetCellType, baseTiff = Some(tiff))
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GeoTiffReprojectRasterSource(
-      dataPath,
-      crs,
-      Some(resampleGrid),
-      method,
-      strategy,
-      targetCellType = targetCellType,
-      baseTiff = Some(tiff)
-    )
+    GeoTiffReprojectRasterSource(dataPath, crs, resampleGrid, method, strategy, targetCellType = targetCellType, baseTiff = Some(tiff))
 
   def convert(targetCellType: TargetCellType): RasterSource =
     GeoTiffReprojectRasterSource(dataPath, crs, targetResampleGrid, resampleMethod, strategy, targetCellType = Some(targetCellType))

@@ -17,7 +17,7 @@
 package geotrellis.contrib.vlm.avro
 
 import geotrellis.contrib.vlm.DataPath
-import geotrellis.spark.LayerId
+import geotrellis.store.LayerId
 
 import cats.syntax.option._
 import io.lemonlabs.uri.{Url, UrlPath, UrlWithAuthority}

@@ -20,6 +20,7 @@ import geotrellis.contrib.vlm.geotiff._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader._
 import geotrellis.layer._
+import geotrellis.proj4._
 import geotrellis.raster.testkit.RasterMatchers
 
 import org.scalatest._

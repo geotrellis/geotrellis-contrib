@@ -70,8 +70,8 @@ case class GDALRasterSource(
       }
   }
 
-  def reprojection(targetCRS: CRS, resampleGrid: Option[ResampleGrid[Long]] = None, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
-    GDALRasterSource(uri, options.reproject(gridExtent, crs, targetCRS, resampleGrid, method))
+  def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
+    GDALRasterSource(dataPath, options.reproject(gridExtent, crs, targetCRS, resampleGrid, method))
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
     GDALRasterSource(dataPath, options.resample(gridExtent, resampleGrid))

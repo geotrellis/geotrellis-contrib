@@ -50,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - GDAL: GDALReprojectRasterSource - this operation is now available as GDALRasterSource.reproject
 - GDAL: GDALResampleRasterSource - this operation is now available as GDALRasterSource.resample
-
+ 
 ## [3.13.0] - 2019-05-17
 ### Added
 - Slick: Project moved to geotrellis-contrib from [geotrellis](https://github.com/locationtech/geotrellis)
