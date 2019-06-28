@@ -55,7 +55,7 @@ lazy val commonSettings = Seq(
 
 lazy val root = Project("geotrellis-contrib", file(".")).
   aggregate(
-    vlm, gdal, summary, slick
+    vlm, gdal, slick
   ).
   settings(commonSettings: _*).
   settings(publish / skip := true).
@@ -156,22 +156,6 @@ lazy val testkit = project
       geotrellisMacros,
       scalatest % Provided
     )
-  )
-
-lazy val summary = project
-  .settings(commonSettings)
-  .settings(
-    organization := "com.azavea.geotrellis",
-    name := "geotrellis-contrib-summary",
-    libraryDependencies ++= Seq(
-      geotrellisRaster,
-      geotrellisVector,
-      simulacrum,
-      scalatest % Test
-    ),
-    Test / fork := true,
-    Test / parallelExecution := false,
-    Test / testOptions += Tests.Argument("-oD")
   )
 
 lazy val benchmark = (project in file("benchmark"))

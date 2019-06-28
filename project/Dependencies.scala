@@ -52,9 +52,7 @@ object Dependencies {
   val scalatest               = "org.scalatest"              %% "scalatest"                  % "3.0.5"
   val scalactic               = "org.scalactic"              %% "scalactic"                  % "3.0.5"
   val scalaURI                = "io.lemonlabs"               %% "scala-uri"                  % "1.4.9"
-  val simulacrum              = "com.github.mpilquist"       %% "simulacrum"                 % "0.15.0"
-
-
+  
   val catsCore                = "org.typelevel"              %% "cats-core"                  % "1.4.0"
   val catsEffect              = "org.typelevel"              %% "cats-effect"                % "1.0.0"
   val fs2Core                 = "co.fs2"                     %% "fs2-core"                   % "1.0.0"
