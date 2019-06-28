@@ -284,7 +284,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
     }
 
     describe("Formatting the given uris - edge cases") {
-      ignore("should parse a path with uncommon characters") {
+      it("should parse a path with uncommon characters") {
         val filePath = """data/jake__user--data!@#$%^&*()`~{}[]\|=+,?';<>;/files/my-data.tif"""
         val uri = s"s3://$filePath"
         val expectedPath = s"/vsis3/$filePath"

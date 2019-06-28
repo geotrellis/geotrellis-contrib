@@ -21,7 +21,7 @@ sealed trait GDALPathType {
 case class RelativePath(localPath: Path) extends GDALPathType {
   import Schemes._
 
-  def path: String = localPath.toString
+  def path: String = localPath.toStringRaw
 
   private val pathParts: Vector[String] = localPath.parts
   def targetFile: String = pathParts(pathParts.size - 1)
@@ -120,16 +120,19 @@ case class URIPath(uri: UrlWithAuthority) extends GDALPathType {
   def targetsCompressedFile: Boolean =
     targetsNestedFile || targetedFileCompressed
 
+  private val rawPath: String =
+    uri.path.toStringRaw
+
   def path: String =
     secondScheme match {
       case (FTP | HTTP | HTTPS | HDFS) =>
-        s"$secondScheme://${uri.authority}${uri.path}"
+        s"$secondScheme://${uri.authority}${rawPath}"
       case (WASB | WASBS) =>
         uri.user match {
-          case Some(info) => s"${info}${uri.path}"
-          case None => s"${uri.authority}${uri.path}"
+          case Some(info) => s"${info}${rawPath}"
+          case None => s"${uri.authority}${rawPath}"
         }
       case _ =>
-        s"${uri.authority}${uri.path}"
+        s"${uri.authority}${rawPath}"
     }
 }

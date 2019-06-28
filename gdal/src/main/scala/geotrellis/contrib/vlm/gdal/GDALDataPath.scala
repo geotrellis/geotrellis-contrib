@@ -18,7 +18,7 @@ package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm.DataPath
 
-import io.lemonlabs.uri.{UrlWithAuthority, Path}
+import io.lemonlabs.uri._
 
 import java.io.File
 import java.net.MalformedURLException
@@ -47,20 +47,22 @@ case class GDALDataPath(
 ) extends DataPath {
   import Schemes._
 
+  // scala-uri has problems encoding/decoding certain characters,
+  // so to account for that, we check to see if the path can
+  // be parsed at all. If it can't then we use the UrlPath
+  // to encode the path so that it can be used by the
+  // classes in the library
+  private val configuredPath: String =
+    Url.parseOption(path) match {
+      case Some(_) => path
+      case None => UrlPath.fromRaw(path).toString
+    }
+
   val gdalPath =
-    try {
-      UrlWithAuthority.parseOption(path) match {
-        case Some(uri) => URIPath(uri)
-        case None => RelativePath(Path.parse(path))
-      }
-    } catch {
-      case _: Throwable =>
-        throw new MalformedURLException(
-          s"Invalid URI passed into the GDALRasterSource constructor: ${path}." +
-          s"Check geotrellis.contrib.vlm.gdal.VSIPath constrains, " +
-          s"or pass VSI formatted String into the GDALRasterSource constructor manually."
-        )
-      }
+    UrlWithAuthority.parseOption(configuredPath) match {
+      case Some(uri) => URIPath(uri)
+      case None => RelativePath(Path.parse(configuredPath))
+    }
 
   private val badPrefixes: List[String] =
     List("gt+", "gtiff+")
@@ -98,6 +100,9 @@ case class GDALDataPath(
   private val onLocalWindows: Boolean =
     System.getProperty("os.name").toLowerCase == "win" && isLocal
 
+  // If the path contains a compressed file delimiter, then we
+  // must convert that character into its respective path character.
+  // Otherwise, the path can be used as is.
   private val formattedPath: String =
     if (gdalPath.targetsNestedFile) {
       val formattedFileName =
