@@ -158,5 +158,14 @@ lazy val testkit = project
   )
 
 lazy val benchmark = (project in file("benchmark"))
+  .dependsOn(vlm)
   .settings(commonSettings: _*)
-  .settings( publish / skip := true)
+  .enablePlugins(JmhPlugin)
+  .settings(
+    name := "benchmark",
+    fork := true,
+    libraryDependencies ++= Seq(
+      sparkCore
+    ),
+    publish / skip := true
+  )
