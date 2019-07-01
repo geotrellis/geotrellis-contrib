@@ -19,16 +19,8 @@ package geotrellis.contrib.vlm.avro
 import geotrellis.contrib.vlm._
 import geotrellis.spark.LayerId
 
-
 class GeoTrellisRasterSourceProvider extends RasterSourceProvider {
-  def canProcess(path: String): Boolean =
-    try {
-      GeoTrellisDataPath(path)
-      true
-    } catch {
-      case _: Throwable => false
-    }
+  def canProcess(path: String): Boolean = path.nonEmpty && GeoTrellisDataPath(path).catalogPath.nonEmpty
 
-    def rasterSource(path: String): GeotrellisRasterSource =
-      new GeotrellisRasterSource(path)
+  def rasterSource(path: String): GeotrellisRasterSource = new GeotrellisRasterSource(path)
 }

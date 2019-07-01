@@ -20,7 +20,6 @@ import geotrellis.contrib.vlm.RasterSource
 
 import org.scalatest._
 
-
 class GDALRasterSourceProviderSpec extends FunSpec {
   describe("GDALRasterSourceProvider") {
     val provider = new GDALRasterSourceProvider()
@@ -38,7 +37,7 @@ class GDALRasterSourceProviderSpec extends FunSpec {
     }
 
     it("should not be able to process a GeoTrellis catalog path") {
-      assert(!provider.canProcess("s3://path/to/my/fav/catalog?layer=fav&zoom=3"))
+      assert(!provider.canProcess("gt+s3://path/to/my/fav/catalog?layer=fav&zoom=3"))
     }
 
     it("should not be able to process a GeoTiff prefixed path") {

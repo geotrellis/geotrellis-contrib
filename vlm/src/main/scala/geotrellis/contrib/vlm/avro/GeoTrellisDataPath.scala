@@ -19,7 +19,9 @@ package geotrellis.contrib.vlm.avro
 import geotrellis.contrib.vlm.DataPath
 import geotrellis.spark.LayerId
 
-import io.lemonlabs.uri.UrlWithAuthority
+import io.lemonlabs.uri.{Url, UrlPath, UrlWithAuthority}
+import io.lemonlabs.uri.encoding.PercentEncoder
+import io.lemonlabs.uri.encoding.PercentEncoder.PATH_CHARS_TO_ENCODE
 
 /** Represents a path that points to a GeoTrellis layer saved in a catalog.
  *
@@ -38,33 +40,48 @@ import io.lemonlabs.uri.UrlWithAuthority
  *  @note The order of the query parameters does not matter.
  */
 case class GeoTrellisDataPath(path: String) extends DataPath {
+  import GeoTrellisDataPath._
+
   private val layerNameParam: String = "layer"
   private val zoomLevelParam: String = "zoom"
   private val bandCountParam: String = "band_count"
 
-  private val uri = UrlWithAuthority.parse(path)
+  // try to parse it, otherwise it is a path
+  private val uri = UrlWithAuthority.parseOption(path).fold(Url().withPath(UrlPath.fromRaw(path)): Url)(identity)
   private val queryString = uri.query
 
-  val catalogPath: String =
-    uri.schemeOption match {
-      case Some(scheme) => s"$scheme://${uri.authority}${uri.path}"
-      case None => throw new Exception(s"The given path requires a scheme: $path")
+  lazy val catalogPath: String = {
+    if (!uri.toStringRaw.toLowerCase.contains("?layer=")) ""
+    else {
+      uri.schemeOption.fold(uri.toStringRaw) { scheme =>
+        val authority =
+          uri match {
+            case url: UrlWithAuthority => url.authority.userInfo.user.getOrElse("")
+            case _ => ""
+          }
+
+        val schemes = scheme.split("\\+")
+        if ((schemes.length > 1 && schemes.head == PREFIX) || (schemes.length == 1)) s"$scheme://$authority${uri.path}"
+        else ""
+      }
     }
+  }
 
   /** The name of the target layer */
-  val layerName = queryString.param(layerNameParam).get
+  lazy val layerName: String = queryString.param(layerNameParam).get
 
   /** The zoom level of the target layer */
-  val zoomLevel: Option[Int] = queryString.param(zoomLevelParam).map { _.toInt }
+  lazy val zoomLevel: Option[Int] = queryString.param(zoomLevelParam).map { _.toInt }
 
   /** The band count of the target layer */
-  val bandCount: Option[Int] = queryString.param(bandCountParam).map { _.toInt }
+  lazy val bandCount: Option[Int] = queryString.param(bandCountParam).map { _.toInt }
 
   /** The [[LayerId]] associated with the given layer */
-  val layerId: LayerId = LayerId(layerName, zoomLevel.get)
+  lazy val layerId: LayerId = LayerId(layerName, zoomLevel.get)
 }
 
 object GeoTrellisDataPath {
-  implicit def toGeoTrellisDataPath(path: String): GeoTrellisDataPath =
-    GeoTrellisDataPath(path)
+  val PREFIX = "gt"
+
+  implicit def toGeoTrellisDataPath(path: String): GeoTrellisDataPath = GeoTrellisDataPath(path)
 }

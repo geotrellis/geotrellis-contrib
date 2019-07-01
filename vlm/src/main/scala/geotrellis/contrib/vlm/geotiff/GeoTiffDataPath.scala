@@ -18,6 +18,9 @@ package geotrellis.contrib.vlm.geotiff
 
 import geotrellis.contrib.vlm.DataPath
 
+import io.lemonlabs.uri.Uri
+import io.lemonlabs.uri.encoding.PercentEncoder
+import io.lemonlabs.uri.encoding.PercentEncoder.PATH_CHARS_TO_ENCODE
 
 /** Represents a path that points to a GeoTiff to be read.
  *  @note The target file must have a file extension.
@@ -30,50 +33,32 @@ import geotrellis.contrib.vlm.DataPath
  *  @example "s3://bucket/prefix/data.tif"
  *  @example "gtiff+file:///tmp/data.tiff"
  *
- *  @param tiffExtensions `List` of extensions to look for when confirming whether or
- *    not the target file is a GeoTiff.
  *  @note Capitalization of the extension is not regarded.
  */
-case class GeoTiffDataPath(
-  path: String,
-  tiffExtensions: List[String] = List(".tiff", ".tif")
-) extends DataPath {
-  private val pointsToTiff: Boolean = {
-    val lowerCase = path.toLowerCase
+case class GeoTiffDataPath(path: String, percentEncoder: PercentEncoder = PercentEncoder(PATH_CHARS_TO_ENCODE ++ Set('%', '?', '#'))) extends DataPath {
+  import GeoTiffDataPath._
 
-    tiffExtensions.map { lowerCase.endsWith }.reduce { _ || _ }
-  }
-
-  require(pointsToTiff, s"The given path must point to a GeoTiff: $path")
-
-  private val badPrefixes: List[String] =
-    List(
-      "gdal+",
-      "zip+",
-      "gzip+",
-      "gz+",
-      "zip+",
-      "tar+"
-    )
-
-  private val hasBadPrefix: Boolean =
-    badPrefixes
-      .map { path.startsWith }
-      .reduce { _ || _ }
-
-  require(!hasBadPrefix, s"Path points to a GeoTiff that GeoTiffRasterSource cannot read: $path")
-
-  private val servicePrefix: String = "gtiff+"
+  private val upath = percentEncoder.encode(path, "UTF-8")
 
   /** The formatted path to the GeoTiff that will be read */
-  def geoTiffPath: String =
-    if (path.startsWith(servicePrefix))
-      path.splitAt(servicePrefix.size)._2
-    else
-      path
+  lazy val geoTiffPath: String = {
+    // this parser supports only TIF and .tif exts
+    if(!SUPPORTED_FORMATS.map(upath.split("\\.").last.toLowerCase.contains).reduce(_ || _)) ""
+    else {
+      Uri.parseOption(upath).fold("") { uri =>
+        uri.schemeOption.fold(uri.toStringRaw) { scheme =>
+          val schemes = scheme.split("\\+")
+          if ((schemes.length > 1 && schemes.head == PREFIX) || (schemes.length == 1)) uri.withScheme(schemes.last).toStringRaw
+          else ""
+        }
+      }
+    }
+  }
 }
 
 object GeoTiffDataPath {
-  implicit def toGeoTiffDataPath(path: String): GeoTiffDataPath =
-    GeoTiffDataPath(path)
+  val PREFIX = "gtiff"
+  val SUPPORTED_FORMATS = Seq("tiff", "tif")
+
+  implicit def toGeoTiffDataPath(path: String): GeoTiffDataPath = GeoTiffDataPath(path)
 }

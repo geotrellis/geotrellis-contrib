@@ -113,7 +113,7 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
       //an[MalformedURLException] should be thrownBy GDALRasterSource(GDALDataPath("file:/random/path/here/N49W155.hgt.gz"))
       val result = GDALRasterSource(GDALDataPath("file:/random/path/here/N49W155.hgt.gz"))
       println(s"\n\nThis is the result: ${result.vsiPath}")
-      println(s"This is the result: ${GDALDataPath.isVSIFormatted(result.vsiPath)}")
+      println(s"This is the result: ${Schemes.isVSIFormatted(result.vsiPath)}")
     }
 
     val cellSizes = {

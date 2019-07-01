@@ -18,7 +18,6 @@ package geotrellis.contrib.vlm.gdal
 
 import org.scalatest._
 
-
 class GDALDataPathSpec extends FunSpec with Matchers {
   val fileName = "file-1.tiff"
 
@@ -42,7 +41,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
 
       it("http that points to gzip with ! url") {
         val filePath = "www.radomdata.com/test-files/data.gzip"
-        val url = s"gzip+http://$filePath!$fileName"
+        val url = s"http://$filePath!$fileName"
         val expectedPath = s"/vsigzip//vsicurl/http://$filePath/$fileName"
 
         GDALDataPath(url).vsiPath should be (expectedPath)
@@ -118,6 +117,17 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val path = "/tmp/some/data/data.zip"
         val uri = s"zip+file://$path!$fileName"
         val expectedPath = s"/vsizip/$path/$fileName"
+
+        GDALDataPath(uri).vsiPath should be (expectedPath)
+      }
+
+      it("force zip+file with ! uri") {
+        val path = "/tmp/some/data/data.gz"
+        val uri = s"zip+file://$path!$fileName"
+        val expectedPath = s"/vsizip/$path/$fileName"
+
+        println(s"GDALDataPath(uri).vsiPath: ${GDALDataPath(uri).vsiPath}")
+        println(s"expectedPath: ${expectedPath}")
 
         GDALDataPath(uri).vsiPath should be (expectedPath)
       }
@@ -336,13 +346,22 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         GDALDataPath(uri).vsiPath should be (expectedPath)
       }
     }
+  }
 
-    ignore("should parse a chained VSI path") {
-      val filePath = "data/my-data/data.zip"
+  describe("Formatting VSI paths") {
+    it("should parse a VSI path") {
+      val filePath = "/vsihdfs/hdfs://data/my-data/data.tif"
+      val expectedPath = s"/vsihdfs/hdfs://$filePath"
+
+      GDALDataPath(expectedPath).vsiPath should be (expectedPath)
+    }
+
+    it("should parse a chained VSI path") {
+      val filePath = "/vsizip//vsis3/data/my-data/data.zip"
       val expectedPath = s"/vsizip//vsis3/$filePath"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
-      }
+      GDALDataPath(expectedPath).vsiPath should be (expectedPath)
+    }
   }
 
   describe("Formatting the given uris - edge cases") {
@@ -351,7 +370,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
       val uri = s"s3://$filePath"
       val expectedPath = s"/vsis3/$filePath"
 
-      GDALDataPath(uri).vsiPath should be (expectedPath)
+      GDALDataPath(uri, None).vsiPath should be (expectedPath)
     }
 
     it("should parse a targeted compressed file with a differenct delimiter") {
@@ -359,7 +378,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
       val uri = s"zip+s3://$filePath/$fileName"
       val expectedPath = s"/vsizip//vsis3/$filePath/$fileName"
 
-      GDALDataPath(uri, "/").vsiPath should be (expectedPath)
+      GDALDataPath(uri, Some("/")).vsiPath should be (expectedPath)
     }
   }
 }
