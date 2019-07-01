@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - VLM: Correct incomplete reads when using `MosaicRasterSource`
 
+### Removed
+- Summary: Subproject removed. The polygonal summary prototype was moved to GeoTrellis core for the 3.0 release. See: https://github.com/locationtech/geotrellis/blob/master/docs/guide/rasters.rst#polygonal-summary
+
 ## [3.15.0] - 2019-06-22
 ### Added
 - Fix GDAL resampling with Dimensions resampleGrid
