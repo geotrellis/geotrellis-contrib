@@ -25,6 +25,7 @@ import geotrellis.raster.merge.Implicits._
 import geotrellis.raster.resample._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.proj4.{CRS, WebMercator}
+import geotrellis.raster.crop.Crop
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.raster.render._
 import geotrellis.spark.tiling.LayoutDefinition
@@ -99,7 +100,9 @@ trait MosaicRasterSource extends RasterSource {
   )
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val rasters = sources map { _.read(extent, bands) }
+    val rasters = sources map {
+      _.read(extent, bands).map(_.crop(extent, Crop.Options(false, false)))
+    }
     rasters.reduce
   }
 
