@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - VLM: Created the `DataPath` type which the `RasterSource`s now take
 - VLM: Created an SPI interface for `RasterSource`
 
+### Fixed
+- VLM: Correct incomplete reads when using `MosaicRasterSource`
+
 ## [3.15.0] - 2019-06-22
 ### Added
 - Fix GDAL resampling with Dimensions resampleGrid
