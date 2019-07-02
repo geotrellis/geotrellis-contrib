@@ -20,8 +20,6 @@ import geotrellis.contrib.vlm.DataPath
 import geotrellis.spark.LayerId
 
 import io.lemonlabs.uri.{Url, UrlPath, UrlWithAuthority}
-import io.lemonlabs.uri.encoding.PercentEncoder
-import io.lemonlabs.uri.encoding.PercentEncoder.PATH_CHARS_TO_ENCODE
 
 /** Represents a path that points to a GeoTrellis layer saved in a catalog.
  *
@@ -40,8 +38,6 @@ import io.lemonlabs.uri.encoding.PercentEncoder.PATH_CHARS_TO_ENCODE
  *  @note The order of the query parameters does not matter.
  */
 case class GeoTrellisDataPath(path: String) extends DataPath {
-  import GeoTrellisDataPath._
-
   private val layerNameParam: String = "layer"
   private val zoomLevelParam: String = "zoom"
   private val bandCountParam: String = "band_count"
@@ -60,9 +56,7 @@ case class GeoTrellisDataPath(path: String) extends DataPath {
             case _ => ""
           }
 
-        val schemes = scheme.split("\\+")
-        if ((schemes.length > 1 && schemes.head == PREFIX) || (schemes.length == 1)) s"$scheme://$authority${uri.path}"
-        else ""
+        s"$scheme://$authority${uri.path}"
       }
     }
   }
@@ -81,7 +75,7 @@ case class GeoTrellisDataPath(path: String) extends DataPath {
 }
 
 object GeoTrellisDataPath {
-  val PREFIX = "gt"
+  val PREFIX = "gt+"
 
   implicit def toGeoTrellisDataPath(path: String): GeoTrellisDataPath = GeoTrellisDataPath(path)
 }

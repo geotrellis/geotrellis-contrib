@@ -110,7 +110,7 @@ case class GDALDataPath(
 }
 
 object GDALDataPath {
-  val PREFIX = "gdal"
+  val PREFIX = "gdal+"
 
   implicit def toGDALDataPath(path: String): GDALDataPath = GDALDataPath(path)
 }

@@ -351,16 +351,14 @@ class GDALDataPathSpec extends FunSpec with Matchers {
   describe("Formatting VSI paths") {
     it("should parse a VSI path") {
       val filePath = "/vsihdfs/hdfs://data/my-data/data.tif"
-      val expectedPath = s"/vsihdfs/hdfs://$filePath"
 
-      GDALDataPath(expectedPath).vsiPath should be (expectedPath)
+      GDALDataPath(filePath).vsiPath should be (filePath)
     }
 
     it("should parse a chained VSI path") {
       val filePath = "/vsizip//vsis3/data/my-data/data.zip"
-      val expectedPath = s"/vsizip//vsis3/$filePath"
 
-      GDALDataPath(expectedPath).vsiPath should be (expectedPath)
+      GDALDataPath(filePath).vsiPath should be (filePath)
     }
   }
 

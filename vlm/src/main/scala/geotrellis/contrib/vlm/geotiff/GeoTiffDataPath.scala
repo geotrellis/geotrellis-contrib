@@ -36,29 +36,20 @@ import io.lemonlabs.uri.encoding.PercentEncoder.PATH_CHARS_TO_ENCODE
  *  @note Capitalization of the extension is not regarded.
  */
 case class GeoTiffDataPath(path: String, percentEncoder: PercentEncoder = PercentEncoder(PATH_CHARS_TO_ENCODE ++ Set('%', '?', '#'))) extends DataPath {
-  import GeoTiffDataPath._
-
   private val upath = percentEncoder.encode(path, "UTF-8")
 
   /** The formatted path to the GeoTiff that will be read */
   lazy val geoTiffPath: String = {
-    // this parser supports only TIF and .tif exts
-    if(!SUPPORTED_FORMATS.map(upath.split("\\.").last.toLowerCase.contains).reduce(_ || _)) ""
-    else {
-      Uri.parseOption(upath).fold("") { uri =>
-        uri.schemeOption.fold(uri.toStringRaw) { scheme =>
-          val schemes = scheme.split("\\+")
-          if ((schemes.length > 1 && schemes.head == PREFIX) || (schemes.length == 1)) uri.withScheme(schemes.last).toStringRaw
-          else ""
-        }
+    Uri.parseOption(upath).fold("") { uri =>
+      uri.schemeOption.fold(uri.toStringRaw) { scheme =>
+        uri.withScheme(scheme.split("\\+").last).toStringRaw
       }
     }
   }
 }
 
 object GeoTiffDataPath {
-  val PREFIX = "gtiff"
-  val SUPPORTED_FORMATS = Seq("tiff", "tif")
+  val PREFIX = "gtiff+"
 
   implicit def toGeoTiffDataPath(path: String): GeoTiffDataPath = GeoTiffDataPath(path)
 }
