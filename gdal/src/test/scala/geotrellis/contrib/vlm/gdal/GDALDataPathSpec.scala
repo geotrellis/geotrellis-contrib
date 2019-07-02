@@ -28,7 +28,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val url = s"http://$filePath"
         val expectedPath = s"/vsicurl/$url"
 
-        GDALDataPath(url).vsiPath should be (expectedPath)
+        GDALDataPath.parse(url).path should be (expectedPath)
       }
 
       it("http that points to gzip url") {
@@ -36,7 +36,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val url = s"http://$filePath"
         val expectedPath = s"/vsigzip//vsicurl/$url"
 
-        GDALDataPath(url).vsiPath should be (expectedPath)
+        GDALDataPath.parse(url).path should be (expectedPath)
       }
 
       it("http that points to gzip with ! url") {
@@ -44,7 +44,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val url = s"http://$filePath!$fileName"
         val expectedPath = s"/vsigzip//vsicurl/http://$filePath/$fileName"
 
-        GDALDataPath(url).vsiPath should be (expectedPath)
+        GDALDataPath.parse(url).path should be (expectedPath)
       }
 
       it("http that points to gz url") {
@@ -52,7 +52,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val url = s"http://$filePath"
         val expectedPath = s"/vsigzip//vsicurl/$url"
 
-        GDALDataPath(url).vsiPath should be (expectedPath)
+        GDALDataPath.parse(url).path should be (expectedPath)
       }
 
       it("http that points to gz with ! url") {
@@ -60,7 +60,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val url = s"http://$filePath!$fileName"
         val expectedPath = s"/vsigzip//vsicurl/http://$filePath/$fileName"
 
-        GDALDataPath(url).vsiPath should be (expectedPath)
+        GDALDataPath.parse(url).path should be (expectedPath)
       }
 
       it("zip+http url") {
@@ -68,7 +68,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val url = s"zip+http://$filePath"
         val expectedPath = s"/vsizip//vsicurl/http://$filePath"
 
-        GDALDataPath(url).vsiPath should be (expectedPath)
+        GDALDataPath.parse(url).path should be (expectedPath)
       }
 
       it("zip+http with ! url") {
@@ -76,7 +76,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val url = s"zip+http://$filePath!$fileName"
         val expectedPath = s"/vsizip//vsicurl/http://$filePath/$fileName"
 
-        GDALDataPath(url).vsiPath should be (expectedPath)
+        GDALDataPath.parse(url).path should be (expectedPath)
       }
     }
 
@@ -86,7 +86,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"file://$filePath"
         val expectedPath = filePath
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("file that points to zip uri") {
@@ -94,7 +94,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"file://$filePath"
         val expectedPath = s"/vsizip/$filePath"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("file that points to zip with ! uri") {
@@ -102,7 +102,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"file://$filePath!$fileName"
         val expectedPath = s"/vsizip/$filePath/$fileName"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("zip+file uri") {
@@ -110,7 +110,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"zip+file://$path"
         val expectedPath = "/vsizip//tmp/some/data/data.zip"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("zip+file with ! uri") {
@@ -118,7 +118,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"zip+file://$path!$fileName"
         val expectedPath = s"/vsizip/$path/$fileName"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("force zip+file with ! uri") {
@@ -126,10 +126,10 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"zip+file://$path!$fileName"
         val expectedPath = s"/vsizip/$path/$fileName"
 
-        println(s"GDALDataPath(uri).vsiPath: ${GDALDataPath(uri).vsiPath}")
+        println(s"GDALDataPath.parse(uri): ${GDALDataPath.parse(uri)}")
         println(s"expectedPath: ${expectedPath}")
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
     }
 
@@ -139,7 +139,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"s3://$filePath"
         val expectedPath = s"/vsis3/$filePath"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("s3 that points to gzip uri") {
@@ -147,7 +147,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"s3://$filePath"
         val expectedPath = s"/vsigzip//vsis3/$filePath"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("s3 that points to gzip with uri") {
@@ -155,7 +155,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"s3://$filePath!$fileName"
         val expectedPath = s"/vsigzip//vsis3/$filePath/$fileName"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("gzip+s3 uri") {
@@ -163,7 +163,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"gzip+s3://$path"
         val expectedPath = s"/vsigzip//vsis3/$path"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("gzip+s3 uri with !") {
@@ -171,7 +171,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"gzip+s3://$path!$fileName"
         val expectedPath = s"/vsigzip//vsis3/$path/$fileName"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("s3 that points to gz uri") {
@@ -179,7 +179,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"s3://$filePath"
         val expectedPath = s"/vsigzip//vsis3/$filePath"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("s3 that points to gz with uri") {
@@ -187,7 +187,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"s3://$filePath!$fileName"
         val expectedPath = s"/vsigzip//vsis3/$filePath/$fileName"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("gzip+s3 uri for a .gz ext") {
@@ -195,7 +195,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"gzip+s3://$path"
         val expectedPath = s"/vsigzip//vsis3/$path"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("gzip+s3 uri with ! for a .gz ext") {
@@ -203,7 +203,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"gzip+s3://$path!$fileName"
         val expectedPath = s"/vsigzip//vsis3/$path/$fileName"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
     }
 
@@ -213,7 +213,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"hdfs://$filePath"
         val expectedPath = s"/vsihdfs/$uri"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("hdfs that points to tgz uri") {
@@ -221,7 +221,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"hdfs://$filePath"
         val expectedPath = s"/vsitar//vsihdfs/$uri"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("hdfs that points to tgz with ! uri") {
@@ -229,7 +229,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"hdfs://$filePath!$fileName"
         val expectedPath = s"/vsitar//vsihdfs/hdfs://$filePath/$fileName"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("zip+hdfs uri") {
@@ -237,7 +237,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"zip+$filePath"
         val expectedPath = s"/vsizip//vsihdfs/$filePath"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("zip+hdfs with ! uri") {
@@ -245,7 +245,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"zip+$filePath!$fileName"
         val expectedPath = s"/vsizip//vsihdfs/$filePath/$fileName"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
     }
 
@@ -255,7 +255,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"gs://$filePath"
         val expectedPath = s"/vsigs/$filePath"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("Google Cloud Storage that points to tar uri") {
@@ -263,7 +263,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"gs://$filePath"
         val expectedPath = s"/vsitar//vsigs/$filePath"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("Google Cloud Storage that points to tar with ! uri") {
@@ -271,7 +271,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"gs://$filePath!$fileName"
         val expectedPath = s"/vsitar//vsigs/$filePath/$fileName"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("tar+gs uri") {
@@ -279,7 +279,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"tar+gs://$filePath"
         val expectedPath = s"/vsitar//vsigs/$filePath"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("tar+gs with ! uri") {
@@ -287,7 +287,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"tar+gs://$filePath!$fileName"
         val expectedPath = s"/vsitar//vsigs/$filePath/$fileName"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
     }
 
@@ -296,28 +296,28 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = "wasb://test-files@myaccount.blah.core.net/nlcd/data/tiff-0.tiff"
         val expectedPath = "/vsiaz/test-files/nlcd/data/tiff-0.tiff"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("Azure that points to kmz uri") {
         val uri = "wasb://test-files@myaccount.blah.core.net/nlcd/data/info.kmz"
         val expectedPath = "/vsizip//vsiaz/test-files/nlcd/data/info.kmz"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("Azure that points to kmz with ! uri") {
         val uri = s"wasb://test-files@myaccount.blah.core.net/nlcd/data/info.kmz!$fileName"
         val expectedPath = s"/vsizip//vsiaz/test-files/nlcd/data/info.kmz/$fileName"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("wasb+zip uri") {
         val uri = "zip+wasb://test-files@myaccount.blah.core.net/nlcd/data/info.zip"
         val expectedPath = "/vsizip//vsiaz/test-files/nlcd/data/info.zip"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("wasb+zip with ! uri") {
@@ -325,7 +325,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = s"$path!$fileName"
         val expectedPath = s"/vsizip//vsiaz/test-files/nlcd/data/info.zip/$fileName"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
     }
 
@@ -335,7 +335,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = filePath
         val expectedPath = filePath
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
 
       it("relative path that points to zip uri") {
@@ -343,7 +343,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
         val uri = filePath
         val expectedPath = s"/vsizip/$filePath"
 
-        GDALDataPath(uri).vsiPath should be (expectedPath)
+        GDALDataPath.parse(uri).path should be (expectedPath)
       }
     }
   }
@@ -352,13 +352,13 @@ class GDALDataPathSpec extends FunSpec with Matchers {
     it("should parse a VSI path") {
       val filePath = "/vsihdfs/hdfs://data/my-data/data.tif"
 
-      GDALDataPath(filePath).vsiPath should be (filePath)
+      GDALDataPath.parse(filePath).path should be (filePath)
     }
 
     it("should parse a chained VSI path") {
       val filePath = "/vsizip//vsis3/data/my-data/data.zip"
 
-      GDALDataPath(filePath).vsiPath should be (filePath)
+      GDALDataPath.parse(filePath).path should be (filePath)
     }
   }
 
@@ -368,7 +368,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
       val uri = s"s3://$filePath"
       val expectedPath = s"/vsis3/$filePath"
 
-      GDALDataPath(uri, None).vsiPath should be (expectedPath)
+      GDALDataPath.parse(uri, None).path should be (expectedPath)
     }
 
     it("should parse a targeted compressed file with a differenct delimiter") {
@@ -376,7 +376,7 @@ class GDALDataPathSpec extends FunSpec with Matchers {
       val uri = s"zip+s3://$filePath/$fileName"
       val expectedPath = s"/vsizip//vsis3/$filePath/$fileName"
 
-      GDALDataPath(uri, Some("/")).vsiPath should be (expectedPath)
+      GDALDataPath.parse(uri, Some("/")).path should be (expectedPath)
     }
   }
 }

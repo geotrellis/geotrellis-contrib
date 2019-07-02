@@ -57,10 +57,10 @@ class GeotrellisRasterSource(
     )
 
   def this(dataPath: GeoTrellisDataPath) =
-    this(AttributeStore(dataPath.catalogPath), dataPath)
+    this(AttributeStore(dataPath.path), dataPath)
 
 
-  lazy val reader = CollectionLayerReader(attributeStore, dataPath.catalogPath)
+  lazy val reader = CollectionLayerReader(attributeStore, dataPath.path)
 
   // read metadata directly instead of searching sourceLayers to avoid unneeded reads
   lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)

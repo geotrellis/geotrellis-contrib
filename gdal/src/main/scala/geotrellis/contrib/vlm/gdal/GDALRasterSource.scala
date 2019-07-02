@@ -31,13 +31,13 @@ case class GDALRasterSource(
   options: GDALWarpOptions = GDALWarpOptions.EMPTY,
   private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource {
-  val vsiPath: String = dataPath.vsiPath
+  val path: String = dataPath.path
 
   lazy val datasetType: Int = options.datasetType
 
   // current dataset
   @transient lazy val dataset: GDALDataset =
-    GDALDataset(vsiPath, options.toWarpOptionsList.toArray)
+    GDALDataset(path, options.toWarpOptionsList.toArray)
 
   lazy val bandCount: Int = dataset.bandCount
 

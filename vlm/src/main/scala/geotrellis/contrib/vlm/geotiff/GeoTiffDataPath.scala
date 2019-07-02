@@ -18,11 +18,12 @@ package geotrellis.contrib.vlm.geotiff
 
 import geotrellis.contrib.vlm.DataPath
 
+import cats.syntax.option._
 import io.lemonlabs.uri.Uri
 import io.lemonlabs.uri.encoding.PercentEncoder
 import io.lemonlabs.uri.encoding.PercentEncoder.PATH_CHARS_TO_ENCODE
 
-/** Represents a path that points to a GeoTiff to be read.
+/** Represents a VALID path that points to a GeoTiff to be read.
  *  @note The target file must have a file extension.
  *
  *  @param path Path to a GeoTiff. There are two ways to format this `String`: either
@@ -35,21 +36,23 @@ import io.lemonlabs.uri.encoding.PercentEncoder.PATH_CHARS_TO_ENCODE
  *
  *  @note Capitalization of the extension is not regarded.
  */
-case class GeoTiffDataPath(path: String, percentEncoder: PercentEncoder = PercentEncoder(PATH_CHARS_TO_ENCODE ++ Set('%', '?', '#'))) extends DataPath {
-  private val upath = percentEncoder.encode(path, "UTF-8")
-
-  /** The formatted path to the GeoTiff that will be read */
-  lazy val geoTiffPath: String = {
-    Uri.parseOption(upath).fold("") { uri =>
-      uri.schemeOption.fold(uri.toStringRaw) { scheme =>
-        uri.withScheme(scheme.split("\\+").last).toStringRaw
-      }
-    }
-  }
-}
+case class GeoTiffDataPath(path: String) extends DataPath
 
 object GeoTiffDataPath {
   val PREFIX = "gtiff+"
 
-  implicit def toGeoTiffDataPath(path: String): GeoTiffDataPath = GeoTiffDataPath(path)
+  implicit def toGeoTiffDataPath(path: String): GeoTiffDataPath = parse(path)
+
+  def parseOption(path: String, percentEncoder: PercentEncoder = PercentEncoder(PATH_CHARS_TO_ENCODE ++ Set('%', '?', '#'))): Option[GeoTiffDataPath] = {
+    val upath = percentEncoder.encode(path, "UTF-8")
+    Uri.parseOption(upath).fold(Option.empty[GeoTiffDataPath]) { uri =>
+      GeoTiffDataPath(uri.schemeOption.fold(uri.toStringRaw) { scheme =>
+        uri.withScheme(scheme.split("\\+").last).toStringRaw
+      }).some
+    }
+  }
+
+  def parse(path: String, percentEncoder: PercentEncoder = PercentEncoder(PATH_CHARS_TO_ENCODE ++ Set('%', '?', '#'))): GeoTiffDataPath =
+    parseOption(path, percentEncoder).getOrElse(throw new IllegalArgumentException(s"Unable to parse GeoTiffDataPath: $path"))
 }
+

@@ -36,81 +36,90 @@ import io.lemonlabs.uri.encoding.PercentEncoder.PATH_CHARS_TO_ENCODE
  *    `VSI Format`. Thus, if given another format type, this class will format it
  *    so that it can be read.
  *
- *  @param compressedFileDelimiter `String` used to represent a file that's to be read
- *    from a compressed.
  *  @example "zip+s3://bucket/prefix/zipped-data.zip!data.tif"
  */
-case class GDALDataPath(
-  path: String,
-  compressedFileDelimiter: Option[String] = "!".some,
-  percentEncoder: PercentEncoder = PercentEncoder(PATH_CHARS_TO_ENCODE ++ Set('%', '?', '#'))
-) extends DataPath {
-  import Schemes._
-
-  // Trying to read something locally on Windows matters
-  // because of how file paths on Windows are formatted.
-  // Therefore, we need to handle them differently.
-  private val onLocalWindows = System.getProperty("os.name").toLowerCase == "win"
-  private val upath = percentEncoder.encode(path, "UTF-8")
-
-  /** The given [[path]] in the `VSI` format */
-  val vsiPath: String =
-    if (isVSIFormatted(path)) path
-    else
-      UrlWithAuthority
-        .parseOption(upath)
-        // try to parse it, otherwise it is a path
-        .fold((Url().withPath(UrlPath.fromRaw(upath)): Url).some)(_.some)
-        .flatMap { url =>
-          // authority is an optional thing and required only for Azure
-          val authority =
-            url match {
-              case url: UrlWithAuthority => url.authority.userInfo.user.getOrElse(EMPTY)
-              case _ => EMPTY
-            }
-
-          // relative path, scheme and charecters should be percent decoded
-          val relativeUrl = url.toRelativeUrl.path.toStringRaw
-
-          // it can also be the case that there is no scheme (the Path case)
-          url.schemeOption.fold(EMPTY.some)(_.some).map { scheme =>
-            val schemesArray = scheme.split("\\+")
-            val schemes = schemesArray.map(toVSIScheme).mkString
-
-            // reverse slashes are used on windows for zip files paths
-            val path =
-              (if (schemes.contains(FILE) && onLocalWindows) compressedFileDelimiter.map(relativeUrl.replace(_, """\\"""))
-              else compressedFileDelimiter.map(relativeUrl.replace(_, "/"))).getOrElse(relativeUrl)
-
-            // check out the last .${extension}, probably we need auto add it into the vsipath construction
-            val extraScheme =
-              COMPRESSED_FILE_TYPES
-                .flatMap { ext => if (path.contains(s".$ext")) toVSIScheme(ext).some else None }
-                .lastOption
-
-            // check out that we won't append a vsi path duplicate or other compression vsipath
-            val extraSchemeExists = extraScheme.exists { es =>
-              schemes.nonEmpty && (schemes.contains(es) || COMPRESSED_FILE_TYPES.map(toVSIScheme).collect { case es if es.nonEmpty => schemes.contains(es) }.reduce(_ || _))
-            }
-
-            val extendedSchemes = extraScheme.fold(schemes) {
-              case _ if extraSchemeExists => schemes
-              case str => s"$str$schemes"
-            }
-
-            // in some cases scheme:// should be added after the vsi path protocol, sometimes not
-            val webProtocol = schemesArray.collectFirst { case sch if URI_PROTOCOL_INCLUDE.contains(sch) => s"$sch://" }.getOrElse(EMPTY)
-
-            url
-              .hostOption
-              .filterNot(_ => URI_HOST_EXCLUDE.map(schemesArray.contains).reduce(_ || _)) // filter the host out, for instance in the Azure case
-              .fold(s"$extendedSchemes$webProtocol$authority$path")(host => s"$extendedSchemes$webProtocol$authority$host$path")
-          }
-        }.getOrElse(EMPTY)
-}
+case class GDALDataPath(path: String) extends DataPath
 
 object GDALDataPath {
   val PREFIX = "gdal+"
 
-  implicit def toGDALDataPath(path: String): GDALDataPath = GDALDataPath(path)
+  implicit def toGDALDataPath(path: String): GDALDataPath = GDALDataPath.parse(path)
+
+  def parseOption(
+    path: String,
+    compressedFileDelimiter: Option[String] = "!".some,
+    percentEncoder: PercentEncoder = PercentEncoder(PATH_CHARS_TO_ENCODE ++ Set('%', '?', '#'))
+  ): Option[GDALDataPath] = {
+    import Schemes._
+
+    // Trying to read something locally on Windows matters
+    // because of how file paths on Windows are formatted.
+    // Therefore, we need to handle them differently.
+    val onLocalWindows = System.getProperty("os.name").toLowerCase == "win"
+    val upath = percentEncoder.encode(path, "UTF-8")
+
+    val vsiPath: Option[String] =
+      if (isVSIFormatted(path)) path.some
+      else
+        UrlWithAuthority
+          .parseOption(upath)
+          // try to parse it, otherwise it is a path
+          .fold((Url().withPath(UrlPath.fromRaw(upath)): Url).some)(_.some)
+          .flatMap { url =>
+            // authority is an optional thing and required only for Azure
+            val authority =
+              url match {
+                case url: UrlWithAuthority => url.authority.userInfo.user.getOrElse(EMPTY)
+                case _ => EMPTY
+              }
+
+            // relative path, scheme and charecters should be percent decoded
+            val relativeUrl = url.toRelativeUrl.path.toStringRaw
+
+            // it can also be the case that there is no scheme (the Path case)
+            url.schemeOption.fold(EMPTY.some)(_.some).map { scheme =>
+              val schemesArray = scheme.split("\\+")
+              val schemes = schemesArray.map(toVSIScheme).mkString
+
+              // reverse slashes are used on windows for zip files paths
+              val path =
+                (if (schemes.contains(FILE) && onLocalWindows) compressedFileDelimiter.map(relativeUrl.replace(_, """\\"""))
+                else compressedFileDelimiter.map(relativeUrl.replace(_, "/"))).getOrElse(relativeUrl)
+
+              // check out the last .${extension}, probably we need auto add it into the vsipath construction
+              val extraScheme =
+                COMPRESSED_FILE_TYPES
+                  .flatMap { ext => if (path.contains(s".$ext")) toVSIScheme(ext).some else None }
+                  .lastOption
+
+              // check out that we won't append a vsi path duplicate or other compression vsipath
+              val extraSchemeExists = extraScheme.exists { es =>
+                schemes.nonEmpty && (schemes.contains(es) || COMPRESSED_FILE_TYPES.map(toVSIScheme).collect { case es if es.nonEmpty => schemes.contains(es) }.reduce(_ || _))
+              }
+
+              val extendedSchemes = extraScheme.fold(schemes) {
+                case _ if extraSchemeExists => schemes
+                case str => s"$str$schemes"
+              }
+
+              // in some cases scheme:// should be added after the vsi path protocol, sometimes not
+              val webProtocol = schemesArray.collectFirst { case sch if URI_PROTOCOL_INCLUDE.contains(sch) => s"$sch://" }.getOrElse(EMPTY)
+
+              url
+                .hostOption
+                .filterNot(_ => URI_HOST_EXCLUDE.map(schemesArray.contains).reduce(_ || _)) // filter the host out, for instance in the Azure case
+                .fold(s"$extendedSchemes$webProtocol$authority$path")(host => s"$extendedSchemes$webProtocol$authority$host$path")
+            }
+          }
+
+    vsiPath.map(GDALDataPath(_))
+  }
+
+  def parse(
+    path: String,
+    compressedFileDelimiter: Option[String] = "!".some,
+    percentEncoder: PercentEncoder = PercentEncoder(PATH_CHARS_TO_ENCODE ++ Set('%', '?', '#'))
+  ): GDALDataPath =
+    parseOption(path, compressedFileDelimiter, percentEncoder)
+      .getOrElse(throw new IllegalArgumentException(s"Unable to parse GDALDataPath: $path"))
 }
