@@ -102,7 +102,12 @@ trait RasterSource extends CellGrid[Long] with Serializable {
     * @group reproject a
     */
   def reprojectToGrid(crs: CRS, grid: GridExtent[Long], method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
-    reproject(crs, Reproject.Options(method = method, parentGridExtent = Some(grid)), strategy)
+    if (crs == this.crs && grid == this.gridExtent)
+      this
+    else if (crs == this.crs)
+      resampleToGrid(grid)
+    else
+      reproject(crs, Reproject.Options(method = method, parentGridExtent = Some(grid)), strategy)
 
   /** Sampling grid and resolution is defined by given [[RasterExtent]] region.
     * The extent of the result is also taken from given [[RasterExtent]],
