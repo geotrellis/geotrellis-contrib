@@ -18,7 +18,6 @@ package geotrellis.contrib.vlm
 
 import java.net.URI
 
-
 /**
  * Represents the path to data that is to be read.
  */

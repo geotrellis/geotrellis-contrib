@@ -21,14 +21,14 @@ package geotrellis.contrib.vlm.gdal
  * into GDAL.
  */
 object Schemes {
-  final val FTP = "ftp"
-  final val HTTP = "http"
+  final val FTP   = "ftp"
+  final val HTTP  = "http"
   final val HTTPS = "https"
 
-  final val TAR = "tar"
-  final val ZIP = "zip"
+  final val TAR  = "tar"
+  final val ZIP  = "zip"
   final val GZIP = "gzip"
-  final val GZ = "gz"
+  final val GZ   = "gz"
 
   final val FILE = "file"
 
@@ -36,10 +36,10 @@ object Schemes {
 
   final val GS = "gs"
 
-  final val WASB = "wasb"
+  final val WASB  = "wasb"
   final val WASBS = "wasbs"
 
-  final val HDFS = "hdfs"
+  final val HDFS  = "hdfs"
 
   final val TGZ = "tgz"
 
@@ -49,27 +49,33 @@ object Schemes {
 
   final val XLSX = "xlsx"
 
-  final val COMPRESSED_FILE_TYPES =
-    Array(
-      s".$TAR",
-      s".$TGZ",
-      s".$ZIP",
-      s".$KMZ",
-      s".$ODS",
-      s".$XLSX",
-      s".$GZIP",
-      s".$GZ"
-    )
+  final val EMPTY = ""
 
-  final val FILE_TYPE_TO_SCHEME =
-    Map(
-      TAR -> TAR,
-      "tgz" -> TAR,
-      ZIP -> ZIP,
-      "kmz" -> ZIP,
-      "ods" -> ZIP,
-      "xlsx" -> ZIP,
-      GZIP -> GZIP,
-      GZ -> GZIP
-    )
+  final val COMPRESSED_FILE_TYPES = Array(TAR, TGZ, ZIP, KMZ, ODS, XLSX, GZIP, GZ, KMZ)
+
+  final val URI_PROTOCOL_INCLUDE = Array(FTP, HTTP, HTTPS, HDFS)
+
+  final val URI_HOST_EXCLUDE = Array(WASB, WASBS)
+
+  def isCompressed(schemes: String): Boolean =
+    COMPRESSED_FILE_TYPES.map(toVSIScheme).collect { case es if es.nonEmpty => schemes.contains(es) }.reduce(_ || _)
+
+  def extraCompressionScheme(path: String): Option[String] =
+    COMPRESSED_FILE_TYPES
+      .flatMap { ext => if (path.contains(s".$ext")) Some(toVSIScheme(ext)) else None }
+      .lastOption
+
+  def isVSIFormatted(path: String): Boolean = path.startsWith("/vsi")
+
+  def toVSIScheme(scheme: String): String = scheme match {
+    case FTP | HTTP | HTTPS => "/vsicurl/"
+    case S3                 => "/vsis3/"
+    case GS                 => "/vsigs/"
+    case WASB | WASBS       => "/vsiaz/"
+    case HDFS               => "/vsihdfs/"
+    case ZIP | KMZ          => "/vsizip/"
+    case GZ | GZIP          => "/vsigzip/"
+    case TAR | TGZ          => "/vsitar/"
+    case _                  => ""
+  }
 }

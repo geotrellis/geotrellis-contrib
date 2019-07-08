@@ -35,7 +35,7 @@ case class GeoTiffResampleRasterSource(
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
   @transient lazy val tiff: MultibandGeoTiff =
-    GeoTiffReader.readMultiband(getByteReader(dataPath.geoTiffPath), streaming = true)
+    GeoTiffReader.readMultiband(getByteReader(dataPath.path), streaming = true)
 
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount

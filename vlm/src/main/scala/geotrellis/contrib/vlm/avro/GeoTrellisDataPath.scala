@@ -19,6 +19,10 @@ package geotrellis.contrib.vlm.avro
 import geotrellis.contrib.vlm.DataPath
 import geotrellis.spark.LayerId
 
+import cats.syntax.option._
+import io.lemonlabs.uri.{Url, UrlPath, UrlWithAuthority}
+
+import java.net.MalformedURLException
 
 /** Represents a path that points to a GeoTrellis layer saved in a catalog.
  *
@@ -36,55 +40,45 @@ import geotrellis.spark.LayerId
  *  @example "gt+file:///tmp/catalog?layer=name&zoom=5"
  *  @note The order of the query parameters does not matter.
  */
-case class GeoTrellisDataPath(path: String) extends DataPath {
-  private val servicePrefix: String = "gt+"
-
-  private val layerNameParam: String = "layer"
-  private val zoomLevelParam: String = "zoom"
-  private val bandCountParam: String = "band_count"
-
-  require(path.contains(s"$layerNameParam="), s"The layer query parameter must be in the given path: $path")
-
-  // TODO: Support having the zoom parameter be optional
-  require(path.contains(s"$zoomLevelParam="), s"The zoom query parameter must be in the given path: $path")
-
-  private val strippedPath: String =
-    if (path.startsWith(servicePrefix))
-      path.splitAt(servicePrefix.size)._2
-    else
-      path
-
-  val Array(catalogPath, queryParams) = strippedPath.split('?')
-
-  private val brokenUpParams: Array[(String, String)] =
-    queryParams
-      .split('&')
-      .map {
-        _.split('=') match {
-          case Array(k, v) => (k, v)
-        }
-      }
-
-  /** The name of the target layer */
-  val layerName =
-    brokenUpParams
-      .filter { case (k, _) => k == layerNameParam }
-      .head
-      ._2
-
-  private val mappedQueryParams: Map[String, Int] =
-    (brokenUpParams.toMap - layerNameParam).mapValues { _.toInt }
-
-  /** The zoom level of the target layer */
-  val zoomLevel: Option[Int] = mappedQueryParams.get(zoomLevelParam)
-
-  /** The band count of the target layer */
-  val bandCount: Option[Int] = mappedQueryParams.get(bandCountParam)
-
-  val layerId: LayerId = LayerId(layerName, zoomLevel.get)
+case class GeoTrellisDataPath(path: String, layerName: String, zoomLevel: Option[Int], bandCount: Option[Int]) extends DataPath {
+  def  layerId: LayerId = LayerId(layerName, zoomLevel.get)
 }
 
 object GeoTrellisDataPath {
-  implicit def toGeoTrellisDataPath(path: String): GeoTrellisDataPath =
-    GeoTrellisDataPath(path)
+  val PREFIX = "gt+"
+
+  implicit def toGeoTrellisDataPath(path: String): GeoTrellisDataPath = parse(path)
+
+  def parseOption(path: String): Option[GeoTrellisDataPath] = {
+    val layerNameParam: String = "layer"
+    val zoomLevelParam: String = "zoom"
+    val bandCountParam: String = "band_count"
+
+    // try to parse it, otherwise it is a path
+    val uri = UrlWithAuthority.parseOption(path).fold(Url().withPath(UrlPath.fromRaw(path)): Url)(identity)
+    val queryString = uri.query
+
+    val catalogPath: Option[String] = {
+      uri.schemeOption.fold(uri.toStringRaw.some) { scheme =>
+        val authority =
+          uri match {
+            case url: UrlWithAuthority => url.authority.userInfo.user.getOrElse("")
+            case _ => ""
+          }
+
+        s"${scheme.split("\\+").last}://$authority${uri.path}".some
+      }
+    }
+
+    catalogPath.fold(Option.empty[GeoTrellisDataPath]) { catalogPath =>
+      val layerName: Option[String] = queryString.param(layerNameParam)
+      val zoomLevel: Option[Int] = queryString.param(zoomLevelParam).map(_.toInt)
+      val bandCount: Option[Int] = queryString.param(bandCountParam).map(_.toInt)
+
+      layerName.map(GeoTrellisDataPath(catalogPath, _, zoomLevel, bandCount))
+    }
+  }
+
+  def parse(path: String): GeoTrellisDataPath =
+    parseOption(path).getOrElse(throw new MalformedURLException(s"Unable to parse GeoTrellisDataPath: $path"))
 }

@@ -17,17 +17,12 @@
 package geotrellis.contrib.vlm.geotiff
 
 import geotrellis.contrib.vlm._
-
+import geotrellis.contrib.vlm.avro.GeoTrellisDataPath
 
 class GeoTiffRasterSourceProvider extends RasterSourceProvider {
-  def canProcess(path: String): Boolean =
-    try {
-      GeoTiffDataPath(path)
-      true
-    } catch {
-      case _: Throwable => false
-    }
+  def canProcess(path: String): Boolean = {
+    (!path.startsWith(GeoTrellisDataPath.PREFIX) && !path.startsWith("gdal+")) && path.nonEmpty && GeoTiffDataPath.parseOption(path).nonEmpty
+  }
 
-  def rasterSource(path: String): RasterSource =
-    GeoTiffRasterSource(path)
+  def rasterSource(path: String): RasterSource = GeoTiffRasterSource(path)
 }

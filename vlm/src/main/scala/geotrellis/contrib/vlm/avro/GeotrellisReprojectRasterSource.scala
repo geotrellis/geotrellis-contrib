@@ -40,7 +40,7 @@ class GeotrellisReprojectRasterSource(
 ) extends RasterSource with LazyLogging { self =>
   import GeotrellisReprojectRasterSource._
 
-  lazy val reader = CollectionLayerReader(attributeStore, dataPath.catalogPath)
+  lazy val reader = CollectionLayerReader(attributeStore, dataPath.path)
 
   lazy val resolutions: List[GridExtent[Long]] = {
     sourceLayers.map { layer =>
@@ -65,7 +65,7 @@ class GeotrellisReprojectRasterSource(
       _ = {
         lazy val tileBounds = sourceLayer.metadata.mapTransform.extentToBounds(sourceExtent)
         lazy val pixelsRead = (tileBounds.size * sourceLayer.metadata.layout.tileCols * sourceLayer.metadata.layout.tileRows).toDouble
-        lazy val pixelsQueried = (targetRasterExtent.cols.toDouble * targetRasterExtent.rows.toDouble)
+        lazy val pixelsQueried = targetRasterExtent.cols.toDouble * targetRasterExtent.rows.toDouble
         def msg = s"""
           |${GREEN}Read($extent)${RESET} =
           |\t${BOLD}FROM${RESET} ${dataPath.toString} ${sourceLayer.id}
