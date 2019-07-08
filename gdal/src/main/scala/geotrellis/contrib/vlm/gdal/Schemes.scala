@@ -57,6 +57,14 @@ object Schemes {
 
   final val URI_HOST_EXCLUDE = Array(WASB, WASBS)
 
+  def isCompressed(schemes: String): Boolean =
+    COMPRESSED_FILE_TYPES.map(toVSIScheme).collect { case es if es.nonEmpty => schemes.contains(es) }.reduce(_ || _)
+
+  def extraCompressionScheme(path: String): Option[String] =
+    COMPRESSED_FILE_TYPES
+      .flatMap { ext => if (path.contains(s".$ext")) Some(toVSIScheme(ext)) else None }
+      .lastOption
+
   def isVSIFormatted(path: String): Boolean = path.startsWith("/vsi")
 
   def toVSIScheme(scheme: String): String = scheme match {

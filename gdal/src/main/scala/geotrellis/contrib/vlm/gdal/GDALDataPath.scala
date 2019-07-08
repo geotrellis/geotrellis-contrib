@@ -22,6 +22,7 @@ import cats.syntax.option._
 import io.lemonlabs.uri._
 import io.lemonlabs.uri.encoding.PercentEncoder
 import io.lemonlabs.uri.encoding.PercentEncoder.PATH_CHARS_TO_ENCODE
+import java.net.MalformedURLException
 
 /** Represents and formats a path that points to a files to be read by GDAL.
  *
@@ -87,15 +88,10 @@ object GDALDataPath {
                 else compressedFileDelimiter.map(relativeUrl.replace(_, "/"))).getOrElse(relativeUrl)
 
               // check out the last .${extension}, probably we need auto add it into the vsipath construction
-              val extraScheme =
-                COMPRESSED_FILE_TYPES
-                  .flatMap { ext => if (path.contains(s".$ext")) toVSIScheme(ext).some else None }
-                  .lastOption
+              val extraScheme = extraCompressionScheme(path)
 
               // check out that we won't append a vsi path duplicate or other compression vsipath
-              val extraSchemeExists = extraScheme.exists { es =>
-                schemes.nonEmpty && (schemes.contains(es) || COMPRESSED_FILE_TYPES.map(toVSIScheme).collect { case es if es.nonEmpty => schemes.contains(es) }.reduce(_ || _))
-              }
+              val extraSchemeExists = extraScheme.exists { es => schemes.nonEmpty && (schemes.contains(es) || isCompressed(schemes)) }
 
               val extendedSchemes = extraScheme.fold(schemes) {
                 case _ if extraSchemeExists => schemes
@@ -121,5 +117,5 @@ object GDALDataPath {
     percentEncoder: PercentEncoder = PercentEncoder(PATH_CHARS_TO_ENCODE ++ Set('%', '?', '#'))
   ): GDALDataPath =
     parseOption(path, compressedFileDelimiter, percentEncoder)
-      .getOrElse(throw new IllegalArgumentException(s"Unable to parse GDALDataPath: $path"))
+      .getOrElse(throw new MalformedURLException(s"Unable to parse GDALDataPath: $path"))
 }

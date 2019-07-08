@@ -22,6 +22,8 @@ import geotrellis.spark.LayerId
 import cats.syntax.option._
 import io.lemonlabs.uri.{Url, UrlPath, UrlWithAuthority}
 
+import java.net.MalformedURLException
+
 /** Represents a path that points to a GeoTrellis layer saved in a catalog.
  *
  *  @param path Path to the layer. This can be either an Avro or COG layer.
@@ -78,5 +80,5 @@ object GeoTrellisDataPath {
   }
 
   def parse(path: String): GeoTrellisDataPath =
-    parseOption(path).getOrElse(throw new IllegalArgumentException(s"Unable to parse GeoTrellisDataPath: $path"))
+    parseOption(path).getOrElse(throw new MalformedURLException(s"Unable to parse GeoTrellisDataPath: $path"))
 }

@@ -23,6 +23,8 @@ import io.lemonlabs.uri.Uri
 import io.lemonlabs.uri.encoding.PercentEncoder
 import io.lemonlabs.uri.encoding.PercentEncoder.PATH_CHARS_TO_ENCODE
 
+import java.net.MalformedURLException
+
 /** Represents a VALID path that points to a GeoTiff to be read.
  *  @note The target file must have a file extension.
  *
@@ -53,6 +55,6 @@ object GeoTiffDataPath {
   }
 
   def parse(path: String, percentEncoder: PercentEncoder = PercentEncoder(PATH_CHARS_TO_ENCODE ++ Set('%', '?', '#'))): GeoTiffDataPath =
-    parseOption(path, percentEncoder).getOrElse(throw new IllegalArgumentException(s"Unable to parse GeoTiffDataPath: $path"))
+    parseOption(path, percentEncoder).getOrElse(throw new MalformedURLException(s"Unable to parse GeoTiffDataPath: $path"))
 }
 
