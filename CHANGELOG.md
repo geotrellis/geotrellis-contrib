@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - Summary: Subproject removed. The polygonal summary prototype was moved to GeoTrellis core for the 3.0 release. See: https://github.com/locationtech/geotrellis/blob/master/docs/guide/rasters.rst#polygonal-summary
 
+### Fixed
+- VLM: RasterSourceRDD.read and RasterSourceRDD.tileLayerRDD partition count
+
 ## [3.15.0] - 2019-06-22
 ### Added
 - Fix GDAL resampling with Dimensions resampleGrid
