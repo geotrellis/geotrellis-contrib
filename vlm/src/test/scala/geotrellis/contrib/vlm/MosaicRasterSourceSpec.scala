@@ -23,8 +23,9 @@ import geotrellis.vector.Extent
 
 import cats.data.NonEmptyList
 import org.scalatest._
+import geotrellis.raster.testkit.RasterMatchers
 
-class MosaicRasterSourceSpec extends FunSpec with Matchers {
+class MosaicRasterSourceSpec extends FunSpec with RasterMatchers {
 
   describe("union operations") {
     // With Extent(0, 0, 1, 1)
@@ -56,13 +57,31 @@ class MosaicRasterSourceSpec extends FunSpec with Matchers {
       )
     }
 
+    it("the extent read should match the extent requested") {
+      val extentRead = Extent(0, 0, 3, 3)
+      val mosaicRasterSource1 = MosaicRasterSource(
+        NonEmptyList(gtRasterSource1, List()),
+        LatLng,
+        gtRasterSource1.gridExtent
+      )
+      assertEqual(
+        mosaicRasterSource1.read(extentRead, Seq(0)).get,
+        gtRasterSource1.read(extentRead, Seq(0)).get
+      )
+    }
+
     it("should return the whole tiles from the whole tiles' extents") {
       val extentRead1 = Extent(0, 0, 1, 1)
       val extentRead2 = Extent(1, 0, 2, 1)
-      mosaicRasterSource.read(extentRead1, Seq(0)) shouldBe
-        gtRasterSource1.read(gtRasterSource1.gridExtent.extent, Seq(0))
-      mosaicRasterSource.read(extentRead2, Seq(0)) shouldBe
-        gtRasterSource2.read(gtRasterSource2.gridExtent.extent, Seq(0))
+
+      assertEqual(
+        mosaicRasterSource.read(extentRead1, Seq(0)).get,
+        gtRasterSource1.read(gtRasterSource1.gridExtent.extent, Seq(0)).get
+      )
+      assertEqual(
+        mosaicRasterSource.read(extentRead2, Seq(0)).get,
+        gtRasterSource2.read(gtRasterSource2.gridExtent.extent, Seq(0)).get
+      )
     }
 
     it("should read an extent overlapping both tiles") {
