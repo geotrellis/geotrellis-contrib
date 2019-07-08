@@ -153,24 +153,14 @@ object MosaicRasterSource {
 
   def apply(_sources: NonEmptyList[RasterSource], _crs: CRS, _gridExtent: GridExtent[Long]) =
     new MosaicRasterSource {
-      val sources =
-        if (_sources.length > 1) {
-          _sources map { _.reprojectToGrid(_crs, gridExtent) }
-        } else {
-          _sources
-        }
+      val sources = _sources map { _.reprojectToGrid(_crs, gridExtent) }
       val crs = _crs
       def gridExtent: GridExtent[Long] = _gridExtent
     }
 
   def apply(_sources: NonEmptyList[RasterSource], _crs: CRS) =
     new MosaicRasterSource {
-      val sources =
-        if (_sources.length > 1) {
-          _sources map { _.reprojectToGrid(_crs, _sources.head.gridExtent) }
-        } else {
-          _sources
-        }
+      val sources = _sources map { _.reprojectToGrid(_crs, _sources.head.gridExtent) }
       val crs = _crs
       def gridExtent: GridExtent[Long] = {
         val reprojectedExtents =
