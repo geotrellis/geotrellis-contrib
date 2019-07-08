@@ -152,8 +152,15 @@ object RasterSourceRDD {
         }
       })
 
-    val groupedRDD: RDD[(SpatialKey, Iterable[(Int, Option[MultibandTile])])] =
-      keyedRDD.groupByKey(partitioner.getOrElse(SpatialPartitioner(summary.estimatePartitionsNumber)))
+    val groupedRDD: RDD[(SpatialKey, Iterable[(Int, Option[MultibandTile])])] = {
+      // The number of partitions estimated by RasterSummary can sometimes be much
+      // lower than what the user set. Therefore, we assume that the larger value
+      // is the optimal number of partitions to use.
+      val partitionCount =
+        math.max(keyedRDD.getNumPartitions, summary.estimatePartitionsNumber)
+
+      keyedRDD.groupByKey(partitioner.getOrElse(SpatialPartitioner(partitionCount)))
+    }
 
     val result: RDD[(SpatialKey, MultibandTile)] =
       groupedRDD.mapPartitions ({ partition =>
