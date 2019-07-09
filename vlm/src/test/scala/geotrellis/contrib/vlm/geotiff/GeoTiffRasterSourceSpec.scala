@@ -25,8 +25,9 @@ import geotrellis.vector._
 import geotrellis.spark._
 import geotrellis.spark.tiling._
 import geotrellis.util._
-
 import org.scalatest._
+
+import scala.concurrent.Await
 
 class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
   lazy val url = Resource.path("img/aspect-tiled.tif")
@@ -139,6 +140,24 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
 
         layoutSource.source
       }
+    }
+
+    it("RasterSource should be threadsafe") {
+      import scala.concurrent.duration.Duration
+      import scala.concurrent.Future
+      import scala.concurrent.ExecutionContext
+
+      implicit val ec = ExecutionContext.global
+
+      val rs = GeoTiffRasterSource(url)
+
+      val res: List[Future[Option[Raster[MultibandTile]]]] = (0 to 100).toList.map { _ => Future {
+        rs.read()
+      } }
+
+      val fres: Future[List[Raster[MultibandTile]]] = Future.sequence(res).map(_.flatten)
+
+      Await.result(fres, Duration.Inf)
     }
   }
 }

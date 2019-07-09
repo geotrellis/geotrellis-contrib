@@ -57,7 +57,12 @@ case class GeoTiffRasterSource(
       // TODO: shouldn't GridExtent give me Extent for types other than N ?
       Raster(tile, gridExtent.extentFor(gb.toGridType[Long], clamp = false))
     }
-    if (it.hasNext) Some(convertRaster(it.next)) else None
+
+    // tiff.synchronized because we want to reuse tiffs,
+    // it will mean that hte same tiff can be called from a different RasterSource
+    // so it is not enough to lock only inside the current ibject instance and
+    // it is better to lock on a tiff object
+    tiff.synchronized { if (it.hasNext) Some(convertRaster(it.next)) else None }
   }
 
   def read(bounds: GridBounds[Long], bands: Seq[Int]): Option[Raster[MultibandTile]] = {
