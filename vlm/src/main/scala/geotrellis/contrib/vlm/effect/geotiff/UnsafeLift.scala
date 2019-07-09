@@ -19,6 +19,7 @@ package geotrellis.contrib.vlm.effect.geotiff
 import cats.Id
 import cats.effect.IO
 
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 /** Type class that allows to handle unsafe calls */
@@ -35,6 +36,10 @@ object UnsafeLift {
 
   implicit val liftIO: UnsafeLift[IO] = new UnsafeLift[IO] {
     def apply[A](value: => A): IO[A] = IO(value)
+  }
+
+  implicit def liftFuture(implicit ec: ExecutionContext): UnsafeLift[Future] = new UnsafeLift[Future] {
+    def apply[A](value: => A): Future[A] = Future(value)
   }
 
   implicit val liftOption: UnsafeLift[Option] = new UnsafeLift[Option] {

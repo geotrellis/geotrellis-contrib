@@ -105,23 +105,23 @@ case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
   override def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): F[Iterator[Raster[MultibandTile]]] =
     (closestTiffOverview, gridBounds, gridExtent, backTransform, baseCRS, crs).mapN { (closestTiffOverview, gridBounds, gridExtent, backTransform, baseCRS, crs) =>
       UnsafeLift[F].apply {
-        RasterSourceF.synchronized {
-          val geoTiffTile = closestTiffOverview.tile.asInstanceOf[GeoTiffMultibandTile]
-          val intersectingWindows = {
-            for {
-              queryPixelBounds <- bounds
-              targetPixelBounds <- queryPixelBounds.intersection(gridBounds)
-            } yield {
-              val targetRasterExtent = RasterExtent(
-                extent = gridExtent.extentFor(targetPixelBounds, clamp = true),
-                cols = targetPixelBounds.width.toInt,
-                rows = targetPixelBounds.height.toInt)
-              val sourceExtent = targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope
-              val sourcePixelBounds = closestTiffOverview.rasterExtent.gridBoundsFor(sourceExtent, clamp = true)
-              (sourcePixelBounds, targetRasterExtent)
-            }
-          }.toMap
+        val geoTiffTile = closestTiffOverview.tile.asInstanceOf[GeoTiffMultibandTile]
+        val intersectingWindows = {
+          for {
+            queryPixelBounds <- bounds
+            targetPixelBounds <- queryPixelBounds.intersection(gridBounds)
+          } yield {
+            val targetRasterExtent = RasterExtent(
+              extent = gridExtent.extentFor(targetPixelBounds, clamp = true),
+              cols = targetPixelBounds.width.toInt,
+              rows = targetPixelBounds.height.toInt)
+            val sourceExtent = targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope
+            val sourcePixelBounds = closestTiffOverview.rasterExtent.gridBoundsFor(sourceExtent, clamp = true)
+            (sourcePixelBounds, targetRasterExtent)
+          }
+        }.toMap
 
+        closestTiffOverview.synchronized {
           geoTiffTile.crop(intersectingWindows.keys.toSeq, bands.toArray).map { case (sourcePixelBounds, tile) =>
             val targetRasterExtent = intersectingWindows(sourcePixelBounds)
             val sourceRaster = Raster(tile, closestTiffOverview.rasterExtent.extentFor(sourcePixelBounds, clamp = true))
