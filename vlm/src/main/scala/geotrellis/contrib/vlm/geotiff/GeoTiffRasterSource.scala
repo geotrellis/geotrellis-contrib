@@ -58,20 +58,21 @@ case class GeoTiffRasterSource(
       Raster(tile, gridExtent.extentFor(gb.toGridType[Long], clamp = false))
     }
 
-    // tiff.synchronized because we want to reuse tiffs,
-    // it will mean that hte same tiff can be called from a different RasterSource
-    // so it is not enough to lock only inside the current ibject instance and
-    // it is better to lock on a tiff object
+    // We want to use this tiff in different `RasterSource`s, so we
+    // need to lock it in order to garuntee the state of tiff when
+    // it's being accessed by a thread.
     tiff.synchronized { if (it.hasNext) Some(convertRaster(it.next)) else None }
   }
 
   def read(bounds: GridBounds[Long], bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val it = readBounds(List(bounds), bands)
-    if (it.hasNext) Some(it.next) else None
+
+    tiff.synchronized { if (it.hasNext) Some(it.next) else None }
   }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     val bounds = extents.map(gridExtent.gridBoundsFor(_, clamp = true))
+
     readBounds(bounds, bands)
   }
 
@@ -79,7 +80,7 @@ case class GeoTiffRasterSource(
     val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
     val intersectingBounds: Seq[GridBounds[Int]] =
       bounds.flatMap(_.intersection(this.gridBounds)).
-        toSeq.map(b => b.toGridType[Int])
+      toSeq.map(b => b.toGridType[Int])
 
     geoTiffTile.crop(intersectingBounds, bands.toArray).map { case (gb, tile) =>
       convertRaster(Raster(tile, gridExtent.extentFor(gb.toGridType[Long], clamp = true)))
