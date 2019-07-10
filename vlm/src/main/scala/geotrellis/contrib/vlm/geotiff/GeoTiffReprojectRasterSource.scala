@@ -44,12 +44,9 @@ case class GeoTiffReprojectRasterSource(
   protected lazy val backTransform = Transform(crs, baseCRS)
 
   override lazy val gridExtent: GridExtent[Long] = reprojectOptions.targetRasterExtent match {
-      case Some(targetRasterExtent) =>
-        targetRasterExtent.toGridType[Long]
-
-        case None =>
-        ReprojectRasterExtent(baseGridExtent, transform, reprojectOptions)
-    }
+    case Some(targetRasterExtent) => targetRasterExtent.toGridType[Long]
+    case None => ReprojectRasterExtent(baseGridExtent, transform, reprojectOptions)
+  }
 
   lazy val resolutions: List[GridExtent[Long]] =
       gridExtent :: tiff.overviews.map(ovr => ReprojectRasterExtent(ovr.rasterExtent.toGridType[Long], transform))
@@ -72,17 +69,19 @@ case class GeoTiffReprojectRasterSource(
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = gridExtent.gridBoundsFor(extent, clamp = false)
-    val it = readBounds(List(bounds), bands)
-    if (it.hasNext) Some(it.next) else None
+
+    read(bounds, bands)
   }
 
   def read(bounds: GridBounds[Long], bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val it = readBounds(List(bounds), bands)
-    if (it.hasNext) Some(it.next) else None
+
+    closestTiffOverview.synchronized { if (it.hasNext) Some(it.next) else None }
   }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     val bounds = extents.map(gridExtent.gridBoundsFor(_, clamp = true))
+
     readBounds(bounds, bands)
   }
 
@@ -95,8 +94,12 @@ case class GeoTiffReprojectRasterSource(
       val targetRasterExtent = RasterExtent(
         extent = gridExtent.extentFor(targetPixelBounds, clamp = true),
         cols = targetPixelBounds.width.toInt,
-        rows = targetPixelBounds.height.toInt)
-      val sourceExtent = targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope
+        rows = targetPixelBounds.height.toInt
+      )
+
+      // A tmp workaround for https://github.com/locationtech/proj4j/pull/29
+      // Stacktrace details: https://github.com/geotrellis/geotrellis-contrib/pull/206#pullrequestreview-260115791
+      val sourceExtent = Proj4Transform.synchronized(targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope)
       val sourcePixelBounds = closestTiffOverview.rasterExtent.gridBoundsFor(sourceExtent, clamp = true)
       (sourcePixelBounds, targetRasterExtent)
     }}.toMap
