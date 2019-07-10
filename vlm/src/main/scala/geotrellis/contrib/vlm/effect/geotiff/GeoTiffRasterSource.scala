@@ -38,7 +38,9 @@ case class GeoTiffRasterSource[F[_]: Monad: UnsafeLift](
   dataPath: GeoTiffDataPath,
   private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSourceF[F] {
-  @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(GeoTiffReader.readMultiband(RangeReader(dataPath.path), streaming = true))
+  // memoize tiff, not useful only in a local fs case
+  @transient lazy val tiff: MultibandGeoTiff = GeoTiffReader.readMultiband(RangeReader(dataPath.path), streaming = true)
+  @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(tiff)
 
   lazy val gridExtent: F[GridExtent[Long]] = tiffF.map(_.rasterExtent.toGridType[Long])
   lazy val resolutions: F[List[GridExtent[Long]]] = tiffF.map { tiff =>
@@ -76,7 +78,7 @@ case class GeoTiffRasterSource[F[_]: Monad: UnsafeLift](
     }.flatten
 
   def read(bounds: GridBounds[Long], bands: Seq[Int]): F[Raster[MultibandTile]] =
-    readBounds(List(bounds), bands) >>= (iter => UnsafeLift[F].apply { iter.next })
+    readBounds(List(bounds), bands) >>= (iter => tiffF.map { _.synchronized(iter.next) })
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): F[Iterator[Raster[MultibandTile]]] = {
     val bounds: F[List[GridBounds[Long]]] = extents.toList.traverse { e => gridExtent.map(_.gridBoundsFor(e, clamp = true)) }
@@ -90,10 +92,8 @@ case class GeoTiffRasterSource[F[_]: Monad: UnsafeLift](
         bounds.flatMap(_.intersection(gridBounds)).toSeq.map(_.toGridType[Int])
 
       UnsafeLift[F].apply {
-        tiff.synchronized {
-          geoTiffTile.crop(intersectingBounds, bands.toArray).map { case (gb, tile) =>
-            convertRaster(Raster(tile, gridExtent.extentFor(gb.toGridType[Long], clamp = true)))
-          }
+        geoTiffTile.crop(intersectingBounds, bands.toArray).map { case (gb, tile) =>
+          convertRaster(Raster(tile, gridExtent.extentFor(gb.toGridType[Long], clamp = true)))
         }
       }
     }.flatten

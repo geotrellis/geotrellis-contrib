@@ -41,7 +41,9 @@ case class GeoTiffResampleRasterSource[F[_]: Monad: UnsafeLift](
 ) extends RasterSourceF[F] {
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
-  @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(GeoTiffReader.readMultiband(RangeReader(dataPath.path), streaming = true))
+  // memoize tiff, not useful only in a local fs case
+  @transient lazy val tiff: MultibandGeoTiff = GeoTiffReader.readMultiband(RangeReader(dataPath.path), streaming = true)
+  @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(tiff)
 
   def crs: F[CRS] = tiffF.map(_.crs)
   def bandCount: F[Int] = tiffF.map(_.bandCount)
@@ -88,11 +90,11 @@ case class GeoTiffResampleRasterSource[F[_]: Monad: UnsafeLift](
 
   def read(extent: Extent, bands: Seq[Int]): F[Raster[MultibandTile]] = {
     val bounds = gridExtent.map(_.gridBoundsFor(extent, clamp = false))
-    bounds >>= (bounds => readBounds(List(bounds), bands) >>= { iter => UnsafeLift[F].apply { iter.next } })
+    bounds >>= (read(_, bands))
   }
 
   def read(bounds: GridBounds[Long], bands: Seq[Int]): F[Raster[MultibandTile]] =
-    readBounds(List(bounds), bands) >>= { iter => UnsafeLift[F].apply { iter.next } }
+    readBounds(List(bounds), bands) >>= { iter => closestTiffOverview.map { _.synchronized(iter.next) } }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): F[Iterator[Raster[MultibandTile]]] = {
     val targetPixelBounds = gridExtent.map(gridExtent => extents.map(gridExtent.gridBoundsFor(_)))
@@ -118,14 +120,12 @@ case class GeoTiffResampleRasterSource[F[_]: Monad: UnsafeLift](
           }
         }.toMap
 
-        closestTiffOverview.synchronized {
-          geoTiffTile.crop(windows.keys.toSeq, bands.toArray).map { case (gb, tile) =>
-            val targetRasterExtent = windows(gb)
-            Raster(
-              tile = tile,
-              extent = targetRasterExtent.extent
-            ).resample(targetRasterExtent.cols, targetRasterExtent.rows, method)
-          }
+        geoTiffTile.crop(windows.keys.toSeq, bands.toArray).map { case (gb, tile) =>
+          val targetRasterExtent = windows(gb)
+          Raster(
+            tile = tile,
+            extent = targetRasterExtent.extent
+          ).resample(targetRasterExtent.cols, targetRasterExtent.rows, method)
         }
       }
     }.flatten

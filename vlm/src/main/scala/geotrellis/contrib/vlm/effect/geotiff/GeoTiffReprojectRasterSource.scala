@@ -43,7 +43,9 @@ case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
   errorThreshold: Double = 0.125,
   private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSourceF[F] {
-  @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(GeoTiffReader.readMultiband(RangeReader(dataPath.path), streaming = true))
+  // memoize tiff, not useful only in a local fs case
+  @transient lazy val tiff: MultibandGeoTiff = GeoTiffReader.readMultiband(RangeReader(dataPath.path), streaming = true)
+  @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(tiff)
 
   lazy val crs: F[CRS] = Monad[F].pure(targetCRS)
   protected lazy val baseCRS: F[CRS] = tiffF.map(_.crs)
@@ -91,11 +93,11 @@ case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
 
   def read(extent: Extent, bands: Seq[Int]): F[Raster[MultibandTile]] = {
     val bounds = gridExtent.map(_.gridBoundsFor(extent, clamp = false))
-    bounds.flatMap(bounds => readBounds(List(bounds), bands) >>= { iter => UnsafeLift[F].apply { iter.next } })
+    bounds >>= (read(_, bands))
   }
 
   def read(bounds: GridBounds[Long], bands: Seq[Int]): F[Raster[MultibandTile]] =
-    readBounds(List(bounds), bands) >>= { iter => UnsafeLift[F].apply { iter.next } }
+    readBounds(List(bounds), bands) >>= { iter => closestTiffOverview.map { _.synchronized(iter.next) } }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): F[Iterator[Raster[MultibandTile]]] = {
     val bounds: F[List[GridBounds[Long]]] = extents.toList.traverse { e => gridExtent.map(_.gridBoundsFor(e, clamp = true)) }
@@ -114,31 +116,30 @@ case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
             val targetRasterExtent = RasterExtent(
               extent = gridExtent.extentFor(targetPixelBounds, clamp = true),
               cols = targetPixelBounds.width.toInt,
-              rows = targetPixelBounds.height.toInt)
-            val sourceExtent = targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope
+              rows = targetPixelBounds.height.toInt
+            )
+            // A tmp workaround for https://github.com/locationtech/proj4j/pull/29
+            // Stacktrace details: https://github.com/geotrellis/geotrellis-contrib/pull/206#pullrequestreview-260115791
+            val sourceExtent = Proj4Transform.synchronized(targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope)
             val sourcePixelBounds = closestTiffOverview.rasterExtent.gridBoundsFor(sourceExtent, clamp = true)
             (sourcePixelBounds, targetRasterExtent)
           }
         }.toMap
 
-        closestTiffOverview.synchronized {
-          geoTiffTile.crop(intersectingWindows.keys.toSeq, bands.toArray).map { case (sourcePixelBounds, tile) =>
-            val targetRasterExtent = intersectingWindows(sourcePixelBounds)
-            val sourceRaster = Raster(tile, closestTiffOverview.rasterExtent.extentFor(sourcePixelBounds, clamp = true))
-            val rr = implicitly[RasterRegionReproject[MultibandTile]]
-            rr.regionReproject(
-              sourceRaster,
-              baseCRS,
-              crs,
-              targetRasterExtent,
-              targetRasterExtent.extent.toPolygon,
-              resampleMethod,
-              errorThreshold
-            )
-          }.map {
-            convertRaster
-          }
-        }
+        geoTiffTile.crop(intersectingWindows.keys.toSeq, bands.toArray).map { case (sourcePixelBounds, tile) =>
+          val targetRasterExtent = intersectingWindows(sourcePixelBounds)
+          val sourceRaster = Raster(tile, closestTiffOverview.rasterExtent.extentFor(sourcePixelBounds, clamp = true))
+          val rr = implicitly[RasterRegionReproject[MultibandTile]]
+          rr.regionReproject(
+            sourceRaster,
+            baseCRS,
+            crs,
+            targetRasterExtent,
+            targetRasterExtent.extent.toPolygon,
+            resampleMethod,
+            errorThreshold
+          )
+        }.map { convertRaster }
       }
     }.flatten
 
