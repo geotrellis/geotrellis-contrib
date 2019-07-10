@@ -43,13 +43,13 @@ case class GeoTiffResampleRasterSource(
 
   override lazy val gridExtent: GridExtent[Long] = resampleGrid(tiff.rasterExtent.toGridType[Long])
   lazy val resolutions: List[GridExtent[Long]] = {
-      val ratio = gridExtent.cellSize.resolution / tiff.rasterExtent.cellSize.resolution
-      gridExtent :: tiff.overviews.map { ovr =>
-        val re = ovr.rasterExtent
-        val CellSize(cw, ch) = re.cellSize
-        new GridExtent[Long](re.extent, CellSize(cw * ratio, ch * ratio))
-      }
+    val ratio = gridExtent.cellSize.resolution / tiff.rasterExtent.cellSize.resolution
+    gridExtent :: tiff.overviews.map { ovr =>
+      val re = ovr.rasterExtent
+      val CellSize(cw, ch) = re.cellSize
+      new GridExtent[Long](re.extent, CellSize(cw * ratio, ch * ratio))
     }
+  }
 
   @transient protected lazy val closestTiffOverview: GeoTiff[MultibandTile] =
     tiff.getClosestOverview(gridExtent.cellSize, strategy)
@@ -77,7 +77,7 @@ case class GeoTiffResampleRasterSource(
   def read(bounds: GridBounds[Long], bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val it = readBounds(List(bounds), bands)
 
-    tiff.synchronized { if (it.hasNext) Some(it.next) else None }
+    closestTiffOverview.synchronized { if (it.hasNext) Some(it.next) else None }
   }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {

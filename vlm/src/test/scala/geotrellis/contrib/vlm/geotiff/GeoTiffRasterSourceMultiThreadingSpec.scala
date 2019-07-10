@@ -16,152 +16,55 @@
 
 package geotrellis.contrib.vlm.geotiff
 
-import geotrellis.contrib.vlm.Resource
-
+import geotrellis.contrib.vlm.{RasterSource, Resource}
 import geotrellis.proj4.CRS
-import geotrellis.raster._
 import geotrellis.raster.resample._
-import geotrellis.util._
 
-import org.scalatest.AsyncFunSpec
+import cats.instances.future._
+import cats.instances.list._
+import cats.syntax.traverse._
+import org.scalatest.{AsyncFunSpec, Matchers}
 
-import scala.concurrent.{Future, ExecutionContext}
-import scala.concurrent.duration.Duration
+import scala.concurrent.{ExecutionContext, Future}
 
-
-class GeoTiffRasterSourceMultiThreadingSpec extends AsyncFunSpec {
+class GeoTiffRasterSourceMultiThreadingSpec extends AsyncFunSpec with Matchers {
   val url = Resource.path("img/aspect-tiled.tif")
-  val source: GeoTiffRasterSource = new GeoTiffRasterSource(url)
+  val source = GeoTiffRasterSource(url)
 
   implicit val ec = ExecutionContext.global
+  
+  val iterations = (0 to 100).toList
 
-  describe("GeoTiffRasterSource should be threadsafe") {
+  /**
+    * readBounds and readExtends are not covered by these tests since these methods return an [[Iterator]].
+    * Due to the [[Iterator]] lazy nature, the lock in these cases should be done on the user side.
+    * */
+  def testMultithreading(rs: RasterSource): Unit = {
     it("read") {
-      val res: List[Future[Option[Raster[MultibandTile]]]] = (0 to 100).toList.map { _ => Future {
-        source.read()
-      } }
-
-      val fres: Future[List[Raster[MultibandTile]]] = Future.sequence(res).map(_.flatten)
-
-      fres.map { rasters => assert(rasters.size == 101) }
+      val res = iterations.map { _ => Future { rs.read() } }.sequence.map(_.flatten)
+      res.map { rasters => rasters.length shouldBe iterations.length }
     }
 
     it("readBounds - Option") {
-      val res: List[Future[Option[Raster[MultibandTile]]]] = (0 to 100).toList.map { _ => Future {
-        source.read(source.gridBounds, 0 until source.bandCount toSeq)
-      } }
+      val res =
+        iterations
+          .map { _ => Future { rs.read(rs.gridBounds, 0 until rs.bandCount) } }
+          .sequence
+          .map(_.flatten)
 
-      val fres: Future[List[Raster[MultibandTile]]] = Future.sequence(res).map(_.flatten)
-
-      fres.map { rasters => assert(rasters.size == 101) }
+      res.map { rasters => rasters.length shouldBe iterations.length }
     }
+  }
 
-    ignore("readBounds - List") {
-      val res: List[Future[List[Raster[MultibandTile]]]] = (0 to 100).toList.map { _ => Future {
-        source.readBounds(List(source.gridBounds), 0 until source.bandCount toSeq).toList
-      } }
-
-      val fres: Future[List[Raster[MultibandTile]]] = Future.sequence(res).map(_.flatten)
-
-      fres.map { rasters => assert(rasters.size == 101) }
-    }
-
-    ignore("readExtents") {
-      val res: List[Future[List[Raster[MultibandTile]]]] = (0 to 100).toList.map { _ => Future {
-        source.readExtents(List(source.extent), 0 until source.bandCount toSeq).toList
-      } }
-
-      val fres: Future[List[Raster[MultibandTile]]] = Future.sequence(res).map(_.flatten)
-
-      fres.map { rasters => assert(rasters.size == 101) }
-    }
+  describe("GeoTiffRasterSource should be threadsafe") {
+    testMultithreading(source)
   }
 
   describe("GeoTiffRasterReprojectSource should be threadsafe") {
-    val reprojected = source.reproject(CRS.fromEpsgCode(4326))
-
-    it("read") {
-      val res: List[Future[Option[Raster[MultibandTile]]]] = (0 to 100).toList.map { _ => Future {
-        reprojected.read()
-      } }
-
-      val fres: Future[List[Raster[MultibandTile]]] = Future.sequence(res).map(_.flatten)
-
-      fres.map { rasters => assert(rasters.size == 101) }
-    }
-
-    it("readBounds - Option") {
-      val res: List[Future[Option[Raster[MultibandTile]]]] = (0 to 100).toList.map { _ => Future {
-        reprojected.read(reprojected.gridBounds, 0 until source.bandCount toSeq)
-      } }
-
-      val fres: Future[List[Raster[MultibandTile]]] = Future.sequence(res).map(_.flatten)
-
-      fres.map { rasters => assert(rasters.size == 101) }
-    }
-
-    ignore("readBounds - List") {
-      val res: List[Future[List[Raster[MultibandTile]]]] = (0 to 100).toList.map { _ => Future {
-        reprojected.readBounds(List(reprojected.gridBounds), 0 until source.bandCount toSeq).toList
-      } }
-
-      val fres: Future[List[Raster[MultibandTile]]] = Future.sequence(res).map(_.flatten)
-
-      fres.map { rasters => assert(rasters.size == 101) }
-    }
-
-    ignore("readExtents") {
-      val res: List[Future[List[Raster[MultibandTile]]]] = (0 to 100).toList.map { _ => Future {
-        reprojected.readExtents(List(reprojected.extent), 0 until source.bandCount toSeq).toList
-      } }
-
-      val fres: Future[List[Raster[MultibandTile]]] = Future.sequence(res).map(_.flatten)
-
-      fres.map { rasters => assert(rasters.size == 101) }
-    }
+    testMultithreading(source.reproject(CRS.fromEpsgCode(4326)))
   }
 
   describe("GeoTiffRasterResampleSource should be threadsafe") {
-    val resampled = source.resample((source.cols * 0.95).toInt , (source.rows * 0.95).toInt, NearestNeighbor)
-
-    it("read") {
-      val res: List[Future[Option[Raster[MultibandTile]]]] = (0 to 100).toList.map { _ => Future {
-        resampled.read()
-      } }
-
-      val fres: Future[List[Raster[MultibandTile]]] = Future.sequence(res).map(_.flatten)
-
-      fres.map { rasters => assert(rasters.size == 101) }
-    }
-
-    it("readBounds - Option") {
-      val res: List[Future[Option[Raster[MultibandTile]]]] = (0 to 100).toList.map { _ => Future {
-        resampled.read(resampled.gridBounds, 0 until source.bandCount toSeq)
-      } }
-
-      val fres: Future[List[Raster[MultibandTile]]] = Future.sequence(res).map(_.flatten)
-
-      fres.map { rasters => assert(rasters.size == 101) }
-    }
-
-    ignore("readBounds - List") {
-      val res: List[Future[List[Raster[MultibandTile]]]] = (0 to 100).toList.map { _ => Future {
-        resampled.readBounds(List(resampled.gridBounds), 0 until source.bandCount toSeq).toList
-      } }
-
-      val fres: Future[List[Raster[MultibandTile]]] = Future.sequence(res).map(_.flatten)
-
-      fres.map { rasters => assert(rasters.size == 101) }
-    }
-
-    ignore("readExtents") {
-      val res: List[Future[List[Raster[MultibandTile]]]] = (0 to 100).toList.map { _ => Future {
-        resampled.readExtents(List(resampled.extent), 0 until source.bandCount toSeq).toList
-      } }
-
-      val fres: Future[List[Raster[MultibandTile]]] = Future.sequence(res).map(_.flatten)
-
-      fres.map { rasters => assert(rasters.size == 101) }
-    }
+    testMultithreading(source.resample((source.cols * 0.95).toInt , (source.rows * 0.95).toInt, NearestNeighbor))
   }
 }

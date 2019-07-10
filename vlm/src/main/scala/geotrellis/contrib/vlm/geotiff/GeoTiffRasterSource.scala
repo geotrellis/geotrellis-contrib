@@ -79,8 +79,9 @@ case class GeoTiffRasterSource(
   override def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): Iterator[Raster[MultibandTile]] = {
     val geoTiffTile = tiff.tile.asInstanceOf[GeoTiffMultibandTile]
     val intersectingBounds: Seq[GridBounds[Int]] =
-      bounds.flatMap(_.intersection(this.gridBounds)).
-      toSeq.map(b => b.toGridType[Int])
+      bounds
+        .flatMap(_.intersection(this.gridBounds)).toSeq
+        .map(b => b.toGridType[Int])
 
     geoTiffTile.crop(intersectingBounds, bands.toArray).map { case (gb, tile) =>
       convertRaster(Raster(tile, gridExtent.extentFor(gb.toGridType[Long], clamp = true)))
