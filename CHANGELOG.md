@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - VLM: `GeoTiffRasterSource` reads are now thread safe
 - VLM: `GeoTiffRasterSource`s will now reuse a tiff instead of rereading
   it when possible.
+- VLM: `RasterSource` will now short circut reprojection if the given
+  source is already in the target CRS.
 
 ### Removed
 - Summary: Subproject removed. The polygonal summary prototype was moved to GeoTrellis core for the 3.0 release. See: https://github.com/locationtech/geotrellis/blob/master/docs/guide/rasters.rst#polygonal-summary
