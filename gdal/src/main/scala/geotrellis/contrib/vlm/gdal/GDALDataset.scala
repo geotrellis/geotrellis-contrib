@@ -30,7 +30,7 @@ case class GDALDataset(token: Long) extends AnyVal {
     require(acceptableDatasets contains dataset)
     val crs = Array.ofDim[Byte](1 << 16)
     if (GDALWarp.get_crs_wkt(token, dataset, numberOfAttempts, crs) <= 0)
-      throw new Exception("get_crs_wkt")
+      throw new MalformedProjectionException("Unable to parse projection as WKT String")
     Some(new String(crs, "UTF-8"))
   }
 
@@ -42,7 +42,7 @@ case class GDALDataset(token: Long) extends AnyVal {
     val width_height = Array.ofDim[Int](2)
     if (GDALWarp.get_transform(token, dataset, numberOfAttempts, transform) <= 0 ||
       GDALWarp.get_width_height(token, dataset, numberOfAttempts, width_height) <= 0)
-      throw new Exception("get_transform or get_width_height")
+      throw new MalformedDataException("Bad tranform values read")
 
     val x1 = transform(0)
     val y1 = transform(3)
@@ -68,7 +68,7 @@ case class GDALDataset(token: Long) extends AnyVal {
     val extent = this.extent(dataset)
 
     if (GDALWarp.get_overview_widths_heights(token, dataset, numberOfAttempts, 1, widths, heights) <= 0)
-      throw new Exception("get_overview_widths_heights")
+      throw new MalformedDataException("Unable to read in overviews")
     widths.zip(heights).flatMap({ case (w, h) =>
       if (w > 0 && h > 0) Some(RasterExtent(extent, cols = w, rows = h))
       else None
@@ -88,7 +88,7 @@ case class GDALDataset(token: Long) extends AnyVal {
     require(acceptableDatasets contains dataset)
     val count = Array.ofDim[Int](1)
     if (GDALWarp.get_band_count(token, dataset, numberOfAttempts, count) <= 0)
-      throw new Exception("get_band_count")
+      throw new MalformedDataException("A bandCount of <= 0 was found")
     count(0)
   }
 
@@ -98,7 +98,7 @@ case class GDALDataset(token: Long) extends AnyVal {
     require(acceptableDatasets contains dataset)
     val crs = Array.ofDim[Byte](1 << 16)
     if (GDALWarp.get_crs_proj4(token, dataset, numberOfAttempts, crs) <= 0)
-      throw new Exception("get_crs_proj4")
+      throw new MalformedProjectionException("Unable to parse projection as CRS")
     val proj4String: String = new String(crs, "UTF-8").trim
     if (proj4String.length > 0) CRS.fromString(proj4String.trim)
     else LatLng
@@ -111,7 +111,7 @@ case class GDALDataset(token: Long) extends AnyVal {
     val nodata = Array.ofDim[Double](1)
     val success = Array.ofDim[Int](1)
     if (GDALWarp.get_band_nodata(token, dataset, numberOfAttempts, 1, nodata, success) <= 0)
-      throw new Exception("get_band_nodata")
+      throw new MalformedDataTypeException("Unable to determine NoData value")
     if (success(0) == 0) None
     else Some(nodata(0))
   }
@@ -122,7 +122,7 @@ case class GDALDataset(token: Long) extends AnyVal {
     require(acceptableDatasets contains dataset)
     val dataType = Array.ofDim[Int](1)
     if (GDALWarp.get_band_data_type(token, dataset, numberOfAttempts, 1, dataType) <= 0)
-      throw new Exception("get_band_data_type")
+      throw new MalformedDataTypeException("Unknown DataType")
     dataType(0)
   }
 
@@ -145,7 +145,7 @@ case class GDALDataset(token: Long) extends AnyVal {
       val minmax = Array.ofDim[Double](2)
       val success = Array.ofDim[Int](1)
       if (GDALWarp.get_band_min_max(token, dataset, numberOfAttempts, 1, true, minmax, success) <= 0)
-        throw new Exception("get_band_min_max")
+        throw new MalformedDataTypeException("Bad min/max values")
       if (success(0) != 0) Some(minmax(0), minmax(1))
       else None
     }
@@ -162,7 +162,7 @@ case class GDALDataset(token: Long) extends AnyVal {
     val bytes = Array.ofDim[Byte](dstWindow(0) * dstWindow(1) * ct.bytes)
 
     if (GDALWarp.get_data(token, dataset, numberOfAttempts, srcWindow, dstWindow, band, dt, bytes) <= 0)
-      throw new Exception("get_data")
+      throw new GDALIOException("Unable to read in data")
     ArrayTile.fromBytes(bytes, ct, dstWindow(0), dstWindow(1))
   }
 
