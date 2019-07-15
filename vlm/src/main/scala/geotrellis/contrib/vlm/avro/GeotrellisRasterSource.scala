@@ -60,19 +60,19 @@ class GeotrellisRasterSource(
     this(AttributeStore(dataPath.path), dataPath)
 
 
-  lazy val reader = CollectionLayerReader(attributeStore, dataPath.path)
+  @transient lazy val reader = CollectionLayerReader(attributeStore, dataPath.path)
 
   // read metadata directly instead of searching sourceLayers to avoid unneeded reads
-  lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
+  @transient lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
 
-  lazy val gridExtent: GridExtent[Long] = metadata.layout.createAlignedGridExtent(metadata.extent)
+  @transient lazy val gridExtent: GridExtent[Long] = metadata.layout.createAlignedGridExtent(metadata.extent)
 
   def crs: CRS = metadata.crs
 
   def cellType: CellType = dstCellType.getOrElse(metadata.cellType)
 
   // reference to this will fully initilze the sourceLayers stream
-  lazy val resolutions: List[GridExtent[Long]] = sourceLayers.map(_.gridExtent).toList
+  @transient lazy val resolutions: List[GridExtent[Long]] = sourceLayers.map(_.gridExtent).toList
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     GeotrellisRasterSource.read(reader, layerId, metadata, extent, bands).map { convertRaster }

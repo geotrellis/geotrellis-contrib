@@ -37,18 +37,18 @@ case class GeoTiffReprojectRasterSource(
   @transient lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(dataPath.path), streaming = true)
 
-  protected lazy val baseCRS: CRS = tiff.crs
-  protected lazy val baseGridExtent: GridExtent[Long] = tiff.rasterExtent.toGridType[Long]
+  @transient protected lazy val baseCRS: CRS = tiff.crs
+  @transient protected lazy val baseGridExtent: GridExtent[Long] = tiff.rasterExtent.toGridType[Long]
 
-  protected lazy val transform = Transform(baseCRS, crs)
-  protected lazy val backTransform = Transform(crs, baseCRS)
+  @transient protected lazy val transform = Transform(baseCRS, crs)
+  @transient protected lazy val backTransform = Transform(crs, baseCRS)
 
-  override lazy val gridExtent: GridExtent[Long] = reprojectOptions.targetRasterExtent match {
+  @transient override lazy val gridExtent: GridExtent[Long] = reprojectOptions.targetRasterExtent match {
     case Some(targetRasterExtent) => targetRasterExtent.toGridType[Long]
     case None => ReprojectRasterExtent(baseGridExtent, transform, reprojectOptions)
   }
 
-  lazy val resolutions: List[GridExtent[Long]] =
+  @transient lazy val resolutions: List[GridExtent[Long]] =
       gridExtent :: tiff.overviews.map(ovr => ReprojectRasterExtent(ovr.rasterExtent.toGridType[Long], transform))
 
   @transient private[vlm] lazy val closestTiffOverview: GeoTiff[MultibandTile] = {

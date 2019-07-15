@@ -34,8 +34,8 @@ case class GeoTiffRasterSource(
   @transient lazy val tiff: MultibandGeoTiff =
     GeoTiffReader.readMultiband(getByteReader(dataPath.path), streaming = true)
 
-  lazy val gridExtent: GridExtent[Long] = tiff.rasterExtent.toGridType[Long]
-  lazy val resolutions: List[GridExtent[Long]] = gridExtent :: tiff.overviews.map(_.rasterExtent.toGridType[Long])
+  @transient lazy val gridExtent: GridExtent[Long] = tiff.rasterExtent.toGridType[Long]
+  @transient lazy val resolutions: List[GridExtent[Long]] = gridExtent :: tiff.overviews.map(_.rasterExtent.toGridType[Long])
 
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount

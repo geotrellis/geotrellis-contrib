@@ -54,13 +54,13 @@ class GeotrellisResampleRasterSource(
   val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource with LazyLogging { self =>
 
-  lazy val reader = CollectionLayerReader(attributeStore, dataPath.path)
+  @transient lazy val reader = CollectionLayerReader(attributeStore, dataPath.path)
 
   /** Source layer metadata  that needs to be resampled */
-  lazy val sourceLayer: Layer = sourceLayers.find(_.id == layerId).get
+  @transient lazy val sourceLayer: Layer = sourceLayers.find(_.id == layerId).get
 
   /** GridExtent of source pixels that needs to be resampled */
-  lazy val sourceGridExtent: GridExtent[Long] = sourceLayer.gridExtent
+  @transient lazy val sourceGridExtent: GridExtent[Long] = sourceLayer.gridExtent
 
   def crs: CRS = sourceLayer.metadata.crs
 
@@ -68,7 +68,7 @@ class GeotrellisResampleRasterSource(
 
   def bandCount: Int = sourceLayer.bandCount
 
-  lazy val resolutions: List[GridExtent[Long]] = sourceLayers.map(_.gridExtent).toList
+  @transient lazy val resolutions: List[GridExtent[Long]] = sourceLayers.map(_.gridExtent).toList
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val tileBounds = sourceLayer.metadata.mapTransform.extentToBounds(extent)

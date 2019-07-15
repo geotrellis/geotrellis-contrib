@@ -56,7 +56,7 @@ case class GeoTiffResampleRasterSource(
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
     new GeoTiffReprojectRasterSource(dataPath, targetCRS, reprojectOptions, strategy, targetCellType) {
-      override lazy val gridExtent: GridExtent[Long] = reprojectOptions.targetRasterExtent match {
+      @transient override lazy val gridExtent: GridExtent[Long] = reprojectOptions.targetRasterExtent match {
         case Some(targetRasterExtent) => targetRasterExtent.toGridType[Long]
         case None => ReprojectRasterExtent(self.gridExtent, this.transform, this.reprojectOptions)
       }
