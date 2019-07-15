@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - VLM: Correct incomplete reads when using `MosaicRasterSource`
 - VLM: `GeoTiffRasterSource` reads are now thread safe
+- VLM: Marked all `lazy val`s as `@transient` in the `RasterSource`s to
+  prevent NPEs.
 
 ### Removed
 - Summary: Subproject removed. The polygonal summary prototype was moved to GeoTrellis core for the 3.0 release. See: https://github.com/locationtech/geotrellis/blob/master/docs/guide/rasters.rst#polygonal-summary
