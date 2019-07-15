@@ -31,7 +31,7 @@ case class GeoTiffReprojectRasterSource(
   reprojectOptions: Reproject.Options = Reproject.Options.DEFAULT,
   strategy: OverviewStrategy = AutoHigherResolution,
   private[vlm] val targetCellType: Option[TargetCellType] = None,
-  val baseTiff: Option[MultibandGeoTiff] = None
+  private val baseTiff: Option[MultibandGeoTiff] = None
 ) extends RasterSource { self =>
   def resampleMethod: Option[ResampleMethod] = Some(reprojectOptions.method)
 
