@@ -30,12 +30,13 @@ case class GeoTiffReprojectRasterSource(
   crs: CRS,
   reprojectOptions: Reproject.Options = Reproject.Options.DEFAULT,
   strategy: OverviewStrategy = AutoHigherResolution,
-  private[vlm] val targetCellType: Option[TargetCellType] = None
+  private[vlm] val targetCellType: Option[TargetCellType] = None,
+  private val baseTiff: Option[MultibandGeoTiff] = None
 ) extends RasterSource { self =>
   def resampleMethod: Option[ResampleMethod] = Some(reprojectOptions.method)
 
   @transient lazy val tiff: MultibandGeoTiff =
-    GeoTiffReader.readMultiband(getByteReader(dataPath.path), streaming = true)
+    baseTiff.getOrElse(GeoTiffReader.readMultiband(getByteReader(dataPath.path), streaming = true))
 
   protected lazy val baseCRS: CRS = tiff.crs
   protected lazy val baseGridExtent: GridExtent[Long] = tiff.rasterExtent.toGridType[Long]
@@ -121,11 +122,18 @@ case class GeoTiffReprojectRasterSource(
   }
 
   def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GeoTiffReprojectRasterSource(dataPath, targetCRS, reprojectOptions, strategy, targetCellType)
+    GeoTiffReprojectRasterSource(dataPath, targetCRS, reprojectOptions, strategy, targetCellType, Some(tiff))
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GeoTiffReprojectRasterSource(dataPath, crs, reprojectOptions.copy(method = method, targetRasterExtent = Some(resampleGrid(self.gridExtent).toRasterExtent)), strategy, targetCellType)
+    GeoTiffReprojectRasterSource(
+      dataPath,
+      crs,
+      reprojectOptions.copy(method = method, targetRasterExtent = Some(resampleGrid(self.gridExtent).toRasterExtent)),
+      strategy,
+      targetCellType,
+      Some(tiff)
+    )
 
   def convert(targetCellType: TargetCellType): RasterSource =
-    GeoTiffReprojectRasterSource(dataPath, crs, reprojectOptions, strategy, Some(targetCellType))
+    GeoTiffReprojectRasterSource(dataPath, crs, reprojectOptions, strategy, Some(targetCellType), Some(tiff))
 }

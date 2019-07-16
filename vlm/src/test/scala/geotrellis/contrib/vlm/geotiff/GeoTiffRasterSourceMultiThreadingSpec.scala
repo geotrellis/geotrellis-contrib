@@ -32,7 +32,7 @@ class GeoTiffRasterSourceMultiThreadingSpec extends AsyncFunSpec with Matchers {
   val source = GeoTiffRasterSource(url)
 
   implicit val ec = ExecutionContext.global
-  
+
   val iterations = (0 to 100).toList
 
   /**

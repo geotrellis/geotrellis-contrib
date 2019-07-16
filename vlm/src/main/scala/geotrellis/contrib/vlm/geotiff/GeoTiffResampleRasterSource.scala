@@ -30,12 +30,13 @@ case class GeoTiffResampleRasterSource(
   resampleGrid: ResampleGrid[Long],
   method: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
-  private[vlm] val targetCellType: Option[TargetCellType] = None
+  private[vlm] val targetCellType: Option[TargetCellType] = None,
+  private val baseTiff: Option[MultibandGeoTiff] = None
 ) extends RasterSource { self =>
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
   @transient lazy val tiff: MultibandGeoTiff =
-    GeoTiffReader.readMultiband(getByteReader(dataPath.path), streaming = true)
+    baseTiff.getOrElse(GeoTiffReader.readMultiband(getByteReader(dataPath.path), streaming = true))
 
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount
@@ -63,10 +64,10 @@ case class GeoTiffResampleRasterSource(
     }
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GeoTiffResampleRasterSource(dataPath, resampleGrid, method, strategy, targetCellType)
+    GeoTiffResampleRasterSource(dataPath, resampleGrid, method, strategy, targetCellType, Some(tiff))
 
   def convert(targetCellType: TargetCellType): RasterSource =
-    GeoTiffResampleRasterSource(dataPath, resampleGrid, method, strategy, Some(targetCellType))
+    GeoTiffResampleRasterSource(dataPath, resampleGrid, method, strategy, Some(targetCellType), Some(tiff))
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = gridExtent.gridBoundsFor(extent, clamp = false)
