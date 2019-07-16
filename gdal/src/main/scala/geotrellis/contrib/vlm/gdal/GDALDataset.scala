@@ -42,7 +42,7 @@ case class GDALDataset(token: Long) extends AnyVal {
     val width_height = Array.ofDim[Int](2)
     if (GDALWarp.get_transform(token, dataset, numberOfAttempts, transform) <= 0 ||
       GDALWarp.get_width_height(token, dataset, numberOfAttempts, width_height) <= 0)
-      throw new MalformedDataException("Bad tranform values read")
+      throw new MalformedDataException("Unable to construct a RasterExtent from the Transformation given")
 
     val x1 = transform(0)
     val y1 = transform(3)
@@ -68,7 +68,7 @@ case class GDALDataset(token: Long) extends AnyVal {
     val extent = this.extent(dataset)
 
     if (GDALWarp.get_overview_widths_heights(token, dataset, numberOfAttempts, 1, widths, heights) <= 0)
-      throw new MalformedDataException("Unable to read in overviews")
+      throw new MalformedDataException("Unable to construct overviews for resample")
     widths.zip(heights).flatMap({ case (w, h) =>
       if (w > 0 && h > 0) Some(RasterExtent(extent, cols = w, rows = h))
       else None
@@ -122,7 +122,7 @@ case class GDALDataset(token: Long) extends AnyVal {
     require(acceptableDatasets contains dataset)
     val dataType = Array.ofDim[Int](1)
     if (GDALWarp.get_band_data_type(token, dataset, numberOfAttempts, 1, dataType) <= 0)
-      throw new MalformedDataTypeException("Unknown DataType")
+      throw new MalformedDataTypeException("Unable to determine DataType")
     dataType(0)
   }
 
@@ -145,7 +145,7 @@ case class GDALDataset(token: Long) extends AnyVal {
       val minmax = Array.ofDim[Double](2)
       val success = Array.ofDim[Int](1)
       if (GDALWarp.get_band_min_max(token, dataset, numberOfAttempts, 1, true, minmax, success) <= 0)
-        throw new MalformedDataTypeException("Bad min/max values")
+        throw new MalformedDataTypeException("Unable to deterime the min/max values in order to calculate CellType")
       if (success(0) != 0) Some(minmax(0), minmax(1))
       else None
     }
