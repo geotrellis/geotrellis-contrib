@@ -62,7 +62,7 @@ class GeotrellisReprojectRasterSource(
     for {
       subExtent <- this.extent.intersection(extent)
       targetRasterExtent = this.gridExtent.createAlignedRasterExtent(subExtent)
-      sourceExtent = targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope
+      sourceExtent = targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).getEnvelopeInternal
       sourceRegion = sourceLayer.metadata.layout.createAlignedGridExtent(sourceExtent)
       _ = {
         lazy val tileBounds = sourceLayer.metadata.mapTransform.extentToBounds(sourceExtent)

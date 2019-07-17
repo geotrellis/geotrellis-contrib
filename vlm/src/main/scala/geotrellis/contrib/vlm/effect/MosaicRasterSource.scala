@@ -95,7 +95,7 @@ abstract class MosaicRasterSource[F[_]: Monad: Par] extends RasterSourceF[F] {
     *
     * @see [[geotrellis.contrib.vlm.RasterSource.reproject]]
     */
-  def reproject(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): MosaicRasterSource[F] =
+  def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): MosaicRasterSource[F] =
     MosaicRasterSource(
       sources.map(_.map { _.reproject(targetCRS, resampleGrid, method, strategy) }),
       crs,

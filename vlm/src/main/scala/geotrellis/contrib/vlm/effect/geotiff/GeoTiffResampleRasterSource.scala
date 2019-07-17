@@ -64,7 +64,7 @@ case class GeoTiffResampleRasterSource[F[_]: Monad: UnsafeLift](
   @transient protected lazy val closestTiffOverview: F[GeoTiff[MultibandTile]] =
     (tiffF, gridExtent).mapN { (tiff, gridExtent) => tiff.getClosestOverview(gridExtent.cellSize, strategy) }
 
-  def reproject(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): GeoTiffReprojectRasterSource[F] =
+  def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): GeoTiffReprojectRasterSource[F] =
     new GeoTiffReprojectRasterSource[F](dataPath, targetCRS, resampleGrid, method, strategy, targetCellType = targetCellType) {
       override lazy val gridExtent: F[GridExtent[Long]] = {
         val reprojectedRasterExtent: F[GridExtent[Long]] =

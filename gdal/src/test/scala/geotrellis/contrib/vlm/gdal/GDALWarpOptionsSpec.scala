@@ -144,8 +144,8 @@ class GDALWarpOptionsSpec extends FunSpec with RasterMatchers with BetterRasterM
       val rs =
         GDALRasterSource(filePath)
           .reproject(
-            crs          = WebMercator,
-            resampleGrid = TargetCellSize[Long](CellSize(10, 10)).some,
+            targetCRS    = WebMercator,
+            resampleGrid = TargetCellSize[Long](CellSize(10, 10)),
             strategy     = AutoHigherResolution
         )
         .resampleToRegion(

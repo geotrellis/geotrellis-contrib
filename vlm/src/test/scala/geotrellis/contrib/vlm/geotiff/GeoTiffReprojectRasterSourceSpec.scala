@@ -89,7 +89,7 @@ class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with
 
     it("should select correct overview to sample from") {
       // we choose LatLng to switch scales, the source projection is in meters
-      val baseReproject = rasterSource.reproject(LatLng)
+      val baseReproject = rasterSource.reproject(LatLng).asInstanceOf[GeoTiffReprojectRasterSource]
       // known good start, CellSize(10, 10) is the base resolution of source
       baseReproject.closestTiffOverview.cellSize shouldBe CellSize(10, 10)
 

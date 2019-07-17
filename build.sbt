@@ -124,7 +124,7 @@ lazy val gdal = project
     name := "geotrellis-contrib-gdal",
     libraryDependencies ++= Seq(
       gdalWarp,
-      sparkCore % Test,
+      sparkCore % Provided,
       sparkSQL % Test,
       geotrellisSparkTestKit % Test,
       scalatest % Test,
@@ -164,7 +164,7 @@ lazy val slick = project
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-slick",
     libraryDependencies ++= Seq(
-      geotrellisVector,
+      "org.locationtech.geotrellis" %% "geotrellis-vector" % "2.3.1",
       slickPG,
       scalatest % Test
     )

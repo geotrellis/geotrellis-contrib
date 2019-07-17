@@ -110,7 +110,7 @@ case class GeoTiffReprojectRasterSource(
 
       // A tmp workaround for https://github.com/locationtech/proj4j/pull/29
       // Stacktrace details: https://github.com/geotrellis/geotrellis-contrib/pull/206#pullrequestreview-260115791
-      val sourceExtent = Proj4Transform.synchronized(targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope)
+      val sourceExtent = Proj4Transform.synchronized(targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).getEnvelopeInternal)
       val sourcePixelBounds = closestTiffOverview.rasterExtent.gridBoundsFor(sourceExtent, clamp = true)
       (sourcePixelBounds, targetRasterExtent)
     }}.toMap

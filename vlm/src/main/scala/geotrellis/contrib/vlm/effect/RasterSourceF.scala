@@ -55,7 +55,15 @@ abstract class RasterSourceF[F[_]: Monad] extends Serializable {
       case None => None
     }
 
-  def reproject(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSourceF[F]
+  protected def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSourceF[F]
+
+  /** Reproject to different CRS with explicit sampling reprojectOptions.
+    * @see [[geotrellis.raster.reproject.Reproject]]
+    * @group reproject
+    */
+  def reproject(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSourceF[F] =
+    if (targetCRS == this.crs) this
+    else reprojection(targetCRS, resampleGrid, method, strategy)
 
   /** Sampling grid and resolution is defined by given [[GridExtent]].
     * Resulting extent is the extent of the minimum enclosing pixel region
@@ -72,8 +80,10 @@ abstract class RasterSourceF[F[_]: Monad] extends Serializable {
     *   this region may be larger or smaller than the footprint of the data
     * @group reproject
     */
-  def reprojectToRegion(crs: CRS, region: RasterExtent, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSourceF[F] =
-    reproject(crs, TargetRegion[Long](region.toGridType[Long]), method, strategy)
+  def reprojectToRegion(targetCRS: CRS, region: RasterExtent, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSourceF[F] =
+    if (targetCRS == this.crs && region == this.gridExtent) this
+    else if (targetCRS == this.crs) resampleToRegion(region.asInstanceOf[GridExtent[Long]], method)
+    else reprojection(targetCRS, TargetRegion[Long](region.toGridType[Long]), method, strategy)
 
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSourceF[F]
