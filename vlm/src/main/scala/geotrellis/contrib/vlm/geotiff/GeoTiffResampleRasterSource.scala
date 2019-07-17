@@ -55,7 +55,7 @@ case class GeoTiffResampleRasterSource(
   @transient protected lazy val closestTiffOverview: GeoTiff[MultibandTile] =
     tiff.getClosestOverview(gridExtent.cellSize, strategy)
 
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
+  def reprojection(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
     new GeoTiffReprojectRasterSource(dataPath, targetCRS, reprojectOptions, strategy, targetCellType) {
       override lazy val gridExtent: GridExtent[Long] = reprojectOptions.targetRasterExtent match {
         case Some(targetRasterExtent) => targetRasterExtent.toGridType[Long]

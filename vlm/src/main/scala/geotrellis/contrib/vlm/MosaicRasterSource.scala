@@ -91,12 +91,12 @@ trait MosaicRasterSource extends RasterSource {
     *
     * @see [[geotrellis.contrib.vlm.RasterSource.reproject]]
     */
-  def reproject(crs: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy)
-      : RasterSource = MosaicRasterSource(
-    sources map { _.reproject(crs, reprojectOptions, strategy) },
-    crs,
-    gridExtent.reproject(this.crs, crs, reprojectOptions)
-  )
+  def reprojection(crs: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
+    MosaicRasterSource(
+      sources map { _.reproject(crs, reprojectOptions, strategy) },
+      crs,
+      gridExtent.reproject(this.crs, crs, reprojectOptions)
+    )
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val rasters = sources map { _.read(extent, bands) }

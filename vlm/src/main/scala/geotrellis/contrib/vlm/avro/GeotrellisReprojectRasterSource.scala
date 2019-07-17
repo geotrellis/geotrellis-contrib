@@ -97,7 +97,7 @@ class GeotrellisReprojectRasterSource(
   override def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
     bounds.toIterator.flatMap(_.intersection(this.gridBounds).flatMap(read(_, bands)))
 
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource = {
+  def reprojection(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource = {
     if (targetCRS == sourceLayer.metadata.crs) {
       val resampleGrid = ResampleGrid.fromReprojectOptions(reprojectOptions).get
       val resampledGridExtent = resampleGrid(this.sourceLayer.gridExtent)

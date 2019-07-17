@@ -80,11 +80,15 @@ trait RasterSource extends CellGrid[Long] with Serializable {
   /** Raster pixel row count */
   def rows: Long = gridExtent.rows
 
+  protected def reprojection(crs: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource
+
   /** Reproject to different CRS with explicit sampling reprojectOptions.
     * @see [[geotrellis.raster.reproject.Reproject]]
     * @group reproject
     */
-  def reproject(crs: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource
+  def reproject(crs: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
+    if (crs == this.crs) this
+    else reprojection(crs, reprojectOptions, strategy)
 
   /** Sampling grid is defined over the footprint of the data at default resolution
     *
@@ -94,7 +98,8 @@ trait RasterSource extends CellGrid[Long] with Serializable {
     * @group reproject
     */
   def reproject(crs: CRS, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
-    reproject(crs, Reproject.Options(method = method), strategy)
+    if (crs == this.crs) this
+    else reprojection(crs, Reproject.Options(method = method), strategy)
 
   /** Sampling grid and resolution is defined by given [[GridExtent]].
     * Resulting extent is the extent of the minimum enclosing pixel region
@@ -103,8 +108,8 @@ trait RasterSource extends CellGrid[Long] with Serializable {
     */
   def reprojectToGrid(crs: CRS, grid: GridExtent[Long], method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
     if (crs == this.crs && grid == this.gridExtent) this
-    else if (crs == this.crs) resampleToGrid(grid)
-    else reproject(crs, Reproject.Options(method = method, parentGridExtent = Some(grid)), strategy)
+    else if (crs == this.crs) resampleToGrid(grid, method)
+    else reprojection(crs, Reproject.Options(method = method, parentGridExtent = Some(grid)), strategy)
 
   /** Sampling grid and resolution is defined by given [[RasterExtent]] region.
     * The extent of the result is also taken from given [[RasterExtent]],
@@ -112,7 +117,9 @@ trait RasterSource extends CellGrid[Long] with Serializable {
     * @group reproject
     */
   def reprojectToRegion(crs: CRS, region: RasterExtent, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
-    reproject(crs, Reproject.Options(method = method, targetRasterExtent = Some(region)), strategy)
+    if (crs == this.crs && region == this.gridExtent) this
+    else if (crs == this.crs) resampleToRegion(region.asInstanceOf[GridExtent[Long]], method)
+    else reprojection(crs, Reproject.Options(method = method, targetRasterExtent = Some(region)), strategy)
 
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource

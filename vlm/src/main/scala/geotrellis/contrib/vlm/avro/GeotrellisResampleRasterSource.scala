@@ -93,7 +93,7 @@ class GeotrellisResampleRasterSource(
       .flatMap(read(_, bands))
   }
 
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeotrellisReprojectRasterSource = {
+  def reprojection(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeotrellisReprojectRasterSource = {
     val (closestLayerId, gridExtent) = GeotrellisReprojectRasterSource.getClosestSourceLayer(targetCRS, sourceLayers, reprojectOptions, strategy)
     new GeotrellisReprojectRasterSource(attributeStore, dataPath, layerId, sourceLayers, gridExtent, targetCRS, reprojectOptions, targetCellType)
   }

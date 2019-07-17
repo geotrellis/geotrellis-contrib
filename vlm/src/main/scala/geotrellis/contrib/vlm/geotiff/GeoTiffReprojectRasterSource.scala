@@ -121,7 +121,7 @@ case class GeoTiffReprojectRasterSource(
     }.map { convertRaster }
   }
 
-  def reproject(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
+  def reprojection(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
     GeoTiffReprojectRasterSource(dataPath, targetCRS, reprojectOptions, strategy, targetCellType, Some(tiff))
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
