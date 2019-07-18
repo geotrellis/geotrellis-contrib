@@ -18,7 +18,7 @@ package geotrellis.contrib.vlm.effect.geotiff
 
 import geotrellis.contrib.vlm._
 import geotrellis.contrib.vlm.effect._
-import geotrellis.contrib.vlm.geotiff.GeoTiffDataPath
+import geotrellis.contrib.vlm.geotiff.{GeoTiffDataPath, GeoTiffMetadata}
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
@@ -50,6 +50,7 @@ case class GeoTiffRasterSource[F[_]: Monad: UnsafeLift](
   def crs: F[CRS] = tiffF.map(_.crs)
   def bandCount: F[Int] = tiffF.map(_.bandCount)
   def cellType: F[CellType] = dstCellType.fold(tiffF.map(_.cellType))(Monad[F].pure)
+  def metadata: F[SourceMetadata] = tiffF.map(tiff => GeoTiffMetadata(tiff.tags))
 
   def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): GeoTiffReprojectRasterSource[F] =
     GeoTiffReprojectRasterSource(dataPath, targetCRS, resampleGrid, method, strategy, targetCellType = targetCellType)

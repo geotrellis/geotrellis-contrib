@@ -29,7 +29,8 @@ import com.azavea.gdal.GDALWarp
 case class GDALRasterSource(
   dataPath: GDALDataPath,
   options: GDALWarpOptions = GDALWarpOptions.EMPTY,
-  private[vlm] val targetCellType: Option[TargetCellType] = None
+  private[vlm] val targetCellType: Option[TargetCellType] = None,
+  private[vlm] val domains: List[String] = List("") // by default we read only the minimum amount of raster tags
 ) extends RasterSource {
   val path: String = dataPath.path
 
@@ -38,6 +39,8 @@ case class GDALRasterSource(
   // current dataset
   @transient lazy val dataset: GDALDataset =
     GDALDataset(path, options.toWarpOptionsList.toArray)
+
+  lazy val metadata: GDALMetadata = dataset.getGDALMetadata(GDALWarp.SOURCE, domains)
 
   lazy val bandCount: Int = dataset.bandCount
 

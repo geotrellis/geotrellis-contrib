@@ -17,19 +17,103 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm.gdal.config.GDALOptionsConfig
-
 import geotrellis.raster._
 import geotrellis.proj4.{CRS, LatLng}
 import geotrellis.vector.Extent
+import geotrellis.contrib.vlm.gdal.GDALMetadata.Domain
+
 import com.azavea.gdal.GDALWarp
 
 case class GDALDataset(token: Long) extends AnyVal {
+  def getGDALMetadata(): GDALMetadata = getGDALMetadata(GDALWarp.SOURCE)
+
+  def getGDALMetadata(dataset: Int): GDALMetadata =
+    GDALMetadata.apply(this, dataset)
+
+  def getGDALMetadata(dataset: Int, domains: List[String]): GDALMetadata =
+    GDALMetadata.apply(this, dataset, domains)
+
+  def getAllMetadataFlatten(dataset: Int): Map[String, String] =
+    getAllMetadata(dataset).flatMap(_._2)
+
+  def getAllMetadata(band: Int): Map[String, Map[String, String]] =
+    getAllMetadata(GDALWarp.SOURCE, band)
+
+  def getAllMetadata(dataset: Int, band: Int): Map[String, Map[String, String]] =
+    getMetadataDomainList(dataset).map { domain => domain -> getMetadata(domain, band) }.filter(_._2.nonEmpty).toMap
+
+  def getMetadataDomainList(band: Int): List[String] = getMetadataDomainList(GDALWarp.SOURCE, band)
+
+  /** https://github.com/OSGeo/gdal/blob/b1c9c12ad373e40b955162b45d704070d4ebf7b0/gdal/doc/source/development/rfc/rfc43_getmetadatadomainlist.rst */
+  def getMetadataDomainList(dataset: Int, band: Int): List[String] = {
+    val arr = Array.ofDim[Byte](100, 1 << 10)
+    val returnValue = GDALWarp.get_metadata_domain_list(token, dataset, numberOfAttempts, band, arr)
+
+    if (returnValue <= 0) {
+      val positiveValue = math.abs(returnValue)
+      throw new MalformedProjectionException(
+        s"Unable to get the metadata domain list. GDAL Error Code: $positiveValue",
+        positiveValue
+      )
+    }
+
+    (Domain.ALL ++ arr.map(new String(_, "UTF-8").trim).filter(_.nonEmpty).toList).distinct
+  }
+
+  def getMetadata(domains: List[String], band: Int): Map[String, Map[String, String]] =
+    getMetadata(GDALWarp.SOURCE, domains, band)
+
+  def getMetadata(dataset: Int, domains: List[String], band: Int): Map[String, Map[String, String]] =
+    domains.map(domain => domain -> getMetadata(dataset, domain, band)).filter(_._2.nonEmpty).toMap
+
+  def getMetadata(domain: String, band: Int): Map[String, String] = getMetadata(GDALWarp.SOURCE, domain, band)
+
+  def getMetadata(dataset: Int, domain: String, band: Int): Map[String, String] = {
+    val arr = Array.ofDim[Byte](100, 1 << 10)
+    val returnValue = GDALWarp.get_metadata(token, dataset, numberOfAttempts, band, domain, arr)
+
+    if (returnValue <= 0) {
+      val positiveValue = math.abs(returnValue)
+      throw new MalformedProjectionException(
+        s"Unable to get the metadata. GDAL Error Code: $positiveValue",
+        positiveValue
+      )
+    }
+
+    arr
+      .map(new String(_, "UTF-8").trim)
+      .filter(_.nonEmpty)
+      .flatMap { str =>
+        val arr = str.split("=")
+        if(arr.length == 2) {
+          val Array(key, value) = str.split("=")
+          Some(key -> value)
+        } else Some("" -> str)
+      }.toMap
+  }
+
+  def getMetadataItem(key: String, domain: String, band: Int): String = getMetadataItem(GDALWarp.WARPED, key, domain, band)
+
+  def getMetadataItem(dataset: Int, key: String, domain: String, band: Int): String = {
+    val arr = Array.ofDim[Byte](1 << 10)
+    val returnValue = GDALWarp.get_metadata_item(token, dataset, numberOfAttempts, band, key, domain, arr)
+
+    if (returnValue <= 0) {
+      val positiveValue = math.abs(returnValue)
+      throw new MalformedProjectionException(
+        s"Unable to get the metadata item. GDAL Error Code: $positiveValue",
+        positiveValue
+      )
+    }
+
+    new String(arr, "UTF-8").trim
+  }
+
   def getProjection: Option[String] = getProjection(GDALWarp.WARPED)
 
   def getProjection(dataset: Int): Option[String] = {
     require(acceptableDatasets contains dataset)
-    val crs = Array.ofDim[Byte](1 << 16)
-
+    val crs = Array.ofDim[Byte](1 << 10)
     val returnValue = GDALWarp.get_crs_wkt(token, dataset, numberOfAttempts, crs)
 
     if (returnValue <= 0) {

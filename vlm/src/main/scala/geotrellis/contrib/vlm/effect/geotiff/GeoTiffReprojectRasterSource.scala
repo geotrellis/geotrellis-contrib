@@ -17,6 +17,7 @@
 package geotrellis.contrib.vlm.effect.geotiff
 
 import geotrellis.contrib.vlm._
+import geotrellis.contrib.vlm.geotiff.GeoTiffMetadata
 import geotrellis.contrib.vlm.effect._
 import geotrellis.proj4._
 import geotrellis.raster._
@@ -90,6 +91,7 @@ case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
 
   def bandCount: F[Int] = tiffF.map(_.bandCount)
   def cellType: F[CellType] = dstCellType.fold(tiffF.map(_.cellType))(Monad[F].pure)
+  def metadata: F[SourceMetadata] = tiffF.map(tiff => GeoTiffMetadata(tiff.tags))
 
   def read(extent: Extent, bands: Seq[Int]): F[Raster[MultibandTile]] = {
     val bounds = gridExtent.map(_.gridBoundsFor(extent, clamp = false))

@@ -80,6 +80,11 @@ abstract class MosaicRasterSource[F[_]: Monad: Par] extends RasterSourceF[F] {
     cellTypes >>= (_.tail.foldLeft(cellTypes.map(_.head)) { (l, r) => (l, Monad[F].pure(r)).mapN(_ union _) })
   }
 
+  /** All available metadata that was not covered by other RasterSource metadata methods */
+  def metadata: F[SourceMetadata] = sources >>= { list =>
+    (list.parTraverse(_.metadata), bandCount).mapN { case (list, bandCount) => list.reduceLeft(_ combine(_, bandCount)) }
+  }
+
   /**
     * All available resolutions for all RasterSources in this MosaicRasterSource
     *
