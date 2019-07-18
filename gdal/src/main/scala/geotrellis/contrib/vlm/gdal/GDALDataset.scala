@@ -68,7 +68,7 @@ case class GDALDataset(token: Long) extends AnyVal {
     val extent = this.extent(dataset)
 
     if (GDALWarp.get_overview_widths_heights(token, dataset, numberOfAttempts, 1, widths, heights) <= 0)
-      throw new MalformedDataException("Unable to construct overviews for resample")
+      throw new MalformedDataException("Unable to construct the overview RasterExtents for the resample")
     widths.zip(heights).flatMap({ case (w, h) =>
       if (w > 0 && h > 0) Some(RasterExtent(extent, cols = w, rows = h))
       else None
