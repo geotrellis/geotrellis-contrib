@@ -24,6 +24,7 @@ import geotrellis.proj4.CRS
 import geotrellis.vector.Extent
 
 import com.azavea.gdal.GDALWarp
+import cats.Monad
 import cats.instances.option._
 import cats.syntax.apply._
 import cats.syntax.option._
@@ -254,6 +255,8 @@ case class GDALWarpOptions(
 
 object GDALWarpOptions {
   val EMPTY = GDALWarpOptions()
+
+  implicit def lift2Monad[F[_]: Monad](options: GDALWarpOptions): F[GDALWarpOptions] = Monad[F].pure(options)
 
   def createConvertOptions(targetCellType: TargetCellType, noDataValue: Option[Double]): Option[GDALWarpOptions] = targetCellType match {
     case ConvertTargetCellType(target) =>
