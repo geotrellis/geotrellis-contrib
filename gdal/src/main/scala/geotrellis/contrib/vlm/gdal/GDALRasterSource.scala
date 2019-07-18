@@ -17,11 +17,11 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm._
+import geotrellis.contrib.vlm.avro._
 import geotrellis.proj4._
 import geotrellis.raster._
-import geotrellis.raster.io.geotiff.OverviewStrategy
-import geotrellis.raster.reproject.Reproject
-import geotrellis.raster.resample.ResampleMethod
+import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
+import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector._
 
 import com.azavea.gdal.GDALWarp
@@ -70,8 +70,8 @@ case class GDALRasterSource(
       }
   }
 
-  def reprojection(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GDALRasterSource(dataPath, options.reproject(gridExtent, crs, targetCRS, reprojectOptions))
+  def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
+    GDALRasterSource(dataPath, options.reproject(gridExtent, crs, targetCRS, resampleGrid, method))
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
     GDALRasterSource(dataPath, options.resample(gridExtent, resampleGrid))
@@ -107,7 +107,7 @@ case class GDALRasterSource(
   }
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    val bounds = gridExtent.gridBoundsFor(extent, clamp = false)
+    val bounds = gridExtent.gridBoundsFor(extent.buffer(- cellSize.width / 2, - cellSize.height / 2), clamp = false)
     read(bounds, bands)
   }
 

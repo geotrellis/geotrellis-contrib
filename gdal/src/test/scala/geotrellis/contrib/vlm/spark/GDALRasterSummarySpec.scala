@@ -23,7 +23,7 @@ import geotrellis.raster._
 import geotrellis.raster.resample.Bilinear
 import geotrellis.spark._
 import geotrellis.spark.testkit._
-import geotrellis.spark.tiling._
+import geotrellis.layer._
 import geotrellis.vector.Extent
 
 import org.apache.spark.rdd._
@@ -63,7 +63,7 @@ class GDALRasterSummarySpec extends FunSpec with TestEnvironment with BetterRast
 
       val sourceRDD: RDD[RasterSource] =
         sc.parallelize(files, files.length)
-          .map(uri => GDALRasterSource(uri).reproject(targetCRS, method): RasterSource)
+          .map(uri => GDALRasterSource(uri).reproject(targetCRS, method = method): RasterSource)
           .cache()
 
       val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
@@ -114,7 +114,7 @@ class GDALRasterSummarySpec extends FunSpec with TestEnvironment with BetterRast
     // read sources
     val sourceRDD: RDD[RasterSource] =
       sc.parallelize(files, files.length)
-        .map(uri => GDALRasterSource(uri).reproject(targetCRS, method): RasterSource)
+        .map(uri => GDALRasterSource(uri).reproject(targetCRS, method = method): RasterSource)
         .cache()
 
     // collect raster summary
@@ -151,7 +151,7 @@ class GDALRasterSummarySpec extends FunSpec with TestEnvironment with BetterRast
     val RasterExtent(Extent(exmin, eymin, exmax, eymax), ecw, ech, ecols, erows) = RasterExtent(Extent(-8769161.632988561, 4257685.794912352, -8750625.653629405, 4274482.8318780195), CellSize(9.554628535647412, 9.554628535646911))
 
     cfor(0)(_ < 11, _ + 1) { _ =>
-      val reference = GDALRasterSource(inputPath).reproject(targetCRS, method).tileToLayout(layout, method)
+      val reference = GDALRasterSource(inputPath).reproject(targetCRS, method = method).tileToLayout(layout, method)
       val RasterExtent(Extent(axmin, aymin, axmax, aymax), acw, ach, acols, arows) = reference.source.gridExtent.toRasterExtent
 
       axmin shouldBe exmin +- 1e-5

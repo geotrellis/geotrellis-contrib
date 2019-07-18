@@ -22,7 +22,7 @@ import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.testkit._
 import geotrellis.raster.MultibandTile
-import geotrellis.spark._
+import geotrellis.store.LayerId
 
 import org.scalatest.{FunSpec, GivenWhenThen}
 

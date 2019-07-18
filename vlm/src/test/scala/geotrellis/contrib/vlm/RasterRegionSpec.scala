@@ -20,7 +20,7 @@ import geotrellis.contrib.vlm.geotiff._
 import geotrellis.raster.io.geotiff._
 import geotrellis.proj4._
 import geotrellis.spark._
-import geotrellis.spark.tiling._
+import geotrellis.layer._
 import geotrellis.spark.testkit._
 
 import org.apache.spark.rdd._

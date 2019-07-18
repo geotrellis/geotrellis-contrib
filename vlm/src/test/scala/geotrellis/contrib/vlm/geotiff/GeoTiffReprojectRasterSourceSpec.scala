@@ -23,20 +23,16 @@ import geotrellis.raster.resample._
 import geotrellis.raster.reproject._
 import geotrellis.proj4._
 import geotrellis.spark.testkit._
-import geotrellis.spark.tiling._
+import geotrellis.layer._
 
 import org.scalatest._
-
 import java.io.File
-
-import geotrellis.spark.tiling.LayoutDefinition
 
 class GeoTiffReprojectRasterSourceSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
   describe("Reprojecting a RasterSource") {
     val uri = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled.tif"
-    val schemeURI = s"file://$uri"
 
-    lazy val rasterSource = GeoTiffRasterSource(schemeURI)
+    lazy val rasterSource = GeoTiffRasterSource(uri)
     lazy val sourceTiff = GeoTiffReader.readMultiband(uri)
 
     lazy val expectedRasterExtent = {

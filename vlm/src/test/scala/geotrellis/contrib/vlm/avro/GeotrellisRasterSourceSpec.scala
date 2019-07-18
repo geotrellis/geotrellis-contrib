@@ -22,10 +22,9 @@ import geotrellis.raster._
 import geotrellis.raster.io.geotiff.{Auto, AutoHigherResolution, Base}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.testkit._
-import geotrellis.raster.{MultibandTile, RasterExtent}
+import geotrellis.raster.MultibandTile
 import geotrellis.raster.resample.NearestNeighbor
-import geotrellis.spark._
-import geotrellis.spark.io.CollectionLayerReader
+import geotrellis.store.{CollectionLayerReader, LayerId}
 import geotrellis.vector.Extent
 
 import org.scalatest.{FunSpec, GivenWhenThen}

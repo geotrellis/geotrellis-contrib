@@ -19,16 +19,14 @@ package geotrellis.contrib.vlm
 import cats.Semigroup
 import cats.implicits._
 import cats.data.NonEmptyList
+
 import geotrellis.vector._
 import geotrellis.raster._
-import geotrellis.raster.merge.Implicits._
 import geotrellis.raster.resample._
 import geotrellis.raster.reproject.Reproject
 import geotrellis.proj4.{CRS, WebMercator}
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
-import geotrellis.raster.render._
-import geotrellis.spark.tiling.LayoutDefinition
-import geotrellis.util.GetComponent
+
 import spire.math.Integral
 
 /**
@@ -91,11 +89,11 @@ trait MosaicRasterSource extends RasterSource {
     *
     * @see [[geotrellis.contrib.vlm.RasterSource.reproject]]
     */
-  def reprojection(crs: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
+  def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
     MosaicRasterSource(
-      sources map { _.reproject(crs, reprojectOptions, strategy) },
+      sources map { _.reproject(targetCRS, resampleGrid, method, strategy) },
       crs,
-      gridExtent.reproject(this.crs, crs, reprojectOptions)
+      gridExtent.reproject(this.crs, targetCRS, Reproject.Options.DEFAULT.copy(method = method))
     )
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
@@ -108,8 +106,7 @@ trait MosaicRasterSource extends RasterSource {
     rasters.reduce
   }
 
-  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy)
-      : RasterSource = MosaicRasterSource(
+  def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource = MosaicRasterSource(
     sources map { _.resample(resampleGrid, method, strategy) },
     crs
   )
@@ -151,22 +148,22 @@ object MosaicRasterSource {
       }
     }
 
-  def apply(_sources: NonEmptyList[RasterSource], _crs: CRS, _gridExtent: GridExtent[Long]) =
+  def apply(sourcesList: NonEmptyList[RasterSource], targetCRS: CRS, targetGridExtent: GridExtent[Long]) = {
     new MosaicRasterSource {
-      val sources = _sources map { _.reprojectToGrid(_crs, gridExtent) }
-      val crs = _crs
-      def gridExtent: GridExtent[Long] = _gridExtent
-    }
+      val sources = sourcesList map { _.reprojectToGrid(targetCRS, gridExtent) }
+      val crs = targetCRS
 
-  def apply(_sources: NonEmptyList[RasterSource], _crs: CRS) =
+      def gridExtent: GridExtent[Long] = targetGridExtent
+    }
+  }
+
+  def apply(sourcesList: NonEmptyList[RasterSource], targetCRS: CRS) = {
     new MosaicRasterSource {
-      val sources = _sources map { _.reprojectToGrid(_crs, _sources.head.gridExtent) }
-      val crs = _crs
+      val sources = sourcesList map { _.reprojectToGrid(targetCRS, sourcesList.head.gridExtent) }
+      val crs = targetCRS
       def gridExtent: GridExtent[Long] = {
         val reprojectedExtents =
-          _sources map { source =>
-            source.gridExtent.reproject(source.crs, _crs)
-          }
+          sourcesList map { source => source.gridExtent.reproject(source.crs, targetCRS) }
         val minCellSize: CellSize = reprojectedExtents.toList map { rasterExtent =>
           CellSize(rasterExtent.cellwidth, rasterExtent.cellheight)
         } minBy { _.resolution }
@@ -177,14 +174,15 @@ object MosaicRasterSource {
         )
       }
     }
+  }
 
   @SuppressWarnings(Array("TraversableHead", "TraversableTail"))
-  def unsafeFromList(_sources: List[RasterSource],
-                     _crs: CRS = WebMercator,
-                     _gridExtent: Option[GridExtent[Long]]) =
+  def unsafeFromList(sourcesList: List[RasterSource],
+                     targetCRS: CRS = WebMercator,
+                     targetGridExtent: Option[GridExtent[Long]]) =
     new MosaicRasterSource {
-      val sources = NonEmptyList(_sources.head, _sources.tail)
-      val crs = _crs
-      def gridExtent: GridExtent[Long] = _gridExtent getOrElse { _sources.head.gridExtent}
+      val sources = NonEmptyList(sourcesList.head, sourcesList.tail)
+      val crs = targetCRS
+      def gridExtent: GridExtent[Long] = targetGridExtent getOrElse { sourcesList.head.gridExtent}
     }
 }

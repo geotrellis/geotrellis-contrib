@@ -16,9 +16,10 @@
 
 package geotrellis.contrib.vlm
 
-import geotrellis.raster.{RasterExtent, GridExtent}
+import geotrellis.raster.{CellSize, GridExtent}
 import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.ResampleMethod
+
 import spire.math.Integral
 import spire.implicits._
 
@@ -42,18 +43,27 @@ case class TargetRegion[N: Integral](region: GridExtent[N]) extends ResampleGrid
     region
 }
 
+case class TargetCellSize[N: Integral](cellSize: CellSize) extends ResampleGrid[N] {
+  def apply(source: => GridExtent[N]): GridExtent[N] =
+    source.withResolution(cellSize)
+}
+
+case object IdentityResampleGrid extends ResampleGrid[Long] {
+  def apply(source: => GridExtent[Long]): GridExtent[Long] = source
+}
+
 
 object ResampleGrid {
   /** Used when reprojecting to original RasterSource CRS, pick-out the grid */
-  private[vlm] def fromReprojectOptions(options: Reproject.Options): Option[ResampleGrid[Long]] ={
+  private[vlm] def fromReprojectOptions(options: Reproject.Options): ResampleGrid[Long] ={
     if (options.targetRasterExtent.isDefined) {
-      Some(TargetRegion(options.targetRasterExtent.get.toGridType[Long]))
+      TargetRegion(options.targetRasterExtent.get.toGridType[Long])
     } else if (options.parentGridExtent.isDefined) {
-      Some(TargetGrid(options.parentGridExtent.get))
+      TargetGrid(options.parentGridExtent.get)
     } else if (options.targetCellSize.isDefined) {
       ??? // TODO: convert from CellSize to Column count based on ... something
     } else {
-      None
+      IdentityResampleGrid
     }
   }
 
@@ -73,6 +83,12 @@ object ResampleGrid {
 
       case TargetRegion(region) =>
         Reproject.Options(method = resampleMethod, targetRasterExtent = Some(region.toGridType[Int].toRasterExtent))
+
+      case TargetCellSize(cellSize) =>
+        Reproject.Options(method = resampleMethod, targetCellSize = Some(cellSize))
+
+      case IdentityResampleGrid =>
+        Reproject.Options.DEFAULT.copy(method = resampleMethod)
     }
   }
 }

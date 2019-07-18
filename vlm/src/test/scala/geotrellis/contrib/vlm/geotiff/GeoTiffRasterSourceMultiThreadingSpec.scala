@@ -33,7 +33,7 @@ class GeoTiffRasterSourceMultiThreadingSpec extends AsyncFunSpec with Matchers {
 
   implicit val ec = ExecutionContext.global
 
-  val iterations = (0 to 100).toList
+  val iterations = (0 to 30).toList
 
   /**
     * readBounds and readExtends are not covered by these tests since these methods return an [[Iterator]].
@@ -45,7 +45,7 @@ class GeoTiffRasterSourceMultiThreadingSpec extends AsyncFunSpec with Matchers {
       res.map { rasters => rasters.length shouldBe iterations.length }
     }
 
-    it("readBounds - Option") {
+    it("readBounds") {
       val res =
         iterations
           .map { _ => Future { rs.read(rs.gridBounds, 0 until rs.bandCount) } }

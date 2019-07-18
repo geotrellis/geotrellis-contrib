@@ -16,32 +16,29 @@
 
 package geotrellis.contrib.vlm.spark
 
-import java.io.File
-import java.util.concurrent.Executors
-
-import cats.effect.{ContextShift, IO}
-import cats.implicits._
 import geotrellis.contrib.vlm.geotiff._
-import geotrellis.contrib.vlm.{BetterRasterMatchers, LayoutTileSource, RasterSource, ReadingSource}
+import geotrellis.contrib.vlm.{BetterRasterMatchers, RasterSource, ReadingSource}
 import geotrellis.proj4._
+import geotrellis.layer._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff._
 import geotrellis.spark._
-import geotrellis.spark.io.hadoop._
+import geotrellis.spark.store.hadoop._
+import geotrellis.store.hadoop._
 import geotrellis.spark.testkit._
-import geotrellis.spark.tiling._
+
 import org.apache.spark.rdd.RDD
 import org.scalatest.Inspectors._
 import org.scalatest._
 import spire.syntax.cfor._
+import cats.implicits._
 
-import scala.concurrent.ExecutionContext
+import java.io.File
 
 class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRasterMatchers with BeforeAndAfterAll {
-  val filePath = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled.tif"
+  val uri = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled.tif"
   def filePathByIndex(i: Int): String = s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled-$i.tif"
-  val uri = s"file://$filePath"
-  lazy val rasterSource = GeoTiffRasterSource(GeoTiffDataPath(uri))
+  lazy val rasterSource = GeoTiffRasterSource(uri)
   lazy val targetCRS = CRS.fromEpsgCode(3857)
   lazy val scheme = ZoomedLayoutScheme(targetCRS)
   lazy val layout = scheme.levelForZoom(13).layout

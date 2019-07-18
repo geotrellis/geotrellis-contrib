@@ -80,14 +80,28 @@ lazy val vlm = project
       scalactic,
       scalaURI,
       squants,
+      catsPar,
       sparkCore % Provided,
       sparkSQL % Test,
       geotrellisSparkTestKit % Test,
       scalatest % Test
     ),
+    // caused by the AWS SDK v2
+    dependencyOverrides ++= {
+      val deps = Seq(
+        jacksonCore,
+        jacksonDatabind,
+        jacksonAnnotations
+      )
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        // if Scala 2.12+ is used
+        case Some((2, scalaMajor)) if scalaMajor >= 12 => deps
+        case _ => deps :+ jacksonModuleScala
+      }
+    },
     Test / fork := true,
     Test / parallelExecution := false,
-    Test / testOptions += Tests.Argument("-oDF"),
+    Test / testOptions += Tests.Argument("-oDF")
   )
   .settings(
     initialCommands in console :=
@@ -110,12 +124,25 @@ lazy val gdal = project
     name := "geotrellis-contrib-gdal",
     libraryDependencies ++= Seq(
       gdalWarp,
-      sparkCore % Test,
+      sparkCore % Provided,
       sparkSQL % Test,
       geotrellisSparkTestKit % Test,
       scalatest % Test,
       gdalBindings % Test
     ),
+    // caused by the AWS SDK v2
+    dependencyOverrides ++= {
+      val deps = Seq(
+        jacksonCore,
+        jacksonDatabind,
+        jacksonAnnotations
+      )
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        // if Scala 2.12+ is used
+        case Some((2, scalaMajor)) if scalaMajor >= 12 => deps
+        case _ => deps :+ jacksonModuleScala
+      }
+    },
     Test / fork := true,
     Test / parallelExecution := false,
     Test / testOptions += Tests.Argument("-oDF"),
@@ -137,7 +164,7 @@ lazy val slick = project
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-slick",
     libraryDependencies ++= Seq(
-      geotrellisVector,
+      "org.locationtech.geotrellis" %% "geotrellis-vector" % "2.3.1",
       slickPG,
       scalatest % Test
     )

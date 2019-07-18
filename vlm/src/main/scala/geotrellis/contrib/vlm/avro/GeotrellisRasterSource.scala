@@ -19,11 +19,10 @@ package geotrellis.contrib.vlm.avro
 import geotrellis.contrib.vlm._
 import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.{Auto, AutoHigherResolution, Base, OverviewStrategy}
-import geotrellis.raster.reproject.Reproject
-import geotrellis.raster.resample.ResampleMethod
+import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.raster.{MultibandTile, Tile, _}
-import geotrellis.spark.io._
-import geotrellis.spark.{LayerId, Metadata, SpatialKey, TileLayerMetadata}
+import geotrellis.store._
+import geotrellis.layer._
 import geotrellis.vector._
 
 
@@ -91,19 +90,21 @@ class GeotrellisRasterSource(
   override def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
     bounds.toIterator.flatMap(_.intersection(this.gridBounds).flatMap(read(_, bands)))
 
-  def reprojection(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource = {
+  def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource = {
     if (targetCRS != this.crs) {
+      val reprojectOptions = ResampleGrid.toReprojectOptions[Long](this.gridExtent, resampleGrid, method)
       val (closestLayerId, targetGridExtent) = GeotrellisReprojectRasterSource.getClosestSourceLayer(targetCRS, sourceLayers, reprojectOptions, strategy)
-      new GeotrellisReprojectRasterSource(attributeStore, dataPath, closestLayerId, sourceLayers, targetGridExtent, targetCRS, reprojectOptions, targetCellType)
+      new GeotrellisReprojectRasterSource(attributeStore, dataPath, closestLayerId, sourceLayers, targetGridExtent, targetCRS, resampleGrid, targetCellType = targetCellType)
     } else {
       // TODO: add unit tests for this in particular, the behavior feels murky
-      ResampleGrid.fromReprojectOptions(reprojectOptions) match {
-        case Some(resampleGrid) =>
+      resampleGrid match {
+        case IdentityResampleGrid =>
+          // I think I was asked to do nothing
+          this
+        case resampleGrid =>
           val resampledGridExtent = resampleGrid(this.gridExtent)
           val closestLayerId = GeotrellisRasterSource.getClosestResolution(sourceLayers.toList, resampledGridExtent.cellSize, strategy)(_.metadata.layout.cellSize).get.id
-          new GeotrellisResampleRasterSource(attributeStore, dataPath, closestLayerId, sourceLayers, resampledGridExtent, reprojectOptions.method, targetCellType)
-        case None =>
-          this // I think I was asked to do nothing
+          new GeotrellisResampleRasterSource(attributeStore, dataPath, closestLayerId, sourceLayers, resampledGridExtent, method, targetCellType)
       }
     }
   }
@@ -123,6 +124,11 @@ class GeotrellisRasterSource(
 
 
 object GeotrellisRasterSource {
+  // stable identifiers to match in a readTiles function
+  private val SpatialKeyClass    = classOf[SpatialKey]
+  private val TileClass          = classOf[Tile]
+  private val MultibandTileClass = classOf[MultibandTile]
+
   def getClosestResolution[T](
     grids: Seq[T],
     cellSize: CellSize,
@@ -162,8 +168,8 @@ object GeotrellisRasterSource {
 
   def readTiles(reader: CollectionLayerReader[LayerId], layerId: LayerId, extent: Extent, bands: Seq[Int]): Seq[(SpatialKey, MultibandTile)] with Metadata[TileLayerMetadata[SpatialKey]] = {
     val header = reader.attributeStore.readHeader[LayerHeader](layerId)
-    (header.keyClass, header.valueClass) match {
-      case ("geotrellis.spark.SpatialKey", "geotrellis.raster.Tile") => {
+    (Class.forName(header.keyClass), Class.forName(header.valueClass)) match {
+      case (SpatialKeyClass, TileClass) =>
         reader.query[SpatialKey, Tile, TileLayerMetadata[SpatialKey]](layerId)
           .where(Intersects(extent))
           .result
@@ -171,18 +177,15 @@ object GeotrellisRasterSource {
             // Convert single band tiles to multiband
             tiles.map{ case(key, tile) => (key, MultibandTile(tile)) }
           )
-      }
-      case ("geotrellis.spark.SpatialKey", "geotrellis.raster.MultibandTile") => {
+      case (SpatialKeyClass, MultibandTileClass) =>
         reader.query[SpatialKey, MultibandTile, TileLayerMetadata[SpatialKey]](layerId)
           .where(Intersects(extent))
           .result
           .withContext(tiles =>
             tiles.map{ case(key, tile) => (key, tile.subsetBands(bands)) }
           )
-      }
-      case _ => {
-        throw new Exception("Unable to read single or multiband tiles from file")
-      }
+      case _ =>
+        throw new Exception(s"Unable to read single or multiband tiles from file: ${(header.keyClass, header.valueClass)}")
     }
   }
 

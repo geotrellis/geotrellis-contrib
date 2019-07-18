@@ -23,15 +23,16 @@ import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.resample._
 import geotrellis.raster.testkit._
+import geotrellis.raster.reproject.Reproject
 import geotrellis.vector._
 import geotrellis.spark._
 import geotrellis.spark.tiling._
+import geotrellis.layer._
 import geotrellis.util._
+
 import cats.implicits._
 import org.scalatest._
 import java.net.MalformedURLException
-
-import geotrellis.raster.reproject.Reproject
 
 class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
 

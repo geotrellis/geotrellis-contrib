@@ -17,13 +17,14 @@
 package geotrellis.contrib.vlm.geotiff
 
 import geotrellis.contrib.vlm._
-import geotrellis.vector._
+import geotrellis.vector.Extent
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.reproject.{Reproject, ReprojectRasterExtent}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiff, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
+import geotrellis.util.RangeReader
 
 case class GeoTiffResampleRasterSource(
   dataPath: GeoTiffDataPath,
@@ -36,7 +37,7 @@ case class GeoTiffResampleRasterSource(
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
   @transient lazy val tiff: MultibandGeoTiff =
-    baseTiff.getOrElse(GeoTiffReader.readMultiband(getByteReader(dataPath.path), streaming = true))
+    baseTiff.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.path), streaming = true))
 
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount
@@ -55,11 +56,23 @@ case class GeoTiffResampleRasterSource(
   @transient protected lazy val closestTiffOverview: GeoTiff[MultibandTile] =
     tiff.getClosestOverview(gridExtent.cellSize, strategy)
 
-  def reprojection(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): GeoTiffReprojectRasterSource =
-    new GeoTiffReprojectRasterSource(dataPath, targetCRS, reprojectOptions, strategy, targetCellType) {
-      override lazy val gridExtent: GridExtent[Long] = reprojectOptions.targetRasterExtent match {
-        case Some(targetRasterExtent) => targetRasterExtent.toGridType[Long]
-        case None => ReprojectRasterExtent(self.gridExtent, this.transform, this.reprojectOptions)
+  def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): GeoTiffReprojectRasterSource =
+    new GeoTiffReprojectRasterSource(dataPath, targetCRS, resampleGrid, method, strategy, targetCellType = targetCellType) {
+      override lazy val gridExtent: GridExtent[Long] = {
+        val reprojectedRasterExtent =
+          ReprojectRasterExtent(
+            baseGridExtent,
+            transform,
+            Reproject.Options.DEFAULT.copy(method = resampleMethod, errorThreshold = errorThreshold)
+          )
+
+        targetResampleGrid match {
+          case targetRegion: TargetRegion[Long] => targetRegion.region
+          case targetGrid: TargetGrid[Long] => targetGrid(reprojectedRasterExtent)
+          case dimensions: Dimensions[Long] => dimensions(reprojectedRasterExtent)
+          case targetCellSize: TargetCellSize[Long] => targetCellSize(reprojectedRasterExtent)
+          case _ => reprojectedRasterExtent
+        }
       }
     }
 

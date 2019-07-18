@@ -20,10 +20,10 @@ import scala.util.Properties
 
 
 object Version {
-  val geotrellis     = "3.0.0-M3"
+  val geotrellis     = "3.0.0-SNAPSHOT"
   val geotrellisGdal = "0.18.5"
   val gdal           = Properties.envOrElse("GDAL_VERSION", "2.4.0")
-  val gdalWarp       = "33.29f906d"
+  val gdalWarp       = "33.58d4965"
   val scala          = "2.11.12"
   val crossScala     = Seq(scala, "2.12.8")
   val hadoop         = "2.8.0"
@@ -53,8 +53,9 @@ object Dependencies {
   val scalactic               = "org.scalactic"              %% "scalactic"                  % "3.0.5"
   val scalaURI                = "io.lemonlabs"               %% "scala-uri"                  % "1.4.10"
 
-  val catsCore                = "org.typelevel"              %% "cats-core"                  % "1.4.0"
-  val catsEffect              = "org.typelevel"              %% "cats-effect"                % "1.0.0"
+  val catsCore                = "org.typelevel"              %% "cats-core"                  % "1.6.0"
+  val catsEffect              = "org.typelevel"              %% "cats-effect"                % "1.2.0"
+  val catsPar                 = "io.chrisdavenport"          %% "cats-par"                   % "0.2.1"
   val fs2Core                 = "co.fs2"                     %% "fs2-core"                   % "1.0.0"
   val fs2Io                   = "co.fs2"                     %% "fs2-io"                     % "1.0.0"
 
@@ -63,4 +64,9 @@ object Dependencies {
   val hadoopClient            = "org.apache.hadoop"           % "hadoop-client"              % Version.hadoop
 
   val squants                 = "org.typelevel"              %% "squants"                    % "1.3.0"
+
+  val jacksonCore             = "com.fasterxml.jackson.core"    % "jackson-core"             % "2.6.7"
+  val jacksonDatabind         = "com.fasterxml.jackson.core"    % "jackson-databind"         % "2.6.7"
+  val jacksonAnnotations      = "com.fasterxml.jackson.core"    % "jackson-annotations"      % "2.6.7"
+  val jacksonModuleScala      = "com.fasterxml.jackson.module" %% "jackson-module-scala"     % "2.6.7"
 }

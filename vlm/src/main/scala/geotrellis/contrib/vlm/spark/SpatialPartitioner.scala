@@ -16,9 +16,10 @@
 
 package geotrellis.contrib.vlm.spark
 
-import geotrellis.spark._
-import geotrellis.spark.io.index.zcurve._
+import geotrellis.layer.{SpatialComponent, SpatialKey}
+import geotrellis.store.index.zcurve._
 import geotrellis.util._
+
 import org.apache.spark._
 
 class SpatialPartitioner[K: SpatialComponent](partitions: Int, bits: Int) extends Partitioner {

@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it when possible.
 - VLM: `RasterSource` will now short circut reprojection if the given
   source is already in the target CRS.
+- RasterSourceF experimental implementation
 
 ### Removed
 - Summary: Subproject removed. The polygonal summary prototype was moved to GeoTrellis core for the 3.0 release. See: https://github.com/locationtech/geotrellis/blob/master/docs/guide/rasters.rst#polygonal-summary
@@ -49,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - GDAL: GDALReprojectRasterSource - this operation is now available as GDALRasterSource.reproject
 - GDAL: GDALResampleRasterSource - this operation is now available as GDALRasterSource.resample
-
+ 
 ## [3.13.0] - 2019-05-17
 ### Added
 - Slick: Project moved to geotrellis-contrib from [geotrellis](https://github.com/locationtech/geotrellis)

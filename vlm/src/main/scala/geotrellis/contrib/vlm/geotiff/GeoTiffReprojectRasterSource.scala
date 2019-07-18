@@ -17,51 +17,61 @@
 package geotrellis.contrib.vlm.geotiff
 
 import geotrellis.contrib.vlm._
-import geotrellis.vector._
+import geotrellis.vector.Extent
 import geotrellis.raster._
 import geotrellis.raster.reproject._
 import geotrellis.raster.resample._
 import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiff, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
+import geotrellis.util.RangeReader
 
 case class GeoTiffReprojectRasterSource(
   dataPath: GeoTiffDataPath,
   crs: CRS,
-  reprojectOptions: Reproject.Options = Reproject.Options.DEFAULT,
+  targetResampleGrid: ResampleGrid[Long] = IdentityResampleGrid,
+  resampleMethod: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
+  errorThreshold: Double = 0.125,
   private[vlm] val targetCellType: Option[TargetCellType] = None,
   private val baseTiff: Option[MultibandGeoTiff] = None
 ) extends RasterSource { self =>
-  def resampleMethod: Option[ResampleMethod] = Some(reprojectOptions.method)
-
   @transient lazy val tiff: MultibandGeoTiff =
-    baseTiff.getOrElse(GeoTiffReader.readMultiband(getByteReader(dataPath.path), streaming = true))
+    baseTiff.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.path), streaming = true))
 
   protected lazy val baseCRS: CRS = tiff.crs
   protected lazy val baseGridExtent: GridExtent[Long] = tiff.rasterExtent.toGridType[Long]
 
   protected lazy val transform = Transform(baseCRS, crs)
   protected lazy val backTransform = Transform(crs, baseCRS)
+  
+  override lazy val gridExtent: GridExtent[Long] = {
+    lazy val reprojectedRasterExtent =
+      ReprojectRasterExtent(
+        baseGridExtent,
+        transform,
+        Reproject.Options.DEFAULT.copy(method = resampleMethod, errorThreshold = errorThreshold)
+      )
 
-  override lazy val gridExtent: GridExtent[Long] = reprojectOptions.targetRasterExtent match {
-    case Some(targetRasterExtent) => targetRasterExtent.toGridType[Long]
-    case None => ReprojectRasterExtent(baseGridExtent, transform, reprojectOptions)
+    targetResampleGrid match {
+      case targetRegion: TargetRegion[Long] => targetRegion.region
+      case targetGrid: TargetGrid[Long] => targetGrid(reprojectedRasterExtent)
+      case dimensions: Dimensions[Long] => dimensions(reprojectedRasterExtent)
+      case targetCellSize: TargetCellSize[Long] => targetCellSize(reprojectedRasterExtent)
+      case _ => reprojectedRasterExtent
+    }
   }
 
   lazy val resolutions: List[GridExtent[Long]] =
       gridExtent :: tiff.overviews.map(ovr => ReprojectRasterExtent(ovr.rasterExtent.toGridType[Long], transform))
 
   @transient private[vlm] lazy val closestTiffOverview: GeoTiff[MultibandTile] = {
-    if (reprojectOptions.targetRasterExtent.isDefined
-      || reprojectOptions.parentGridExtent.isDefined
-      || reprojectOptions.targetCellSize.isDefined)
-    {
-      // we're asked to match specific target resolution, estimate what resolution we need in source to sample it
-      val estimatedSource = ReprojectRasterExtent(gridExtent, backTransform)
-      tiff.getClosestOverview(estimatedSource.cellSize, strategy)
-    } else {
-      tiff.getClosestOverview(baseGridExtent.cellSize, strategy)
+    targetResampleGrid match {
+      case IdentityResampleGrid => tiff.getClosestOverview(baseGridExtent.cellSize, strategy)
+      case _ =>
+        // we're asked to match specific target resolution, estimate what resolution we need in source to sample it
+        val estimatedSource = ReprojectRasterExtent(gridExtent, backTransform)
+        tiff.getClosestOverview(estimatedSource.cellSize, strategy)
     }
   }
 
@@ -100,7 +110,7 @@ case class GeoTiffReprojectRasterSource(
 
       // A tmp workaround for https://github.com/locationtech/proj4j/pull/29
       // Stacktrace details: https://github.com/geotrellis/geotrellis-contrib/pull/206#pullrequestreview-260115791
-      val sourceExtent = Proj4Transform.synchronized(targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).envelope)
+      val sourceExtent = Proj4Transform.synchronized(targetRasterExtent.extent.reprojectAsPolygon(backTransform, 0.001).getEnvelopeInternal)
       val sourcePixelBounds = closestTiffOverview.rasterExtent.gridBoundsFor(sourceExtent, clamp = true)
       (sourcePixelBounds, targetRasterExtent)
     }}.toMap
@@ -115,25 +125,18 @@ case class GeoTiffReprojectRasterSource(
         crs,
         targetRasterExtent,
         targetRasterExtent.extent.toPolygon,
-        reprojectOptions.method,
-        reprojectOptions.errorThreshold
+        resampleMethod,
+        errorThreshold
       )
     }.map { convertRaster }
   }
 
-  def reprojection(targetCRS: CRS, reprojectOptions: Reproject.Options, strategy: OverviewStrategy): RasterSource =
-    GeoTiffReprojectRasterSource(dataPath, targetCRS, reprojectOptions, strategy, targetCellType, Some(tiff))
+  def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource =
+    GeoTiffReprojectRasterSource(dataPath, targetCRS, resampleGrid, method, strategy, targetCellType = targetCellType, baseTiff = Some(tiff))
 
   def resample(resampleGrid: ResampleGrid[Long], method: ResampleMethod, strategy: OverviewStrategy): RasterSource =
-    GeoTiffReprojectRasterSource(
-      dataPath,
-      crs,
-      reprojectOptions.copy(method = method, targetRasterExtent = Some(resampleGrid(self.gridExtent).toRasterExtent)),
-      strategy,
-      targetCellType,
-      Some(tiff)
-    )
+    GeoTiffReprojectRasterSource(dataPath, crs, resampleGrid, method, strategy, targetCellType = targetCellType, baseTiff = Some(tiff))
 
   def convert(targetCellType: TargetCellType): RasterSource =
-    GeoTiffReprojectRasterSource(dataPath, crs, reprojectOptions, strategy, Some(targetCellType), Some(tiff))
+    GeoTiffReprojectRasterSource(dataPath, crs, targetResampleGrid, resampleMethod, strategy, targetCellType = Some(targetCellType))
 }
