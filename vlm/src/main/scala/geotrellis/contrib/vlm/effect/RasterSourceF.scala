@@ -169,7 +169,7 @@ abstract class RasterSourceF[F[_]: Monad] extends RasterSourceMetadataF[F] with 
     * and CellSize of the layout.
     *
     */
-  def tileToLayout(layout: LayoutDefinition, resampleMethod: ResampleMethod = NearestNeighbor): F[LayoutTileSource] = ???
+  // def tileToLayout(layout: LayoutDefinition, resampleMethod: ResampleMethod = NearestNeighbor): F[LayoutTileSource] = ???
     // LayoutTileSource(resampleToGrid(layout, resampleMethod), layout)
 
   def convert(targetCellType: TargetCellType): RasterSourceF[F]

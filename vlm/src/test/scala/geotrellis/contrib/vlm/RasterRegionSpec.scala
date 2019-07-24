@@ -48,7 +48,7 @@ class RasterRegionSpec extends FunSpec with TestEnvironment with BetterRasterMat
 
     When("Generating RDD of RasterRegions")
     val rdd: RDD[(SpatialKey, RasterRegion)] with Metadata[TileLayerMetadata[SpatialKey]] = {
-      val srcRdd = sc.parallelize(paths, paths.size).map { uri => new GeoTiffRasterSource(uri) }
+      val srcRdd = sc.parallelize(paths, paths.size).map { uri => GeoTiffRasterSource(uri) }
       srcRdd.cache()
 
       val (combinedExtent, commonCellType) =
@@ -65,7 +65,7 @@ class RasterRegionSpec extends FunSpec with TestEnvironment with BetterRasterMat
 
       val refRdd = srcRdd.flatMap { src =>
         // too easy? whats missing
-        val tileSource = new LayoutTileSource(src, layout)
+        val tileSource = LayoutTileSource(src, layout)
         tileSource.keys.toIterator.map { key => (key, tileSource.rasterRegionForKey(key).get) }
       }
 

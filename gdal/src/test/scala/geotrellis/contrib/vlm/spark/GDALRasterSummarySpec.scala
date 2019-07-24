@@ -68,7 +68,7 @@ class GDALRasterSummarySpec extends FunSpec with TestEnvironment with BetterRast
 
       val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
       val layoutLevel @ LayoutLevel(zoom, layout) = summary.levelFor(layoutScheme)
-      val tiledRDD = sourceRDD.map(_.tileToLayout(layout, method))
+      val tiledRDD = sourceRDD.map(_.tileToLayout(layout, (_, sk) => sk, method))
 
       val summaryCollected = RasterSummary.fromRDD[RasterSource, Long](tiledRDD.map(_.source))
       val summaryResampled = summary.resample(TargetGrid(layout))
@@ -121,7 +121,7 @@ class GDALRasterSummarySpec extends FunSpec with TestEnvironment with BetterRast
     val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
     val layoutLevel @ LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
 
-    val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
+    val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, (_, sk) => sk, method))
 
     // Create RDD of references, references contain information how to read rasters
     val rasterRefRdd: RDD[(SpatialKey, RasterRegion)] = tiledLayoutSource.flatMap(_.keyedRasterRegions())
@@ -151,7 +151,7 @@ class GDALRasterSummarySpec extends FunSpec with TestEnvironment with BetterRast
     val RasterExtent(Extent(exmin, eymin, exmax, eymax), ecw, ech, ecols, erows) = RasterExtent(Extent(-8769161.632988561, 4257685.794912352, -8750625.653629405, 4274482.8318780195), CellSize(9.554628535647412, 9.554628535646911))
 
     cfor(0)(_ < 11, _ + 1) { _ =>
-      val reference = GDALRasterSource(inputPath).reproject(targetCRS, method = method).tileToLayout(layout, method)
+      val reference = GDALRasterSource(inputPath).reproject(targetCRS, method = method).tileToLayout(layout, (_, sk) => sk, method)
       val RasterExtent(Extent(axmin, aymin, axmax, aymax), acw, ach, acols, arows) = reference.source.gridExtent.toRasterExtent
 
       axmin shouldBe exmin +- 1e-5

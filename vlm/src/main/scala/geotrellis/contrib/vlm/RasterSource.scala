@@ -21,7 +21,7 @@ import geotrellis.raster._
 import geotrellis.raster.resample._
 import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
-import geotrellis.layer.LayoutDefinition
+import geotrellis.layer._
 import geotrellis.util.GetComponent
 
 import java.util.ServiceLoader
@@ -172,8 +172,8 @@ trait RasterSource extends CellGrid[Long] with RasterMetadata with Serializable 
     * and CellSize of the layout.
     *
     */
-  def tileToLayout(layout: LayoutDefinition, resampleMethod: ResampleMethod = NearestNeighbor): LayoutTileSource =
-    LayoutTileSource(resampleToGrid(layout, resampleMethod), layout)
+  /*def tileToLayout(layout: LayoutDefinition, resampleMethod: ResampleMethod = NearestNeighbor): LayoutTileSource =
+    LayoutTileSource(resampleToGrid(layout, resampleMethod), layout)*/
 
   private[vlm] def targetCellType: Option[TargetCellType]
 
@@ -208,6 +208,17 @@ trait RasterSource extends CellGrid[Long] with RasterMetadata with Serializable 
 object RasterSource {
   implicit def projectedExtentComponent[T <: RasterSource]: GetComponent[T, ProjectedExtent] =
     GetComponent(rs => ProjectedExtent(rs.extent, rs.crs))
+
+  implicit def tileToLayoutOps(rs: RasterSource) = new TileToLayoutOps(rs)
+
+  final class TileToLayoutOps(val self: RasterSource) {
+    def tileToLayout[K: TileToLayoutRasterSource](
+      layout: LayoutDefinition,
+      keyTransformation: (RasterSource, SpatialKey) => K,
+      resampleMethod: ResampleMethod = NearestNeighbor
+    ): LayoutTileSource[K] =
+      TileToLayoutRasterSource[K].tileToLayout(self, layout, keyTransformation, resampleMethod)
+  }
 
   def apply(path: String): RasterSource = {
     import scala.collection.JavaConverters._

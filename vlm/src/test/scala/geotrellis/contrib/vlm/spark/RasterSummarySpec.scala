@@ -16,15 +16,16 @@
 
 package geotrellis.contrib.vlm.spark
 
+import java.time.{ZoneOffset, ZonedDateTime}
+
 import geotrellis.contrib.vlm.geotiff._
 import geotrellis.contrib.vlm.{BetterRasterMatchers, GlobalLayout, RasterRegion, RasterSource, Resource, TargetGrid}
 import geotrellis.proj4._
 import geotrellis.raster._
-import geotrellis.raster.resample.Bilinear
+import geotrellis.raster.resample.{Bilinear, NearestNeighbor}
 import geotrellis.spark._
 import geotrellis.spark.testkit._
 import geotrellis.layer._
-
 import org.apache.spark.rdd._
 import org.scalatest._
 
@@ -65,7 +66,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
 
       val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
       val layoutLevel @ LayoutLevel(zoom, layout) = summary.levelFor(layoutScheme)
-      val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
+      val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, (_, sk) => sk, method))
 
       val summaryCollected = RasterSummary.fromRDD[RasterSource, Long](tiledLayoutSource.map(_.source))
       val summaryResampled = summary.resample(TargetGrid(layout))
@@ -107,7 +108,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     // collect raster summary
     val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
     val layoutLevel @ LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
-    val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
+    val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, (_, sk) => sk, method))
 
     // Create RDD of references, references contain information how to read rasters
     val rasterRefRdd: RDD[(SpatialKey, RasterRegion)] = tiledLayoutSource.flatMap(_.keyedRasterRegions())
@@ -123,5 +124,60 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     contextRDD.count() shouldBe 72
 
     contextRDD.stitch.tile.band(0).renderPng().write("/tmp/raster-source-contextrdd.png")
+  }
+
+  it("should collect temporal contextRDD") {
+    val dates = "2018-01-01" :: "2018-02-01" :: "2018-03-01" :: Nil
+    val expectedDates = dates.map { str =>
+      val Array(y, m, d) = str.split("-").map(_.toInt)
+      ZonedDateTime.of(y, m, d,0,0,0,0, ZoneOffset.UTC).toInstant.toEpochMilli
+    }
+    val files = dates.map { str => GeoTiffDataPath(Resource.path(s"img/aspect-tiled-$str.tif")) }
+    val targetCRS = WebMercator
+    val method = Bilinear
+    val layoutScheme = ZoomedLayoutScheme(targetCRS, tileSize = 256)
+
+    // read sources
+    val sourceRDD: RDD[RasterSource] =
+      sc.parallelize(files, files.length)
+        .map(uri => GeoTiffRasterSource(uri).reproject(targetCRS, method = method): RasterSource)
+        .cache()
+
+    // collect raster summary
+    val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
+    val LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
+    val contextRDD: MultibandTileLayerRDD[SpaceTimeKey] =
+      RasterSourceRDD.tiledLayerRDDK[SpaceTimeKey](
+        sourceRDD, layout, (rs, key) => SpaceTimeKey(
+          key,
+          {
+            val date = raw"(\d{4})-(\d{2})-(\d{2})".r.findFirstMatchIn(rs.dataPath.toString)
+            val Some((y, m, d)) = date.map { d => (d.group(1).toInt, d.group(2).toInt, d.group(3).toInt) }
+
+            TemporalKey(ZonedDateTime.of(y, m, d, 0, 0, 0, 0, ZoneOffset.UTC).toInstant.toEpochMilli)
+          }
+        ), rasterSummary = Some(summary)
+      )
+
+    val (minDate, maxDate) = expectedDates.head -> expectedDates.last
+
+
+    contextRDD.metadata.bounds match {
+      case KeyBounds(minKey, maxKey) =>
+        minKey.instant shouldBe minDate
+        maxKey.instant shouldBe maxDate
+
+      case EmptyBounds => throw new Exception("EmptyBounds are not allowed here")
+    }
+
+    contextRDD.count() shouldBe 72 * dates.length
+
+    contextRDD
+      .toSpatial(minDate)
+      .stitch
+      .tile
+      .band(0)
+      .renderPng()
+      .write(s"/tmp/raster-source-contextrdd-${minDate}.png")
   }
 }

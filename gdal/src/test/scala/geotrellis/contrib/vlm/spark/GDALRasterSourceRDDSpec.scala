@@ -216,7 +216,7 @@ class GDALRasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRa
         println(java.lang.Thread.activeCount())
 
         /** Functions to trigger Datasets computation */
-        def ltsWithDatasetsTriggered(lts: LayoutTileSource): LayoutTileSource = { rsWithDatasetsTriggered(lts.source); lts }
+        def ltsWithDatasetsTriggered(lts: LayoutTileSource[SpatialKey]): LayoutTileSource[SpatialKey] = { rsWithDatasetsTriggered(lts.source); lts }
         def rsWithDatasetsTriggered(rs: RasterSource): RasterSource = {
           val brs = rs.asInstanceOf[GDALRasterSource]
           brs.dataset.rasterExtent
@@ -225,12 +225,12 @@ class GDALRasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRa
         }
 
         /** Do smth usual with the original RasterSource to force VRTs allocation */
-        def reprojRS(i: Int): LayoutTileSource =
+        def reprojRS(i: Int): LayoutTileSource[SpatialKey] =
           ltsWithDatasetsTriggered(
             rsWithDatasetsTriggered(
               rsWithDatasetsTriggered(GDALRasterSource(filePathByIndex(i)))
                 .reprojectToGrid(targetCRS, layout)
-            ).tileToLayout(layout)
+            ).tileToLayout(layout, (_, sk) => sk)
           )
 
         /** Simulate possible RF backsplash calls */
