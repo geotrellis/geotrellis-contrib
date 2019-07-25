@@ -26,12 +26,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - VLM: Created the `DataPath` type which the `RasterSource`s now take
 - VLM: Created an SPI interface for `RasterSource`
 - VLM: Use scala-uri library for URI parsing
+- GDAL: `GDALException` and its subclasses
 
 ### Fixed
 
 - VLM: Correct incomplete reads when using `MosaicRasterSource`
 - VLM: `RasterSource` will now short circut reprojection if the given
   source is already in the target CRS.
+- RasterSourceF experimental implementation
+- GDAL: `GDALDataset` will now throw more helpful error messages
 
 ### Removed
 
