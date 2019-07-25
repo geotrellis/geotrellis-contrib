@@ -18,16 +18,16 @@ package geotrellis.contrib.vlm.gdal
 
 
 /** Base class for all Exceptions involving GDAL. */
-class GDALException(message: String) extends Exception(message)
+class GDALException(message: String, gdalErrorCode: Int) extends Exception(message)
 
 /** Exception thrown when data could not be read from data source. */
-class GDALIOException(message: String) extends GDALException(message)
+class GDALIOException(message: String, gdalErrorCode: Int) extends GDALException(message, gdalErrorCode)
 
 /** Exception thrown when the attributes of a data source are found to be bad. */
-class MalformedDataException(message: String) extends GDALException(message)
+class MalformedDataException(message: String, gdalErrorCode: Int) extends GDALException(message, gdalErrorCode)
 
 /** Exception thrown when the DataType of a data source is found to be bad. */
-class MalformedDataTypeException(message: String) extends GDALException(message)
+class MalformedDataTypeException(message: String, gdalErrorCode: Int) extends GDALException(message, gdalErrorCode)
 
 /** Exception thrown when the projection of a data source is found to be bad. */
-class MalformedProjectionException(message: String) extends GDALException(message)
+class MalformedProjectionException(message: String, gdalErrorCode: Int) extends GDALException(message, gdalErrorCode)
