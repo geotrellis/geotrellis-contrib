@@ -81,8 +81,8 @@ abstract class MosaicRasterSource[F[_]: Monad: Par] extends RasterSourceF[F] {
   }
 
   /** All available metadata that was not covered by other RasterSource metadata methods */
-  def metadata: F[SourceMetadata] = sources >>= { list =>
-    (list.parTraverse(_.metadata), bandCount).mapN { case (list, bandCount) => list.reduceLeft(_ combine(_, bandCount)) }
+  def metadata: F[MosaicMetadata] = sources >>= { list =>
+    list.parTraverse { case rs => rs.metadata.map { case md: RasterSourceMetadata => md } }.map(MosaicMetadata)
   }
 
   /**

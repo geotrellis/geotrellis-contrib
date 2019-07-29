@@ -19,5 +19,4 @@ package geotrellis.contrib.vlm
 trait SourceMetadata {
   def base: Map[String, String]
   def band(b: Int): Map[String, String]
-  def combine(self: SourceMetadata, bandCount: Int): SourceMetadata
 }

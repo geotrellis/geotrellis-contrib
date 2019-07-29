@@ -76,7 +76,7 @@ trait MosaicRasterSource extends RasterSource {
   }
 
   /** All available metadata that was not covered by other RasterSource metadata methods */
-  def metadata: SourceMetadata = sources.map(_.metadata).reduceLeft(_ combine(_, bandCount))
+  def metadata: MosaicMetadata = MosaicMetadata(sources.map(_.metadata))
 
   /**
     * All available resolutions for all RasterSources in this MosaicRasterSource

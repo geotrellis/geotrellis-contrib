@@ -50,7 +50,7 @@ case class GeoTiffRasterSource[F[_]: Monad: UnsafeLift](
   def crs: F[CRS] = tiffF.map(_.crs)
   def bandCount: F[Int] = tiffF.map(_.bandCount)
   def cellType: F[CellType] = dstCellType.fold(tiffF.map(_.cellType))(Monad[F].pure)
-  def metadata: F[SourceMetadata] = tiffF.map(tiff => GeoTiffMetadata(tiff.tags))
+  def metadata: F[GeoTiffMetadata] = tiffF.map(tiff => GeoTiffMetadata(tiff.tags))
 
   def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): GeoTiffReprojectRasterSource[F] =
     GeoTiffReprojectRasterSource(dataPath, targetCRS, resampleGrid, method, strategy, targetCellType = targetCellType)

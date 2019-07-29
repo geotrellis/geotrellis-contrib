@@ -22,6 +22,4 @@ import geotrellis.raster.io.geotiff.Tags
 case class GeoTiffMetadata(tags: Tags) extends SourceMetadata {
   def base: Map[String, String] = tags.headTags
   def band(b: Int): Map[String, String] = if(b == 0) base else tags.bandTags.lift(b).getOrElse(Map())
-  def combine(self: SourceMetadata, bandCount: Int): GeoTiffMetadata =
-    GeoTiffMetadata(Tags(base, (1 until bandCount).map(band).toList))
 }

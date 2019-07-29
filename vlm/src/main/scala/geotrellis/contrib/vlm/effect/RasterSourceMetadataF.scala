@@ -39,5 +39,5 @@ abstract class RasterSourceMetadataF[F[_]: Monad] {
   def rows: F[Long] = gridExtent.map(_.rows)
 
   /** All available metadata that was not covered by other RasterSource metadata methods */
-  def metadata: F[SourceMetadata]
+  def metadata: F[_ <: SourceMetadata]
 }

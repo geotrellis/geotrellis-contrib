@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm.avro
+package geotrellis.contrib.vlm
 
-import geotrellis.contrib.vlm.SourceMetadata
+import cats.instances.string._
+import cats.instances.map._
+import cats.data.NonEmptyList
 
-case class GeoTrellisMetadata(base: Map[String, String] = Map()) extends SourceMetadata {
-  def band(b: Int): Map[String, String] = base
+case class MosaicMetadata(list: NonEmptyList[SourceMetadata]) extends SourceMetadata {
+  def base: Map[String, String] = list.map(_.base).reduce
+  def band(b: Int): Map[String, String] = if(b == 0) base else list.map(_.band(b)).reduce
 }

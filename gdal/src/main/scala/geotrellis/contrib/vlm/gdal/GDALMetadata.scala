@@ -28,8 +28,6 @@ case class GDALMetadata(
 
   def base: Map[String, String] = baseMetadata
   def band(b: Int): Map[String, String] = if(b == 0) baseMetadata else bandsMetadata.lift(b).getOrElse(Map())
-  def combine(self: SourceMetadata, bandCount: Int): GDALMetadata =
-    GDALMetadata(Map("" -> base), (1 until bandCount).map { i => Map("" -> band(i)) }.toList)
 }
 
 object GDALMetadata {
