@@ -29,8 +29,17 @@ case class GDALDataset(token: Long) extends AnyVal {
   def getProjection(dataset: Int): Option[String] = {
     require(acceptableDatasets contains dataset)
     val crs = Array.ofDim[Byte](1 << 16)
-    if (GDALWarp.get_crs_wkt(token, dataset, numberOfAttempts, crs) <= 0)
-      throw new Exception("get_crs_wkt")
+
+    val returnValue = GDALWarp.get_crs_wkt(token, dataset, numberOfAttempts, crs)
+
+    if (returnValue <= 0) {
+      val positiveValue = math.abs(returnValue)
+      throw new MalformedProjectionException(
+        s"Unable to parse projection as WKT String. GDAL Error Code: $positiveValue",
+        positiveValue
+      )
+    }
+
     Some(new String(crs, "UTF-8"))
   }
 
@@ -40,9 +49,22 @@ case class GDALDataset(token: Long) extends AnyVal {
     require(acceptableDatasets contains dataset)
     val transform = Array.ofDim[Double](6)
     val width_height = Array.ofDim[Int](2)
-    if (GDALWarp.get_transform(token, dataset, numberOfAttempts, transform) <= 0 ||
-      GDALWarp.get_width_height(token, dataset, numberOfAttempts, width_height) <= 0)
-      throw new Exception("get_transform or get_width_height")
+
+    val transformReturnValue = GDALWarp.get_transform(token, dataset, numberOfAttempts, transform)
+    val dimensionReturnValue = GDALWarp.get_width_height(token, dataset, numberOfAttempts, width_height)
+
+    val returnValue =
+      if (transformReturnValue < 0) transformReturnValue
+      else if (dimensionReturnValue < 0) dimensionReturnValue
+      else 0
+
+    if (returnValue < 0) {
+      val positiveValue = math.abs(returnValue)
+      throw new MalformedDataException(
+        s"Unable to construct a RasterExtent from the Transformation given. GDAL Error Code: $positiveValue",
+        positiveValue
+      )
+    }
 
     val x1 = transform(0)
     val y1 = transform(3)
@@ -67,8 +89,17 @@ case class GDALDataset(token: Long) extends AnyVal {
     val heights = Array.ofDim[Int](N)
     val extent = this.extent(dataset)
 
-    if (GDALWarp.get_overview_widths_heights(token, dataset, numberOfAttempts, 1, widths, heights) <= 0)
-      throw new Exception("get_overview_widths_heights")
+    val returnValue =
+      GDALWarp.get_overview_widths_heights(token, dataset, numberOfAttempts, 1, widths, heights)
+
+    if (returnValue <= 0) {
+      val positiveValue = math.abs(returnValue)
+      throw new MalformedDataException(
+        s"Unable to construct the overview RasterExtents for the resample. GDAL Error Code: $positiveValue",
+        positiveValue
+      )
+    }
+
     widths.zip(heights).flatMap({ case (w, h) =>
       if (w > 0 && h > 0) Some(RasterExtent(extent, cols = w, rows = h))
       else None
@@ -87,8 +118,17 @@ case class GDALDataset(token: Long) extends AnyVal {
   def bandCount(dataset: Int): Int = {
     require(acceptableDatasets contains dataset)
     val count = Array.ofDim[Int](1)
-    if (GDALWarp.get_band_count(token, dataset, numberOfAttempts, count) <= 0)
-      throw new Exception("get_band_count")
+
+    val returnValue = GDALWarp.get_band_count(token, dataset, numberOfAttempts, count)
+
+    if (returnValue <= 0) {
+      val positiveValue = math.abs(returnValue)
+      throw new MalformedDataException(
+        s"A bandCount of <= 0 was found. GDAL Error Code: $positiveValue",
+        positiveValue
+      )
+    }
+
     count(0)
   }
 
@@ -97,8 +137,17 @@ case class GDALDataset(token: Long) extends AnyVal {
   def crs(dataset: Int): CRS = {
     require(acceptableDatasets contains dataset)
     val crs = Array.ofDim[Byte](1 << 16)
-    if (GDALWarp.get_crs_proj4(token, dataset, numberOfAttempts, crs) <= 0)
-      throw new Exception("get_crs_proj4")
+
+    val returnValue = GDALWarp.get_crs_proj4(token, dataset, numberOfAttempts, crs)
+
+    if (returnValue <= 0) {
+      val positiveValue = math.abs(returnValue)
+      throw new MalformedProjectionException(
+        s"Unable to parse projection as CRS. GDAL Error Code: $positiveValue",
+        positiveValue
+      )
+    }
+
     val proj4String: String = new String(crs, "UTF-8").trim
     if (proj4String.length > 0) CRS.fromString(proj4String.trim)
     else LatLng
@@ -110,8 +159,17 @@ case class GDALDataset(token: Long) extends AnyVal {
     require(acceptableDatasets contains dataset)
     val nodata = Array.ofDim[Double](1)
     val success = Array.ofDim[Int](1)
-    if (GDALWarp.get_band_nodata(token, dataset, numberOfAttempts, 1, nodata, success) <= 0)
-      throw new Exception("get_band_nodata")
+
+    val returnValue = GDALWarp.get_band_nodata(token, dataset, numberOfAttempts, 1, nodata, success)
+
+    if (returnValue <= 0) {
+      val positiveValue = math.abs(returnValue)
+      throw new MalformedDataTypeException(
+        s"Unable to determine NoData value. GDAL Exception Code: $positiveValue",
+        positiveValue
+      )
+    }
+
     if (success(0) == 0) None
     else Some(nodata(0))
   }
@@ -121,8 +179,17 @@ case class GDALDataset(token: Long) extends AnyVal {
   def dataType(dataset: Int): Int = {
     require(acceptableDatasets contains dataset)
     val dataType = Array.ofDim[Int](1)
-    if (GDALWarp.get_band_data_type(token, dataset, numberOfAttempts, 1, dataType) <= 0)
-      throw new Exception("get_band_data_type")
+
+    val returnValue = GDALWarp.get_band_data_type(token, dataset, numberOfAttempts, 1, dataType)
+
+    if (returnValue <= 0) {
+      val positiveValue = math.abs(returnValue)
+      throw new MalformedDataTypeException(
+        s"Unable to determine DataType. GDAL Error Code: $positiveValue",
+        positiveValue
+      )
+    }
+
     dataType(0)
   }
 
@@ -144,8 +211,16 @@ case class GDALDataset(token: Long) extends AnyVal {
     val mm = {
       val minmax = Array.ofDim[Double](2)
       val success = Array.ofDim[Int](1)
-      if (GDALWarp.get_band_min_max(token, dataset, numberOfAttempts, 1, true, minmax, success) <= 0)
-        throw new Exception("get_band_min_max")
+
+      val returnValue = GDALWarp.get_band_min_max(token, dataset, numberOfAttempts, 1, true, minmax, success)
+
+      if (returnValue <= 0) {
+        val positiveValue = math.abs(returnValue)
+        throw new MalformedDataTypeException(
+          s"Unable to deterime the min/max values in order to calculate CellType. GDAL Error Code: $positiveValue",
+          positiveValue
+        )
+      }
       if (success(0) != 0) Some(minmax(0), minmax(1))
       else None
     }
@@ -161,8 +236,16 @@ case class GDALDataset(token: Long) extends AnyVal {
     val dt = this.dataType(dataset)
     val bytes = Array.ofDim[Byte](dstWindow(0) * dstWindow(1) * ct.bytes)
 
-    if (GDALWarp.get_data(token, dataset, numberOfAttempts, srcWindow, dstWindow, band, dt, bytes) <= 0)
-      throw new Exception("get_data")
+    val returnValue = GDALWarp.get_data(token, dataset, numberOfAttempts, srcWindow, dstWindow, band, dt, bytes)
+
+    if (returnValue <= 0) {
+      val positiveValue = math.abs(returnValue)
+      throw new GDALIOException(
+        s"Unable to read in data. GDAL Error Code: $positiveValue",
+        positiveValue
+      )
+    }
+
     ArrayTile.fromBytes(bytes, ct, dstWindow(0), dstWindow(1))
   }
 
