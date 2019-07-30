@@ -45,6 +45,9 @@ import java.util.ServiceLoader
 trait RasterSource extends CellGrid[Long] with RasterSourceMetadata with Serializable {
   def dataPath: DataPath
 
+  /** All available RasterSource metadata */
+  def metadata: SourceMetadata
+
   protected def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource
 
   /** Reproject to different CRS with explicit sampling reprojectOptions.

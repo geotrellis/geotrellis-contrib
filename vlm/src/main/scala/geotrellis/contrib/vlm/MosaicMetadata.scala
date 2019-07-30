@@ -16,11 +16,32 @@
 
 package geotrellis.contrib.vlm
 
+import geotrellis.contrib.vlm.effect.RasterSourceF
+import geotrellis.proj4.CRS
+import geotrellis.raster.{CellType, GridExtent}
+
 import cats.instances.string._
 import cats.instances.map._
 import cats.data.NonEmptyList
+import cats.Monad
+import cats.syntax.apply._
 
-case class MosaicMetadata(list: NonEmptyList[SourceMetadata]) extends SourceMetadata {
-  def base: Map[String, String] = list.map(_.base).reduce
-  def band(b: Int): Map[String, String] = if(b == 0) base else list.map(_.band(b)).reduce
+case class MosaicMetadata(
+  list: NonEmptyList[SourceMetadata],
+  crs: CRS,
+  bandCount: Int,
+  cellType: CellType,
+  gridExtent: GridExtent[Long],
+  resolutions: List[GridExtent[Long]]
+) extends SourceMetadata {
+  def sourceMetadata(): Map[String, String] = list.map(_.sourceMetadata()).reduce
+  def sourceMetadata(b: Int): Map[String, String] = if(b == 0) sourceMetadata() else list.map(_.sourceMetadata(b)).reduce
+}
+
+object MosaicMetadata {
+  def apply(list: NonEmptyList[SourceMetadata], rasterSource: RasterSource): MosaicMetadata =
+    MosaicMetadata(list, rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions)
+
+  def apply[F[_]: Monad](list: F[NonEmptyList[SourceMetadata]], rasterSource: RasterSourceF[F]): F[MosaicMetadata] =
+    (list, rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions).mapN(MosaicMetadata.apply)
 }

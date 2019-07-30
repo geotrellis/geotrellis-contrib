@@ -54,7 +54,12 @@ trait RasterSourceMetadata {
 
   /** Raster pixel row count */
   def rows: Long = gridExtent.rows
-
-  /** All available metadata that was not covered by other RasterSource metadata methods */
-  def metadata: SourceMetadata
 }
+
+case class BaseRasterSourceMetadata(
+  crs: CRS,
+  bandCount: Int,
+  cellType: CellType,
+  gridExtent: GridExtent[Long],
+  resolutions: List[GridExtent[Long]]
+) extends RasterSourceMetadata

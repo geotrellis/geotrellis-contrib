@@ -16,7 +16,8 @@
 
 package geotrellis.contrib.vlm
 
-trait SourceMetadata {
-  def base: Map[String, String]
-  def band(b: Int): Map[String, String]
+trait SourceMetadata extends RasterSourceMetadata {
+  // contains metadata that is not a part of the RasterSourceMetadata
+  def sourceMetadata(): Map[String, String]
+  def sourceMetadata(b: Int): Map[String, String]
 }

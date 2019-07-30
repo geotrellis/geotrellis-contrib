@@ -16,13 +16,14 @@
 
 package geotrellis.contrib.vlm.effect
 
+import geotrellis.contrib.vlm.{BaseRasterSourceMetadata, RasterSourceMetadata, SourceMetadata}
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellSize, CellType, GridBounds, GridExtent}
 import geotrellis.vector.Extent
+
 import cats._
 import cats.syntax.functor._
 import cats.syntax.apply._
-import geotrellis.contrib.vlm.SourceMetadata
 
 abstract class RasterSourceMetadataF[F[_]: Monad] {
   def crs: F[CRS]
@@ -38,6 +39,11 @@ abstract class RasterSourceMetadataF[F[_]: Monad] {
   def cols: F[Long] = gridExtent.map(_.cols)
   def rows: F[Long] = gridExtent.map(_.rows)
 
-  /** All available metadata that was not covered by other RasterSource metadata methods */
+  /** All available RasterSource metadata */
   def metadata: F[_ <: SourceMetadata]
+}
+
+object RasterSourceMetadataF {
+  implicit def deliftF[F[_]: Monad](rs: RasterSourceMetadataF[F]): F[RasterSourceMetadata] =
+    (rs.crs, rs.bandCount, rs.cellType, rs.gridExtent, rs.resolutions).mapN(BaseRasterSourceMetadata)
 }

@@ -25,14 +25,6 @@ import geotrellis.contrib.vlm.gdal.GDALMetadata.Domain
 import com.azavea.gdal.GDALWarp
 
 case class GDALDataset(token: Long) extends AnyVal {
-  def getGDALMetadata(): GDALMetadata = getGDALMetadata(GDALWarp.SOURCE)
-
-  def getGDALMetadata(dataset: Int): GDALMetadata =
-    GDALMetadata.apply(this, dataset)
-
-  def getGDALMetadata(dataset: Int, domains: List[String]): GDALMetadata =
-    GDALMetadata.apply(this, dataset, domains)
-
   def getAllMetadataFlatten(dataset: Int): Map[String, String] =
     getAllMetadata(dataset).flatMap(_._2)
 

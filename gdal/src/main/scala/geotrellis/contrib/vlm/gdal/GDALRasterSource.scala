@@ -40,7 +40,7 @@ case class GDALRasterSource(
   @transient lazy val dataset: GDALDataset =
     GDALDataset(path, options.toWarpOptionsList.toArray)
 
-  lazy val metadata: GDALMetadata = dataset.getGDALMetadata(GDALWarp.SOURCE, domains)
+  lazy val metadata: GDALMetadata = GDALMetadata(dataset, this, GDALWarp.SOURCE, domains)
 
   lazy val bandCount: Int = dataset.bandCount
 

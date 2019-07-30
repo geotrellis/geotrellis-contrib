@@ -91,7 +91,7 @@ case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
 
   def bandCount: F[Int] = tiffF.map(_.bandCount)
   def cellType: F[CellType] = dstCellType.fold(tiffF.map(_.cellType))(Monad[F].pure)
-  def metadata: F[SourceMetadata] = tiffF.map(tiff => GeoTiffMetadata(tiff.tags))
+  def metadata: F[GeoTiffMetadata] = GeoTiffMetadata(tiffF.map(_.tags), this)
 
   def read(extent: Extent, bands: Seq[Int]): F[Raster[MultibandTile]] = {
     val bounds = gridExtent.map(_.gridBoundsFor(extent, clamp = false))

@@ -17,7 +17,7 @@
 package geotrellis.contrib.vlm.gdal.effect
 
 import geotrellis.contrib.vlm._
-import geotrellis.contrib.vlm.gdal.{GDALDataPath, GDALDataset, GDALWarpOptions}
+import geotrellis.contrib.vlm.gdal.{GDALDataPath, GDALDataset, GDALMetadata, GDALWarpOptions}
 import geotrellis.contrib.vlm.effect._
 import geotrellis.contrib.vlm.effect.geotiff.UnsafeLift
 import geotrellis.contrib.vlm.avro._
@@ -27,7 +27,6 @@ import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector._
 import com.azavea.gdal.GDALWarp
-
 import cats._
 import cats.syntax.flatMap._
 import cats.syntax.apply._
@@ -70,6 +69,8 @@ case class GDALRasterSource[F[_]: Monad: UnsafeLift](
     */
   lazy val resolutions: F[List[GridExtent[Long]]] =
     (datasetF, datasetType).mapN { case (dataset, datasetType) => dataset.resolutions(datasetType).map(_.toGridType[Long]) }
+
+  lazy val metadata: F[GDALMetadata] = GDALMetadata(datasetF, this, GDALWarp.SOURCE, domains)
 
   override def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): F[Iterator[Raster[MultibandTile]]] = {
     UnsafeLift[F].apply {
