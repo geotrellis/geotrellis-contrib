@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
+package geotrellis.contrib.vlm.gdal
 
-trait SourceMetadata extends RasterSourceMetadata {
-  // contains metadata that is not a part of the RasterSourceMetadata
-  def sourceMetadata(): Map[String, String]
-  def sourceMetadata(b: Int): Map[String, String]
+sealed trait GDALMetadataDomainList
+
+case object FullDomainList extends GDALMetadataDomainList
+case class DomainList(domains: List[GDALMetadataDomain]) extends GDALMetadataDomainList
+
+object GDALMetadataDomainList {
+  implicit def list2DomainList(domains: List[GDALMetadataDomain]): GDALMetadataDomainList = DomainList(domains)
 }

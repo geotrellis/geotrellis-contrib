@@ -42,11 +42,11 @@ import java.util.ServiceLoader
   * @groupdesc reproject Functions to resample raster data in target projection.
   * @groupprio reproject 2
   */
-trait RasterSource extends CellGrid[Long] with RasterSourceMetadata with Serializable {
+trait RasterSource extends CellGrid[Long] with RasterMetadata with Serializable {
   def dataPath: DataPath
 
   /** All available RasterSource metadata */
-  def metadata: SourceMetadata
+  def metadata: RasterSourceMetadata
 
   protected def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource
 

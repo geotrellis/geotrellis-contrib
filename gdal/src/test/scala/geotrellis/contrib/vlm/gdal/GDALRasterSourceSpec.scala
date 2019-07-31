@@ -170,7 +170,7 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
 
     it("should read the same metadata as GeoTiffRasterSource") {
       lazy val tsource = GeoTiffRasterSource(uri)
-      source.metadata.sourceMetadata.mapValues(_.toUpperCase) shouldBe tsource.metadata.sourceMetadata.mapValues(_.toUpperCase)
+      source.metadata.attributes.mapValues(_.toUpperCase) shouldBe tsource.metadata.attributes.mapValues(_.toUpperCase)
     }
   }
 }

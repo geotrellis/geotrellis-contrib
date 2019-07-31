@@ -16,50 +16,14 @@
 
 package geotrellis.contrib.vlm
 
-import geotrellis.proj4.CRS
-import geotrellis.raster.{CellSize, CellType, GridExtent, RasterExtent}
-import geotrellis.vector.Extent
-
-trait RasterSourceMetadata {
-  def crs: CRS
-  def bandCount: Int
-  def cellType: CellType
-
-  /** Cell size at which rasters will be read when using this [[RasterSource]]
-    *
-    * Note: some re-sampling of underlying raster data may be required to produce this cell size.
+trait RasterSourceMetadata extends RasterMetadata {
+  /**
+    * Return the "base" metadata, usually it is a zero band metadata,
+    * a metadata that is valid for the entire source and for the zero band
     */
-  def cellSize: CellSize = gridExtent.cellSize
-
-  def gridExtent: GridExtent[Long]
-
-  /** All available resolutions for this raster source
-    *
-    * <li> For base [[RasterSource]] instance this will be resolutions of available overviews.
-    * <li> For reprojected [[RasterSource]] these resolutions represent an estimate where
-    *      each cell in target CRS has ''approximately'' the same geographic coverage as a cell in the source CRS.
-    *
-    * When reading raster data the underlying implementation will have to sample from one of these resolutions.
-    * It is possible that a read request for a small bounding box will results in significant IO request when the target
-    * cell size is much larger than closest available resolution.
-    *
-    * __Note__: It is expected but not guaranteed that the extent each [[RasterExtent]] in this list will be the same.
+  def attributes: Map[String, String]
+  /**
+    * Return a per band metadata
     */
-  def resolutions: List[GridExtent[Long]]
-
-  def extent: Extent = gridExtent.extent
-
-  /** Raster pixel column count */
-  def cols: Long = gridExtent.cols
-
-  /** Raster pixel row count */
-  def rows: Long = gridExtent.rows
+  def attributesForBand(band: Int): Map[String, String]
 }
-
-case class BaseRasterSourceMetadata(
-  crs: CRS,
-  bandCount: Int,
-  cellType: CellType,
-  gridExtent: GridExtent[Long],
-  resolutions: List[GridExtent[Long]]
-) extends RasterSourceMetadata

@@ -80,11 +80,11 @@ abstract class MosaicRasterSource[F[_]: Monad: Par] extends RasterSourceF[F] {
     cellTypes >>= (_.tail.foldLeft(cellTypes.map(_.head)) { (l, r) => (l, Monad[F].pure(r)).mapN(_ union _) })
   }
 
-  /** All available RasterSources metadata */
+  /** All available RasterSources metadata. */
   def metadata: F[MosaicMetadata] =
     MosaicMetadata(
-      sources >>= { list => list.parTraverse { _.metadata.map { case md: RasterSourceMetadata => md } } },
-      this
+      this,
+      sources >>= { list => list.parTraverse { _.metadata.map { case md: RasterMetadata => md } } }
     )
 
   /**

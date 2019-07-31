@@ -42,7 +42,7 @@ case class GeoTiffResampleRasterSource(
   def crs: CRS = tiff.crs
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = dstCellType.getOrElse(tiff.cellType)
-  def metadata: GeoTiffMetadata = GeoTiffMetadata(tiff.tags, this)
+  def metadata: GeoTiffMetadata = GeoTiffMetadata(this, tiff.tags)
 
   override lazy val gridExtent: GridExtent[Long] = resampleGrid(tiff.rasterExtent.toGridType[Long])
   lazy val resolutions: List[GridExtent[Long]] = {

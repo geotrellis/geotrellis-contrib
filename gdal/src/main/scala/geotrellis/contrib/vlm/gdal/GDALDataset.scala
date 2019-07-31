@@ -20,7 +20,6 @@ import geotrellis.contrib.vlm.gdal.config.GDALOptionsConfig
 import geotrellis.raster._
 import geotrellis.proj4.{CRS, LatLng}
 import geotrellis.vector.Extent
-import geotrellis.contrib.vlm.gdal.GDALMetadata.Domain
 
 import com.azavea.gdal.GDALWarp
 
@@ -28,16 +27,16 @@ case class GDALDataset(token: Long) extends AnyVal {
   def getAllMetadataFlatten(dataset: Int): Map[String, String] =
     getAllMetadata(dataset).flatMap(_._2)
 
-  def getAllMetadata(band: Int): Map[String, Map[String, String]] =
+  def getAllMetadata(band: Int): Map[GDALMetadataDomain, Map[String, String]] =
     getAllMetadata(GDALWarp.SOURCE, band)
 
-  def getAllMetadata(dataset: Int, band: Int): Map[String, Map[String, String]] =
+  def getAllMetadata(dataset: Int, band: Int): Map[GDALMetadataDomain, Map[String, String]] =
     getMetadataDomainList(dataset).map { domain => domain -> getMetadata(domain, band) }.filter(_._2.nonEmpty).toMap
 
-  def getMetadataDomainList(band: Int): List[String] = getMetadataDomainList(GDALWarp.SOURCE, band)
+  def getMetadataDomainList(band: Int): List[GDALMetadataDomain] = getMetadataDomainList(GDALWarp.SOURCE, band)
 
   /** https://github.com/OSGeo/gdal/blob/b1c9c12ad373e40b955162b45d704070d4ebf7b0/gdal/doc/source/development/rfc/rfc43_getmetadatadomainlist.rst */
-  def getMetadataDomainList(dataset: Int, band: Int): List[String] = {
+  def getMetadataDomainList(dataset: Int, band: Int): List[GDALMetadataDomain] = {
     val arr = Array.ofDim[Byte](100, 1 << 10)
     val returnValue = GDALWarp.get_metadata_domain_list(token, dataset, numberOfAttempts, band, arr)
 
@@ -49,20 +48,20 @@ case class GDALDataset(token: Long) extends AnyVal {
       )
     }
 
-    (Domain.ALL ++ arr.map(new String(_, "UTF-8").trim).filter(_.nonEmpty).toList).distinct
+    (GDALMetadataDomain.ALL ++ arr.map(new String(_, "UTF-8").trim).filter(_.nonEmpty).toList.map(UserDefinedDomain)).distinct
   }
 
-  def getMetadata(domains: List[String], band: Int): Map[String, Map[String, String]] =
+  def getMetadata(domains: List[GDALMetadataDomain], band: Int): Map[GDALMetadataDomain, Map[String, String]] =
     getMetadata(GDALWarp.SOURCE, domains, band)
 
-  def getMetadata(dataset: Int, domains: List[String], band: Int): Map[String, Map[String, String]] =
+  def getMetadata(dataset: Int, domains: List[GDALMetadataDomain], band: Int): Map[GDALMetadataDomain, Map[String, String]] =
     domains.map(domain => domain -> getMetadata(dataset, domain, band)).filter(_._2.nonEmpty).toMap
 
-  def getMetadata(domain: String, band: Int): Map[String, String] = getMetadata(GDALWarp.SOURCE, domain, band)
+  def getMetadata(domain: GDALMetadataDomain, band: Int): Map[String, String] = getMetadata(GDALWarp.SOURCE, domain, band)
 
-  def getMetadata(dataset: Int, domain: String, band: Int): Map[String, String] = {
+  def getMetadata(dataset: Int, domain: GDALMetadataDomain, band: Int): Map[String, String] = {
     val arr = Array.ofDim[Byte](100, 1 << 10)
-    val returnValue = GDALWarp.get_metadata(token, dataset, numberOfAttempts, band, domain, arr)
+    val returnValue = GDALWarp.get_metadata(token, dataset, numberOfAttempts, band, domain.name, arr)
 
     if (returnValue <= 0) {
       val positiveValue = math.abs(returnValue)
@@ -84,11 +83,11 @@ case class GDALDataset(token: Long) extends AnyVal {
       }.toMap
   }
 
-  def getMetadataItem(key: String, domain: String, band: Int): String = getMetadataItem(GDALWarp.WARPED, key, domain, band)
+  def getMetadataItem(key: String, domain: GDALMetadataDomain, band: Int): String = getMetadataItem(GDALWarp.WARPED, key, domain, band)
 
-  def getMetadataItem(dataset: Int, key: String, domain: String, band: Int): String = {
+  def getMetadataItem(dataset: Int, key: String, domain: GDALMetadataDomain, band: Int): String = {
     val arr = Array.ofDim[Byte](1 << 10)
-    val returnValue = GDALWarp.get_metadata_item(token, dataset, numberOfAttempts, band, key, domain, arr)
+    val returnValue = GDALWarp.get_metadata_item(token, dataset, numberOfAttempts, band, key, domain.name, arr)
 
     if (returnValue <= 0) {
       val positiveValue = math.abs(returnValue)

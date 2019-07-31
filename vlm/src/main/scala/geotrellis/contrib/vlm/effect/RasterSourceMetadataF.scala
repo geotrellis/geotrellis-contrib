@@ -16,7 +16,7 @@
 
 package geotrellis.contrib.vlm.effect
 
-import geotrellis.contrib.vlm.{BaseRasterSourceMetadata, RasterSourceMetadata, SourceMetadata}
+import geotrellis.contrib.vlm.{BaseRasterMetadata, RasterMetadata, RasterSourceMetadata}
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellSize, CellType, GridBounds, GridExtent}
 import geotrellis.vector.Extent
@@ -40,10 +40,10 @@ abstract class RasterSourceMetadataF[F[_]: Monad] {
   def rows: F[Long] = gridExtent.map(_.rows)
 
   /** All available RasterSource metadata */
-  def metadata: F[_ <: SourceMetadata]
+  def metadata: F[_ <: RasterSourceMetadata]
 }
 
 object RasterSourceMetadataF {
-  implicit def deliftF[F[_]: Monad](rs: RasterSourceMetadataF[F]): F[RasterSourceMetadata] =
-    (rs.crs, rs.bandCount, rs.cellType, rs.gridExtent, rs.resolutions).mapN(BaseRasterSourceMetadata)
+  implicit def deliftF[F[_]: Monad](rs: RasterSourceMetadataF[F]): F[RasterMetadata] =
+    (rs.crs, rs.bandCount, rs.cellType, rs.gridExtent, rs.resolutions).mapN(BaseRasterMetadata)
 }

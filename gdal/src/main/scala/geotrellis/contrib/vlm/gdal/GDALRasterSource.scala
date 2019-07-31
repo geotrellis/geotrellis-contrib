@@ -29,9 +29,23 @@ import com.azavea.gdal.GDALWarp
 case class GDALRasterSource(
   dataPath: GDALDataPath,
   options: GDALWarpOptions = GDALWarpOptions.EMPTY,
-  private[vlm] val targetCellType: Option[TargetCellType] = None,
-  private[vlm] val domains: List[String] = List("") // by default we read only the minimum amount of raster tags
+  private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource {
+
+  /**
+    * All the information received from the JNI side should be cached on the JVM side,
+    * to minimize JNI calls. Too aggressive JNI functions usage can lead to a significant performance regression
+    * as the result of the often memory copy.
+    *
+    * For the each JNI call the proxy function will send arguments into the C bindings,
+    * on the C side the result would be computed and sent to the JVM side (memory copy happened two times).
+    *
+    * Since it would happen for each call, much safer and faster would be to remember once computed value in a JVM memory
+    * and interact only with it: it will allow to minimize JNI calls, speed up function calls and will allow to memoize some
+    * potentially sensitive data.
+    *
+    */
+
   val path: String = dataPath.path
 
   lazy val datasetType: Int = options.datasetType
@@ -40,7 +54,16 @@ case class GDALRasterSource(
   @transient lazy val dataset: GDALDataset =
     GDALDataset(path, options.toWarpOptionsList.toArray)
 
-  lazy val metadata: GDALMetadata = GDALMetadata(dataset, this, GDALWarp.SOURCE, domains)
+  /**
+    * Fetches a default metadata from the default domain.
+    * If there is a need in some custom domain, use the metadataForDomain function.
+    */
+  lazy val metadata: GDALMetadata = GDALMetadata(this, dataset, DefaultDomain :: Nil)
+
+  /**
+    * Fetches a metadata from the specified [[DomainList]]
+    */
+  def metadataForDomain(domainList: DomainList): GDALMetadata = GDALMetadata(this, dataset, domainList)
 
   lazy val bandCount: Int = dataset.bandCount
 

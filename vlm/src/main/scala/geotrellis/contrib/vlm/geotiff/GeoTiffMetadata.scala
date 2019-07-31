@@ -17,7 +17,7 @@
 package geotrellis.contrib.vlm.geotiff
 
 import geotrellis.contrib.vlm.effect.RasterSourceF
-import geotrellis.contrib.vlm.{RasterSourceMetadata, SourceMetadata}
+import geotrellis.contrib.vlm.{RasterMetadata, RasterSourceMetadata}
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellType, GridExtent}
 import geotrellis.raster.io.geotiff.Tags
@@ -26,21 +26,23 @@ import cats.Monad
 import cats.syntax.apply._
 
 case class GeoTiffMetadata(
-  tags: Tags,
   crs: CRS,
   bandCount: Int,
   cellType: CellType,
   gridExtent: GridExtent[Long],
-  resolutions: List[GridExtent[Long]]
-) extends SourceMetadata {
-  def sourceMetadata(): Map[String, String] = tags.headTags
-  def sourceMetadata(b: Int): Map[String, String] = if(b == 0) sourceMetadata() else tags.bandTags.lift(b).getOrElse(Map())
+  resolutions: List[GridExtent[Long]],
+  tags: Tags
+) extends RasterSourceMetadata {
+  /** Returns the GeoTiff head tags. */
+  def attributes: Map[String, String] = tags.headTags
+  /** Returns the GeoTiff per band tags. */
+  def attributesForBand(band: Int): Map[String, String] = tags.bandTags.lift(band).getOrElse(Map.empty)
 }
 
 object GeoTiffMetadata {
-  def apply(tags: Tags, rasterSource: RasterSourceMetadata): GeoTiffMetadata =
-    GeoTiffMetadata(tags, rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions)
+  def apply(rasterSource: RasterMetadata, tags: Tags): GeoTiffMetadata =
+    GeoTiffMetadata(rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions, tags)
 
-  def apply[F[_]: Monad](tags: F[Tags], rasterSource: RasterSourceF[F]): F[GeoTiffMetadata] =
-    (tags, rasterSource: F[RasterSourceMetadata]).mapN(GeoTiffMetadata.apply)
+  def apply[F[_]: Monad](rasterSource: RasterSourceF[F], tags: F[Tags]): F[GeoTiffMetadata] =
+    (rasterSource: F[RasterMetadata], tags).mapN(GeoTiffMetadata.apply)
 }
