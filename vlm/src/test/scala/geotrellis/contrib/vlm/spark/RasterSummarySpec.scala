@@ -66,7 +66,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
 
       val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
       val layoutLevel @ LayoutLevel(zoom, layout) = summary.levelFor(layoutScheme)
-      val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, (_, sk) => sk, method))
+      val tiledLayoutSource = sourceRDD.map(_.tileToLayoutSpatial(layout, method))
 
       val summaryCollected = RasterSummary.fromRDD[RasterSource, Long](tiledLayoutSource.map(_.source))
       val summaryResampled = summary.resample(TargetGrid(layout))
@@ -108,7 +108,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     // collect raster summary
     val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
     val layoutLevel @ LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
-    val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, (_, sk) => sk, method))
+    val tiledLayoutSource = sourceRDD.map(_.tileToLayoutSpatial(layout, method))
 
     // Create RDD of references, references contain information how to read rasters
     val rasterRefRdd: RDD[(SpatialKey, RasterRegion)] = tiledLayoutSource.flatMap(_.keyedRasterRegions())
@@ -147,7 +147,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
     val LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
     val contextRDD: MultibandTileLayerRDD[SpaceTimeKey] =
-      RasterSourceRDD.tiledLayerRDDK[SpaceTimeKey](
+      RasterSourceRDD.tiledLayerRDDTemporal(
         sourceRDD, layout, (rs, key) => SpaceTimeKey(
           key,
           {

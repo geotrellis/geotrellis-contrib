@@ -112,7 +112,7 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
             )
           }.toList
 
-        val layoutSource = source.tileToLayout(layout, (_, sk) => sk)
+        val layoutSource = source.tileToLayoutSpatial(layout)
         val actual: List[(SpatialKey, MultibandTile)] = layoutSource.readAll().toList
 
         withClue(s"actual.size: ${actual.size} expected.size: ${expected.size}") {

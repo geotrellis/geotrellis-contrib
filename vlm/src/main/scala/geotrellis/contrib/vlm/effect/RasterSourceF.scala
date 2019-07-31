@@ -163,15 +163,6 @@ abstract class RasterSourceF[F[_]: Monad] extends RasterSourceMetadataF[F] with 
       .traverse { bounds => bandCount >>= { bandCount => read(bounds, 0 until bandCount) } }
       .map(_.toIterator)
 
-  /**
-    * Applies the given [[LayoutDefinition]] to the source data producing a [[LayoutTileSource]].
-    * In order to fit to the given layout, the source data is resampled to match the Extent
-    * and CellSize of the layout.
-    *
-    */
-  // def tileToLayout(layout: LayoutDefinition, resampleMethod: ResampleMethod = NearestNeighbor): F[LayoutTileSource] = ???
-    // LayoutTileSource(resampleToGrid(layout, resampleMethod), layout)
-
   def convert(targetCellType: TargetCellType): RasterSourceF[F]
 
   /** Converts the values within the RasterSource from one [[CellType]] to another.
@@ -192,9 +183,4 @@ abstract class RasterSourceF[F[_]: Monad] extends RasterSourceMetadataF[F] with 
       case _ =>
         (raster: Raster[MultibandTile]) => raster
     }
-}
-
-object RasterSourceF {
-  //implicit def projectedExtentComponent[F[_], T <: RasterSourceF[F]]: GetComponent[T, ProjectedExtent] =
-    //GetComponent(rs => ProjectedExtent(rs.extent, rs.crs))
 }

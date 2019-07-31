@@ -16,7 +16,7 @@
 
 package geotrellis.contrib.vlm.spark
 
-import geotrellis.contrib.vlm.{LayoutTileSource, RasterRegion, RasterSource, ReadingSource, TileToLayoutRasterSource}
+import geotrellis.contrib.vlm.{LayoutTileSource, RasterRegion, RasterSource, ReadingSource, TileToLayout}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.raster.{ArrayTile, MultibandTile, NODATA, Tile}
 import geotrellis.layer._
@@ -30,25 +30,39 @@ import scala.collection.mutable.ArrayBuilder
 import scala.reflect.ClassTag
 
 object RasterSourceRDD {
-  import TileToLayoutRasterSource._
   import RasterSource._
 
   final val DEFAULT_PARTITION_BYTES: Long = 128l * 1024 * 1024
 
-  def read(
+  def readSpatial(
     readingSources: Seq[ReadingSource],
     layout: LayoutDefinition
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
-    read(readingSources, layout, DEFAULT_PARTITION_BYTES)
+    readSpatial(readingSources, layout, DEFAULT_PARTITION_BYTES)
 
-  def read(
+  def readTemporal(
+    readingSources: Seq[ReadingSource],
+    layout: LayoutDefinition,
+    keyTransformation: (RasterSource, SpatialKey) => SpaceTimeKey
+  )(implicit sc: SparkContext): MultibandTileLayerRDD[SpaceTimeKey] =
+    readTemporal(readingSources, layout, keyTransformation, DEFAULT_PARTITION_BYTES)
+
+  def readSpatial(
     readingSources: Seq[ReadingSource],
     layout: LayoutDefinition,
     partitionBytes: Long
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
-    readPartitionBytesK[SpatialKey](readingSources, layout, (_, sk) => sk, partitionBytes)
+    readPartitionBytes[SpatialKey](readingSources, layout, (_, sk) => sk, partitionBytes)
 
-  def readPartitionBytesK[K: SpatialComponent: TileToLayoutRasterSource: Ordering: ClassTag](
+  def readTemporal(
+    readingSources: Seq[ReadingSource],
+    layout: LayoutDefinition,
+    keyTransformation: (RasterSource, SpatialKey) => SpaceTimeKey,
+    partitionBytes: Long
+  )(implicit sc: SparkContext): MultibandTileLayerRDD[SpaceTimeKey] =
+    readPartitionBytes[SpaceTimeKey](readingSources, layout, keyTransformation, partitionBytes)
+
+  def readPartitionBytes[K: SpatialComponent: TileToLayout: Ordering: ClassTag](
     readingSources: Seq[ReadingSource],
     layout: LayoutDefinition,
     keyTransformation: (RasterSource, SpatialKey) => K,
@@ -95,6 +109,7 @@ object RasterSourceRDD {
 
     sourcesRDD.persist()
 
+    // TODO: refactor metadata collection
     val layerMetadataK: TileLayerMetadata[K] =
       layerMetadata.copy[K](bounds = KeyBounds(sourcesRDD.map(_._1).min(), sourcesRDD.map(_._1).max()))
 
@@ -133,20 +148,35 @@ object RasterSourceRDD {
     ContextRDD(result, layerMetadataK)
   }
 
-  def read(
+  def readSpatial(
     readingSourcesRDD: RDD[ReadingSource],
     layout: LayoutDefinition
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
-    read(readingSourcesRDD, layout, None)
+    readSpatial(readingSourcesRDD, layout, None)
 
-  def read(
+  def readSpatial(
     readingSourcesRDD: RDD[ReadingSource],
     layout: LayoutDefinition,
     partitioner: Option[Partitioner]
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
-    readK[SpatialKey](readingSourcesRDD, layout, (_, sk) => sk, partitioner)
+    read[SpatialKey](readingSourcesRDD, layout, (_, sk) => sk, partitioner)
 
-  def readK[K: SpatialComponent: TileToLayoutRasterSource: Ordering: ClassTag](
+  def readTemporal(
+    readingSourcesRDD: RDD[ReadingSource],
+    layout: LayoutDefinition,
+    keyTransformation: (RasterSource, SpatialKey) => SpaceTimeKey
+  )(implicit sc: SparkContext): MultibandTileLayerRDD[SpaceTimeKey] =
+    readTemporal(readingSourcesRDD, layout, keyTransformation, None)
+
+  def readTemporal(
+    readingSourcesRDD: RDD[ReadingSource],
+    layout: LayoutDefinition,
+    keyTransformation: (RasterSource, SpatialKey) => SpaceTimeKey,
+    partitioner: Option[Partitioner]
+  )(implicit sc: SparkContext): MultibandTileLayerRDD[SpaceTimeKey] =
+    read[SpaceTimeKey](readingSourcesRDD, layout, keyTransformation, partitioner)
+
+  def read[K: SpatialComponent: TileToLayout: Ordering: ClassTag](
     readingSourcesRDD: RDD[ReadingSource],
     layout: LayoutDefinition,
     keyTransformation: (RasterSource, SpatialKey) => K,
@@ -177,6 +207,7 @@ object RasterSourceRDD {
         }
       })
 
+    // TODO: refactor metadata collection
     val layerMetadataK: TileLayerMetadata[K] =
       layerMetadata.copy[K](bounds = KeyBounds(keyedRDD.map(_._1).min(), keyedRDD.map(_._1).max()))
 
@@ -213,16 +244,26 @@ object RasterSourceRDD {
   }
 
 
-  def tiledLayerRDD(
+  def tiledLayerRDDSpatial(
     sources: RDD[RasterSource],
     layout: LayoutDefinition,
     resampleMethod: ResampleMethod = NearestNeighbor,
     rasterSummary: Option[RasterSummary] = None,
     partitioner: Option[Partitioner] = None
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
-    tiledLayerRDDK[SpatialKey](sources, layout, (_, sk) => sk, resampleMethod, rasterSummary, partitioner)
+    tiledLayerRDD[SpatialKey](sources, layout, (_, sk) => sk, resampleMethod, rasterSummary, partitioner)
 
-  def tiledLayerRDDK[K: SpatialComponent: TileToLayoutRasterSource: Ordering: ClassTag](
+  def tiledLayerRDDTemporal(
+    sources: RDD[RasterSource],
+    layout: LayoutDefinition,
+    keyTransformation: (RasterSource, SpatialKey) => SpaceTimeKey,
+    resampleMethod: ResampleMethod = NearestNeighbor,
+    rasterSummary: Option[RasterSummary] = None,
+    partitioner: Option[Partitioner] = None
+  )(implicit sc: SparkContext): MultibandTileLayerRDD[SpaceTimeKey] =
+    tiledLayerRDD[SpaceTimeKey](sources, layout, keyTransformation, resampleMethod, rasterSummary, partitioner)
+
+  def tiledLayerRDD[K: SpatialComponent: TileToLayout: Ordering: ClassTag](
     sources: RDD[RasterSource],
     layout: LayoutDefinition,
     keyTransformation: (RasterSource, SpatialKey) => K,
@@ -239,6 +280,7 @@ object RasterSourceRDD {
     val rasterRegionRDD: RDD[(K, RasterRegion)] =
       tiledLayoutSourceRDD.flatMap { _.keyedRasterRegions() }
 
+    // TODO: refactor metadata collection
     val layerMetadataK: TileLayerMetadata[K] =
       layerMetadata.copy[K](bounds = KeyBounds(rasterRegionRDD.map(_._1).min(), rasterRegionRDD.map(_._1).max()))
 
@@ -260,17 +302,28 @@ object RasterSourceRDD {
     ContextRDD(tiledRDD, layerMetadataK)
   }
 
-  def apply(
+  def spatial(
     sources: Seq[RasterSource],
     layout: LayoutDefinition,
     partitionBytes: Long = DEFAULT_PARTITION_BYTES
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
-    applyK[SpatialKey](sources, layout, (_, sk) => sk, partitionBytes)
+    apply[SpatialKey](sources, layout, (_, sk) => sk, partitionBytes)
 
-  def apply(source: RasterSource, layout: LayoutDefinition)(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
-    apply(Seq(source), layout)
+  def spatial(source: RasterSource, layout: LayoutDefinition)(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
+    spatial(Seq(source), layout)
 
-  def applyK[K: SpatialComponent: TileToLayoutRasterSource: Ordering: ClassTag](
+  def temporal(
+    sources: Seq[RasterSource],
+    layout: LayoutDefinition,
+    keyTransformation: (RasterSource, SpatialKey) => SpaceTimeKey,
+    partitionBytes: Long = DEFAULT_PARTITION_BYTES
+  )(implicit sc: SparkContext): MultibandTileLayerRDD[SpaceTimeKey] =
+    apply[SpaceTimeKey](sources, layout, keyTransformation, partitionBytes)
+
+  def temporal(source: RasterSource, layout: LayoutDefinition, keyTransformation: (RasterSource, SpatialKey) => SpaceTimeKey)(implicit sc: SparkContext): MultibandTileLayerRDD[SpaceTimeKey] =
+    temporal(Seq(source), layout, keyTransformation)
+
+  def apply[K: SpatialComponent: TileToLayout: Ordering: ClassTag](
     sources: Seq[RasterSource],
     layout: LayoutDefinition,
     keyTransformation: (RasterSource, SpatialKey) => K,
@@ -328,6 +381,7 @@ object RasterSourceRDD {
         tileSource.readAll(keysK.toIterator)
       }
 
+    // TODO: refactor metadata collection
     val layerMetadataK: TileLayerMetadata[K] =
       layerMetadata.copy[K](bounds = KeyBounds(result.map(_._1).min(), result.map(_._1).max()))
 

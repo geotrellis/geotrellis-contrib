@@ -20,7 +20,12 @@ import geotrellis.layer.{LayoutDefinition, SpaceTimeKey, SpatialKey}
 import geotrellis.raster.ResampleMethod
 import geotrellis.raster.resample.NearestNeighbor
 
-trait TileToLayoutRasterSource[K] extends Serializable {
+/**
+  * Applies the given [[LayoutDefinition]] to the source data producing a [[LayoutTileSource]].
+  * In order to fit to the given layout, the source data is resampled to match the Extent
+  * and CellSize of the layout.
+  */
+trait TileToLayout[K] extends Serializable {
   def tileToLayout(
     rs: RasterSource,
     layout: LayoutDefinition,
@@ -29,10 +34,10 @@ trait TileToLayoutRasterSource[K] extends Serializable {
   ): LayoutTileSource[K]
 }
 
-object TileToLayoutRasterSource {
-  def apply[K: TileToLayoutRasterSource] = implicitly[TileToLayoutRasterSource[K]]
+object TileToLayout {
+  def apply[K: TileToLayout] = implicitly[TileToLayout[K]]
 
-  implicit val spatialTileToLayoutRasterSource = new TileToLayoutRasterSource[SpatialKey] {
+  implicit val spatialTileToLayout = new TileToLayout[SpatialKey] {
     def tileToLayout(
       rs: RasterSource,
       layout: LayoutDefinition,
@@ -42,7 +47,7 @@ object TileToLayoutRasterSource {
       LayoutTileSource(rs.resampleToGrid(layout, resampleMethod), layout, keyTransformation)
   }
 
-  implicit val spaceTimeTileToLayoutRasterSource = new TileToLayoutRasterSource[SpaceTimeKey] {
+  implicit val spaceTimeTileToLayout = new TileToLayout[SpaceTimeKey] {
     def tileToLayout(
       rs: RasterSource,
       layout: LayoutDefinition,

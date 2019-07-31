@@ -56,8 +56,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
       info(s"RasterSource CRS: ${reprojectedSource.crs}")
 
-      val rdd = RasterSourceRDD(reprojectedSource, layout)
-
+      val rdd = RasterSourceRDD.spatial(reprojectedSource, layout)
 
       val actualKeys = rdd.keys.collect().sortBy { key => (key.col, key.row) }
 
@@ -68,7 +67,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
     it("should read in the tiles as squares") {
       val reprojectedRasterSource = rasterSource.reprojectToGrid(targetCRS, layout)
-      val rdd = RasterSourceRDD(reprojectedRasterSource, layout)
+      val rdd = RasterSourceRDD.spatial(reprojectedRasterSource, layout)
       val rows = rdd.collect()
 
       forAll(rows) { case (key, tile) =>
@@ -98,10 +97,10 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
     }
 
     def assertRDDLayersEqual(
-                              expected: MultibandTileLayerRDD[SpatialKey],
-                              actual: MultibandTileLayerRDD[SpatialKey],
-                              matchRasters: Boolean = false
-                            ): Unit = {
+      expected: MultibandTileLayerRDD[SpatialKey],
+      actual: MultibandTileLayerRDD[SpatialKey],
+      matchRasters: Boolean = false
+    ): Unit = {
       val joinedRDD = expected.filter { case (_, t) => !t.band(0).isNoDataTile }.leftOuterJoin(actual)
 
       joinedRDD.collect().foreach { case (key, (expected, actualTile)) =>
@@ -134,7 +133,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
     it("should reproduce tileToLayout") {
       // This should be the same as result of .tileToLayout(md.layout)
-      val rasterSourceRDD: MultibandTileLayerRDD[SpatialKey] = RasterSourceRDD(rasterSource, md.layout)
+      val rasterSourceRDD: MultibandTileLayerRDD[SpatialKey] = RasterSourceRDD.spatial(rasterSource, md.layout)
 
       // Complete the reprojection
       val reprojectedSource = rasterSourceRDD.reproject(targetCRS, layout)._2
@@ -144,7 +143,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
     it("should reproduce tileToLayout followed by reproject") {
       val reprojectedSourceRDD: MultibandTileLayerRDD[SpatialKey] =
-        RasterSourceRDD(rasterSource.reprojectToGrid(targetCRS, layout), layout)
+        RasterSourceRDD.spatial(rasterSource.reprojectToGrid(targetCRS, layout), layout)
 
       // geotrellis.raster.io.geotiff.GeoTiff(reprojectedExpectedRDD.stitch, targetCRS).write("/tmp/expected.tif")
       // geotrellis.raster.io.geotiff.GeoTiff(reprojectedSourceRDD.stitch, targetCRS).write("/tmp/actual.tif")
@@ -176,7 +175,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
       val reprojectedRasterSourceRDD: RDD[RasterSource] = rasterSourceRDD.map { _.reprojectToGrid(crs, targetLayout) }
 
-      val tiledSource: MultibandTileLayerRDD[SpatialKey] = RasterSourceRDD.tiledLayerRDD(reprojectedRasterSourceRDD, targetLayout)
+      val tiledSource: MultibandTileLayerRDD[SpatialKey] = RasterSourceRDD.tiledLayerRDDSpatial(reprojectedRasterSourceRDD, targetLayout)
 
       assertRDDLayersEqual(reprojectedExpectedRDD, tiledSource)
     }
@@ -211,7 +210,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
       val expected: MultibandTile = expectedMultibandTile
 
-      val actual: MultibandTile = RasterSourceRDD.read(readingSources, floatingLayout).stitch().tile
+      val actual: MultibandTile = RasterSourceRDD.readSpatial(readingSources, floatingLayout).stitch().tile
 
       assertEqual(expected, actual)
     }
@@ -227,7 +226,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
       val expected: MultibandTile =
         MultibandTile(expectedMultibandTile.band(0), expectedMultibandTile.band(2), noDataTile, expectedMultibandTile.band(4))
 
-      val actual: MultibandTile = RasterSourceRDD.read(readingSources, floatingLayout).stitch().tile
+      val actual: MultibandTile = RasterSourceRDD.readSpatial(readingSources, floatingLayout).stitch().tile
 
       assertEqual(expected, actual)
     }
@@ -245,7 +244,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
       val expected: MultibandTile = expectedMultibandTile
 
-      val actual: MultibandTile = RasterSourceRDD.read(readingSources, floatingLayout).stitch().tile
+      val actual: MultibandTile = RasterSourceRDD.readSpatial(readingSources, floatingLayout).stitch().tile
 
       assertEqual(expected, actual)
     }
@@ -268,7 +267,7 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
           expectedMultibandTile.band(4)
         )
 
-      val actual: MultibandTile = RasterSourceRDD.read(readingSources, floatingLayout).stitch().tile
+      val actual: MultibandTile = RasterSourceRDD.readSpatial(readingSources, floatingLayout).stitch().tile
 
       assertEqual(expected, actual)
     }

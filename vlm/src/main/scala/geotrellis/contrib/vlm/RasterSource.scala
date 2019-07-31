@@ -166,15 +166,6 @@ trait RasterSource extends CellGrid[Long] with RasterMetadata with Serializable 
   def readBounds(bounds: Traversable[GridBounds[Long]]): Iterator[Raster[MultibandTile]] =
     bounds.toIterator.flatMap(read(_, (0 until bandCount)).toIterator)
 
-  /**
-    * Applies the given [[LayoutDefinition]] to the source data producing a [[LayoutTileSource]].
-    * In order to fit to the given layout, the source data is resampled to match the Extent
-    * and CellSize of the layout.
-    *
-    */
-  /*def tileToLayout(layout: LayoutDefinition, resampleMethod: ResampleMethod = NearestNeighbor): LayoutTileSource =
-    LayoutTileSource(resampleToGrid(layout, resampleMethod), layout)*/
-
   private[vlm] def targetCellType: Option[TargetCellType]
 
   protected lazy val dstCellType: Option[CellType] =
@@ -212,12 +203,25 @@ object RasterSource {
   implicit def tileToLayoutOps(rs: RasterSource) = new TileToLayoutOps(rs)
 
   final class TileToLayoutOps(val self: RasterSource) {
-    def tileToLayout[K: TileToLayoutRasterSource](
+    def tileToLayout[K: TileToLayout](
       layout: LayoutDefinition,
       keyTransformation: (RasterSource, SpatialKey) => K,
       resampleMethod: ResampleMethod = NearestNeighbor
     ): LayoutTileSource[K] =
-      TileToLayoutRasterSource[K].tileToLayout(self, layout, keyTransformation, resampleMethod)
+      TileToLayout[K].tileToLayout(self, layout, keyTransformation, resampleMethod)
+
+    def tileToLayoutSpatial(
+      layout: LayoutDefinition,
+      resampleMethod: ResampleMethod = NearestNeighbor
+    ): LayoutTileSource[SpatialKey] =
+      TileToLayout[SpatialKey].tileToLayout(self, layout, (_, sk) => sk, resampleMethod)
+
+    def tileToLayoutTemporal(
+      layout: LayoutDefinition,
+      keyTransformation: (RasterSource, SpatialKey) => SpaceTimeKey,
+      resampleMethod: ResampleMethod = NearestNeighbor
+    ): LayoutTileSource[SpaceTimeKey] =
+      TileToLayout[SpaceTimeKey].tileToLayout(self, layout, keyTransformation, resampleMethod)
   }
 
   def apply(path: String): RasterSource = {
