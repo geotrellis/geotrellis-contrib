@@ -17,7 +17,8 @@
 package geotrellis.contrib.vlm.gdal.effect
 
 import geotrellis.contrib.vlm._
-import geotrellis.contrib.vlm.gdal.{DefaultDomain, DomainList, GDALDataPath, GDALDataset, GDALMetadata, GDALWarpOptions}
+import geotrellis.contrib.vlm.gdal.{DefaultDomain, GDALDataPath, GDALDataset, GDALMetadata, GDALMetadataDomain, GDALWarpOptions}
+import geotrellis.contrib.vlm.gdal.GDALDataset.DatasetType
 import geotrellis.contrib.vlm.effect._
 import geotrellis.contrib.vlm.effect.geotiff.UnsafeLift
 import geotrellis.contrib.vlm.avro._
@@ -27,7 +28,6 @@ import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector._
 
-import com.azavea.gdal.GDALWarp
 import cats._
 import cats.syntax.flatMap._
 import cats.syntax.apply._
@@ -40,7 +40,7 @@ case class GDALRasterSource[F[_]: Monad: UnsafeLift](
 ) extends RasterSourceF[F] {
   val path: String = dataPath.path
 
-  lazy val datasetType: F[Int] = options.map(_.datasetType)
+  lazy val datasetType: F[DatasetType] = options.map(_.datasetType)
 
   // current dataset
   @transient lazy val datasetF: F[GDALDataset] =
@@ -51,7 +51,7 @@ case class GDALRasterSource[F[_]: Monad: UnsafeLift](
   lazy val crs: F[CRS] = datasetF.map(_.crs)
 
   // noDataValue from the previous step
-  lazy val noDataValue: F[Option[Double]] = datasetF.map(_.noDataValue(GDALWarp.SOURCE))
+  lazy val noDataValue: F[Option[Double]] = datasetF.map(_.noDataValue(GDALDataset.SOURCE))
 
   lazy val dataType: F[Int] = datasetF.map(_.dataType)
 
@@ -77,9 +77,14 @@ case class GDALRasterSource[F[_]: Monad: UnsafeLift](
   lazy val metadata: F[GDALMetadata] = GDALMetadata(this, datasetF, DefaultDomain :: Nil)
 
   /**
-    * Fetches a metadata from the specified [[DomainList]]
+    * Fetches a metadata from the specified [[GDALMetadataDomain]] list.
     */
-  def metadataForDomain(domainList: DomainList): F[GDALMetadata] = GDALMetadata(this, datasetF, domainList)
+  def metadataForDomain(domainList: List[GDALMetadataDomain]): F[GDALMetadata] = GDALMetadata(this, datasetF, domainList)
+
+  /**
+    * Fetches a metadata from all domains.
+    */
+  def metadataForAllDomains: F[GDALMetadata] = GDALMetadata(this, datasetF)
 
   override def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): F[Iterator[Raster[MultibandTile]]] = {
     UnsafeLift[F].apply {

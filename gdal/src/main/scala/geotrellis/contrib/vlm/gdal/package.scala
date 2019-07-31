@@ -17,8 +17,9 @@
 package geotrellis.contrib.vlm
 
 import geotrellis.contrib.vlm.gdal.config.GDALOptionsConfig
+import geotrellis.contrib.vlm.gdal.GDALDataset.DatasetType
 
 package object gdal extends gdal.Implicits {
-  val acceptableDatasets: Set[Int] = GDALOptionsConfig.getAcceptableDatasets
+  val acceptableDatasets: Set[DatasetType] = GDALOptionsConfig.getAcceptableDatasets
   val numberOfAttempts: Int = GDALOptionsConfig.getNumberOfAttempts
 }

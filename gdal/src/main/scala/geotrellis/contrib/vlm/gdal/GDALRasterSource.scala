@@ -16,6 +16,7 @@
 
 package geotrellis.contrib.vlm.gdal
 
+import geotrellis.contrib.vlm.gdal.GDALDataset.DatasetType
 import geotrellis.contrib.vlm._
 import geotrellis.contrib.vlm.avro._
 import geotrellis.proj4._
@@ -23,8 +24,6 @@ import geotrellis.raster._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector._
-
-import com.azavea.gdal.GDALWarp
 
 case class GDALRasterSource(
   dataPath: GDALDataPath,
@@ -48,7 +47,7 @@ case class GDALRasterSource(
 
   val path: String = dataPath.path
 
-  lazy val datasetType: Int = options.datasetType
+  lazy val datasetType: DatasetType = options.datasetType
 
   // current dataset
   @transient lazy val dataset: GDALDataset =
@@ -61,16 +60,21 @@ case class GDALRasterSource(
   lazy val metadata: GDALMetadata = GDALMetadata(this, dataset, DefaultDomain :: Nil)
 
   /**
-    * Fetches a metadata from the specified [[DomainList]]
+    * Fetches a metadata from the specified [[GDALMetadataDomain]] list.
     */
-  def metadataForDomain(domainList: DomainList): GDALMetadata = GDALMetadata(this, dataset, domainList)
+  def metadataForDomain(domainList: List[GDALMetadataDomain]): GDALMetadata = GDALMetadata(this, dataset, domainList)
+
+  /**
+    * Fetches a metadata from all domains.
+    */
+  def metadataForAllDomains: GDALMetadata = GDALMetadata(this, dataset)
 
   lazy val bandCount: Int = dataset.bandCount
 
   lazy val crs: CRS = dataset.crs
 
   // noDataValue from the previous step
-  lazy val noDataValue: Option[Double] = dataset.noDataValue(GDALWarp.SOURCE)
+  lazy val noDataValue: Option[Double] = dataset.noDataValue(GDALDataset.SOURCE)
 
   lazy val dataType: Int = dataset.dataType
 

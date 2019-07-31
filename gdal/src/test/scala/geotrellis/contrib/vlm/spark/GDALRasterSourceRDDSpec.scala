@@ -28,7 +28,6 @@ import geotrellis.spark.testkit._
 import geotrellis.store.hadoop._
 import geotrellis.layer._
 
-import com.azavea.gdal.GDALWarp
 import cats.effect.{ContextShift, IO}
 import cats.implicits._
 import spire.syntax.cfor._
@@ -221,7 +220,7 @@ class GDALRasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRa
         def rsWithDatasetsTriggered(rs: RasterSource): RasterSource = {
           val brs = rs.asInstanceOf[GDALRasterSource]
           brs.dataset.rasterExtent
-          brs.dataset.rasterExtent(GDALWarp.SOURCE)
+          brs.dataset.rasterExtent(GDALDataset.SOURCE)
           rs
         }
 

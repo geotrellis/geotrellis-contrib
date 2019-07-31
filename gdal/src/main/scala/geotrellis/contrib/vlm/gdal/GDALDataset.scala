@@ -17,6 +17,7 @@
 package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm.gdal.config.GDALOptionsConfig
+import geotrellis.contrib.vlm.gdal.GDALDataset.DatasetType
 import geotrellis.raster._
 import geotrellis.proj4.{CRS, LatLng}
 import geotrellis.vector.Extent
@@ -24,21 +25,23 @@ import geotrellis.vector.Extent
 import com.azavea.gdal.GDALWarp
 
 case class GDALDataset(token: Long) extends AnyVal {
-  def getAllMetadataFlatten(dataset: Int): Map[String, String] =
-    getAllMetadata(dataset).flatMap(_._2)
+  def getAllMetadataFlatten(): Map[String, String] = getAllMetadataFlatten(GDALDataset.SOURCE)
+
+  def getAllMetadataFlatten(datasetType: DatasetType): Map[String, String] =
+    (0 until bandCount(datasetType)).map(getAllMetadata(datasetType, _).flatMap(_._2)).reduce(_ ++ _)
 
   def getAllMetadata(band: Int): Map[GDALMetadataDomain, Map[String, String]] =
-    getAllMetadata(GDALWarp.SOURCE, band)
+    getAllMetadata(GDALDataset.SOURCE, band)
 
-  def getAllMetadata(dataset: Int, band: Int): Map[GDALMetadataDomain, Map[String, String]] =
-    getMetadataDomainList(dataset).map { domain => domain -> getMetadata(domain, band) }.filter(_._2.nonEmpty).toMap
+  def getAllMetadata(datasetType: DatasetType, band: Int): Map[GDALMetadataDomain, Map[String, String]] =
+    getMetadataDomainList(datasetType.value).map { domain => domain -> getMetadata(domain, band) }.filter(_._2.nonEmpty).toMap
 
-  def getMetadataDomainList(band: Int): List[GDALMetadataDomain] = getMetadataDomainList(GDALWarp.SOURCE, band)
+  def getMetadataDomainList(band: Int): List[GDALMetadataDomain] = getMetadataDomainList(GDALDataset.SOURCE, band)
 
   /** https://github.com/OSGeo/gdal/blob/b1c9c12ad373e40b955162b45d704070d4ebf7b0/gdal/doc/source/development/rfc/rfc43_getmetadatadomainlist.rst */
-  def getMetadataDomainList(dataset: Int, band: Int): List[GDALMetadataDomain] = {
+  def getMetadataDomainList(datasetType: DatasetType, band: Int): List[GDALMetadataDomain] = {
     val arr = Array.ofDim[Byte](100, 1 << 10)
-    val returnValue = GDALWarp.get_metadata_domain_list(token, dataset, numberOfAttempts, band, arr)
+    val returnValue = GDALWarp.get_metadata_domain_list(token, datasetType.value, numberOfAttempts, band, arr)
 
     if (returnValue <= 0) {
       val positiveValue = math.abs(returnValue)
@@ -52,16 +55,16 @@ case class GDALDataset(token: Long) extends AnyVal {
   }
 
   def getMetadata(domains: List[GDALMetadataDomain], band: Int): Map[GDALMetadataDomain, Map[String, String]] =
-    getMetadata(GDALWarp.SOURCE, domains, band)
+    getMetadata(GDALDataset.SOURCE, domains, band)
 
-  def getMetadata(dataset: Int, domains: List[GDALMetadataDomain], band: Int): Map[GDALMetadataDomain, Map[String, String]] =
-    domains.map(domain => domain -> getMetadata(dataset, domain, band)).filter(_._2.nonEmpty).toMap
+  def getMetadata(datasetType: DatasetType, domains: List[GDALMetadataDomain], band: Int): Map[GDALMetadataDomain, Map[String, String]] =
+    domains.map(domain => domain -> getMetadata(datasetType, domain, band)).filter(_._2.nonEmpty).toMap
 
-  def getMetadata(domain: GDALMetadataDomain, band: Int): Map[String, String] = getMetadata(GDALWarp.SOURCE, domain, band)
+  def getMetadata(domain: GDALMetadataDomain, band: Int): Map[String, String] = getMetadata(GDALDataset.SOURCE, domain, band)
 
-  def getMetadata(dataset: Int, domain: GDALMetadataDomain, band: Int): Map[String, String] = {
+  def getMetadata(datasetType: DatasetType, domain: GDALMetadataDomain, band: Int): Map[String, String] = {
     val arr = Array.ofDim[Byte](100, 1 << 10)
-    val returnValue = GDALWarp.get_metadata(token, dataset, numberOfAttempts, band, domain.name, arr)
+    val returnValue = GDALWarp.get_metadata(token, datasetType.value, numberOfAttempts, band, domain.name, arr)
 
     if (returnValue <= 0) {
       val positiveValue = math.abs(returnValue)
@@ -83,11 +86,11 @@ case class GDALDataset(token: Long) extends AnyVal {
       }.toMap
   }
 
-  def getMetadataItem(key: String, domain: GDALMetadataDomain, band: Int): String = getMetadataItem(GDALWarp.WARPED, key, domain, band)
+  def getMetadataItem(key: String, domain: GDALMetadataDomain, band: Int): String = getMetadataItem(GDALDataset.WARPED, key, domain, band)
 
-  def getMetadataItem(dataset: Int, key: String, domain: GDALMetadataDomain, band: Int): String = {
+  def getMetadataItem(datasetType: DatasetType, key: String, domain: GDALMetadataDomain, band: Int): String = {
     val arr = Array.ofDim[Byte](1 << 10)
-    val returnValue = GDALWarp.get_metadata_item(token, dataset, numberOfAttempts, band, key, domain.name, arr)
+    val returnValue = GDALWarp.get_metadata_item(token, datasetType.value, numberOfAttempts, band, key, domain.name, arr)
 
     if (returnValue <= 0) {
       val positiveValue = math.abs(returnValue)
@@ -100,12 +103,12 @@ case class GDALDataset(token: Long) extends AnyVal {
     new String(arr, "UTF-8").trim
   }
 
-  def getProjection: Option[String] = getProjection(GDALWarp.WARPED)
+  def getProjection: Option[String] = getProjection(GDALDataset.WARPED)
 
-  def getProjection(dataset: Int): Option[String] = {
-    require(acceptableDatasets contains dataset)
+  def getProjection(datasetType: DatasetType): Option[String] = {
+    require(acceptableDatasets contains datasetType)
     val crs = Array.ofDim[Byte](1 << 10)
-    val returnValue = GDALWarp.get_crs_wkt(token, dataset, numberOfAttempts, crs)
+    val returnValue = GDALWarp.get_crs_wkt(token, datasetType.value, numberOfAttempts, crs)
 
     if (returnValue <= 0) {
       val positiveValue = math.abs(returnValue)
@@ -118,15 +121,15 @@ case class GDALDataset(token: Long) extends AnyVal {
     Some(new String(crs, "UTF-8"))
   }
 
-  def rasterExtent: RasterExtent = rasterExtent(GDALWarp.WARPED)
+  def rasterExtent: RasterExtent = rasterExtent(GDALDataset.WARPED)
 
-  def rasterExtent(dataset: Int): RasterExtent = {
-    require(acceptableDatasets contains dataset)
+  def rasterExtent(datasetType: DatasetType): RasterExtent = {
+    require(acceptableDatasets contains datasetType)
     val transform = Array.ofDim[Double](6)
     val width_height = Array.ofDim[Int](2)
 
-    val transformReturnValue = GDALWarp.get_transform(token, dataset, numberOfAttempts, transform)
-    val dimensionReturnValue = GDALWarp.get_width_height(token, dataset, numberOfAttempts, width_height)
+    val transformReturnValue = GDALWarp.get_transform(token, datasetType.value, numberOfAttempts, transform)
+    val dimensionReturnValue = GDALWarp.get_width_height(token, datasetType.value, numberOfAttempts, width_height)
 
     val returnValue =
       if (transformReturnValue < 0) transformReturnValue
@@ -155,17 +158,17 @@ case class GDALDataset(token: Long) extends AnyVal {
     RasterExtent(e, math.abs(transform(1)), math.abs(transform(5)), width_height(0), width_height(1))
   }
 
-  def resolutions(): List[RasterExtent] = resolutions(GDALWarp.WARPED)
+  def resolutions(): List[RasterExtent] = resolutions(GDALDataset.WARPED)
 
-  def resolutions(dataset: Int): List[RasterExtent] = {
-    require(acceptableDatasets contains dataset)
+  def resolutions(datasetType: DatasetType): List[RasterExtent] = {
+    require(acceptableDatasets contains datasetType)
     val N = 1 << 8
     val widths = Array.ofDim[Int](N)
     val heights = Array.ofDim[Int](N)
-    val extent = this.extent(dataset)
+    val extent = this.extent(datasetType)
 
     val returnValue =
-      GDALWarp.get_overview_widths_heights(token, dataset, numberOfAttempts, 1, widths, heights)
+      GDALWarp.get_overview_widths_heights(token, datasetType.value, numberOfAttempts, 1, widths, heights)
 
     if (returnValue <= 0) {
       val positiveValue = math.abs(returnValue)
@@ -181,20 +184,20 @@ case class GDALDataset(token: Long) extends AnyVal {
     }).toList
   }
 
-  def extent: Extent = extent(GDALWarp.WARPED)
+  def extent: Extent = extent(GDALDataset.WARPED)
 
-  def extent(dataset: Int): Extent = {
-    require(acceptableDatasets contains dataset)
-    this.rasterExtent(dataset).extent
+  def extent(datasetType: DatasetType): Extent = {
+    require(acceptableDatasets contains datasetType)
+    this.rasterExtent(datasetType).extent
   }
 
-  def bandCount: Int = bandCount(GDALWarp.WARPED)
+  def bandCount: Int = bandCount(GDALDataset.WARPED)
 
-  def bandCount(dataset: Int): Int = {
-    require(acceptableDatasets contains dataset)
+  def bandCount(datasetType: DatasetType): Int = {
+    require(acceptableDatasets contains datasetType)
     val count = Array.ofDim[Int](1)
 
-    val returnValue = GDALWarp.get_band_count(token, dataset, numberOfAttempts, count)
+    val returnValue = GDALWarp.get_band_count(token, datasetType.value, numberOfAttempts, count)
 
     if (returnValue <= 0) {
       val positiveValue = math.abs(returnValue)
@@ -207,13 +210,13 @@ case class GDALDataset(token: Long) extends AnyVal {
     count(0)
   }
 
-  def crs: CRS = crs(GDALWarp.WARPED)
+  def crs: CRS = crs(GDALDataset.WARPED)
 
-  def crs(dataset: Int): CRS = {
-    require(acceptableDatasets contains dataset)
+  def crs(datasetType: DatasetType): CRS = {
+    require(acceptableDatasets contains datasetType)
     val crs = Array.ofDim[Byte](1 << 16)
 
-    val returnValue = GDALWarp.get_crs_proj4(token, dataset, numberOfAttempts, crs)
+    val returnValue = GDALWarp.get_crs_proj4(token, datasetType.value, numberOfAttempts, crs)
 
     if (returnValue <= 0) {
       val positiveValue = math.abs(returnValue)
@@ -228,14 +231,14 @@ case class GDALDataset(token: Long) extends AnyVal {
     else LatLng
   }
 
-  def noDataValue: Option[Double] = noDataValue(GDALWarp.WARPED)
+  def noDataValue: Option[Double] = noDataValue(GDALDataset.WARPED)
 
-  def noDataValue(dataset: Int): Option[Double] = {
-    require(acceptableDatasets contains dataset)
+  def noDataValue(datasetType: DatasetType): Option[Double] = {
+    require(acceptableDatasets contains datasetType)
     val nodata = Array.ofDim[Double](1)
     val success = Array.ofDim[Int](1)
 
-    val returnValue = GDALWarp.get_band_nodata(token, dataset, numberOfAttempts, 1, nodata, success)
+    val returnValue = GDALWarp.get_band_nodata(token, datasetType.value, numberOfAttempts, 1, nodata, success)
 
     if (returnValue <= 0) {
       val positiveValue = math.abs(returnValue)
@@ -249,13 +252,13 @@ case class GDALDataset(token: Long) extends AnyVal {
     else Some(nodata(0))
   }
 
-  def dataType: Int = dataType(GDALWarp.WARPED)
+  def dataType: Int = dataType(GDALDataset.WARPED)
 
-  def dataType(dataset: Int): Int = {
-    require(acceptableDatasets contains dataset)
+  def dataType(datasetType: DatasetType): Int = {
+    require(acceptableDatasets contains datasetType)
     val dataType = Array.ofDim[Int](1)
 
-    val returnValue = GDALWarp.get_band_data_type(token, dataset, numberOfAttempts, 1, dataType)
+    val returnValue = GDALWarp.get_band_data_type(token, datasetType.value, numberOfAttempts, 1, dataType)
 
     if (returnValue <= 0) {
       val positiveValue = math.abs(returnValue)
@@ -268,26 +271,26 @@ case class GDALDataset(token: Long) extends AnyVal {
     dataType(0)
   }
 
-  def cellSize: CellSize = cellSize(GDALWarp.WARPED)
+  def cellSize: CellSize = cellSize(GDALDataset.WARPED)
 
-  def cellSize(dataset: Int): CellSize = {
-    require(acceptableDatasets contains dataset)
+  def cellSize(datasetType: DatasetType): CellSize = {
+    require(acceptableDatasets contains datasetType)
     val transform = Array.ofDim[Double](6)
-    GDALWarp.get_transform(token, dataset, numberOfAttempts, transform)
+    GDALWarp.get_transform(token, datasetType.value, numberOfAttempts, transform)
     CellSize(transform(1), transform(5))
   }
 
-  def cellType: CellType = cellType(GDALWarp.WARPED)
+  def cellType: CellType = cellType(GDALDataset.WARPED)
 
-  def cellType(dataset: Int): CellType = {
-    require(acceptableDatasets contains dataset)
-    val nd = noDataValue(dataset)
-    val dt = GDALDataType.intToGDALDataType(this.dataType(dataset))
+  def cellType(datasetType: DatasetType): CellType = {
+    require(acceptableDatasets contains datasetType)
+    val nd = noDataValue(datasetType)
+    val dt = GDALDataType.intToGDALDataType(this.dataType(datasetType))
     val mm = {
       val minmax = Array.ofDim[Double](2)
       val success = Array.ofDim[Int](1)
 
-      val returnValue = GDALWarp.get_band_min_max(token, dataset, numberOfAttempts, 1, true, minmax, success)
+      val returnValue = GDALWarp.get_band_min_max(token, datasetType.value, numberOfAttempts, 1, true, minmax, success)
 
       if (returnValue <= 0) {
         val positiveValue = math.abs(returnValue)
@@ -302,16 +305,16 @@ case class GDALDataset(token: Long) extends AnyVal {
     GDALUtils.dataTypeToCellType(datatype = dt, noDataValue = nd, minMaxValues = mm)
   }
 
-  def readTile(gb: GridBounds[Int] = rasterExtent.gridBounds, band: Int, dataset: Int = GDALWarp.WARPED): Tile = {
-    require(acceptableDatasets contains dataset)
+  def readTile(gb: GridBounds[Int] = rasterExtent.gridBounds, band: Int, datasetType: DatasetType = GDALDataset.WARPED): Tile = {
+    require(acceptableDatasets contains datasetType)
     val GridBounds(xmin, ymin, xmax, ymax) = gb
     val srcWindow: Array[Int] = Array(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1)
     val dstWindow: Array[Int] = Array(srcWindow(2), srcWindow(3))
-    val ct = this.cellType(dataset)
-    val dt = this.dataType(dataset)
+    val ct = this.cellType(datasetType)
+    val dt = this.dataType(datasetType)
     val bytes = Array.ofDim[Byte](dstWindow(0) * dstWindow(1) * ct.bytes)
 
-    val returnValue = GDALWarp.get_data(token, dataset, numberOfAttempts, srcWindow, dstWindow, band, dt, bytes)
+    val returnValue = GDALWarp.get_data(token, datasetType.value, numberOfAttempts, srcWindow, dstWindow, band, dt, bytes)
 
     if (returnValue <= 0) {
       val positiveValue = math.abs(returnValue)
@@ -324,14 +327,21 @@ case class GDALDataset(token: Long) extends AnyVal {
     ArrayTile.fromBytes(bytes, ct, dstWindow(0), dstWindow(1))
   }
 
-  def readMultibandTile(gb: GridBounds[Int] = rasterExtent.gridBounds, bands: Seq[Int] = 1 to bandCount, dataset: Int = GDALWarp.WARPED): MultibandTile =
-    MultibandTile(bands.map { readTile(gb, _, dataset) })
+  def readMultibandTile(gb: GridBounds[Int] = rasterExtent.gridBounds, bands: Seq[Int] = 1 to bandCount, datasetType: DatasetType = GDALDataset.WARPED): MultibandTile =
+    MultibandTile(bands.map { readTile(gb, _, datasetType) })
 
-  def readMultibandRaster(gb: GridBounds[Int] = rasterExtent.gridBounds, bands: Seq[Int] = 1 to bandCount, dataset: Int = GDALWarp.WARPED): Raster[MultibandTile] =
-    Raster(readMultibandTile(gb, bands, dataset), rasterExtent.rasterExtentFor(gb).extent)
+  def readMultibandRaster(gb: GridBounds[Int] = rasterExtent.gridBounds, bands: Seq[Int] = 1 to bandCount, datasetType: DatasetType = GDALDataset.WARPED): Raster[MultibandTile] =
+    Raster(readMultibandTile(gb, bands, datasetType), rasterExtent.rasterExtentFor(gb).extent)
 }
 
 object GDALDataset {
+  /** ADTs to encode the Dataset source type. */
+  sealed trait DatasetType { def value: Int }
+  /** [[SOURCE]] allows to access the source dataset of the warped dataset. */
+  case object SOURCE extends DatasetType { val value: Int = GDALWarp.SOURCE }
+  /** [[WARPED]] allows to access the warped dataset. */
+  case object WARPED extends DatasetType { val value: Int = GDALWarp.WARPED }
+
   GDALOptionsConfig.setOptions
   def apply(uri: String, options: Array[String]): GDALDataset = GDALDataset(GDALWarp.get_token(uri, options))
   def apply(uri: String): GDALDataset = apply(uri, Array())

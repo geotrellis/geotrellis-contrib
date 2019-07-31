@@ -20,9 +20,9 @@ import geotrellis.contrib.vlm.{RasterMetadata, RasterSourceMetadata}
 import geotrellis.contrib.vlm.effect.RasterSourceF
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellType, GridExtent}
+
 import cats.Monad
 import cats.syntax.apply._
-import com.azavea.gdal.GDALWarp
 
 case class GDALMetadata(
   crs: CRS,
@@ -38,30 +38,34 @@ case class GDALMetadata(
   /** Returns the GDAL metadata merged into a single metadata domain. */
   def attributes: Map[String, String] = baseMetadata.flatMap(_._2)
   /** Returns the GDAL per band metadata merged into a single metadata domain. */
-  def attributesForBand(band: Int): Map[String, String] = bandsMetadata.map(_.flatMap(_._2)).lift(band).getOrElse(Map())
+  def attributesForBand(band: Int): Map[String, String] = bandsMetadata.map(_.flatMap(_._2)).lift(band).getOrElse(Map.empty)
 }
 
 object GDALMetadata {
-  def apply(rasterSource: RasterMetadata, dataset: GDALDataset, domains: GDALMetadataDomainList): GDALMetadata = {
+  def apply(rasterSource: RasterMetadata, dataset: GDALDataset, domains: List[GDALMetadataDomain]): GDALMetadata = {
     domains match {
-      case DomainList(domains) if domains.isEmpty =>
+      case Nil =>
         GDALMetadata(rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions)
-      case DomainList(domains) =>
+      case _ =>
         GDALMetadata(
           rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions,
-          dataset.getMetadata(GDALWarp.SOURCE, domains, 0),
-          (1 until dataset.bandCount).toList.map(dataset.getMetadata(GDALWarp.SOURCE, domains, _))
-        )
-      case FullDomainList =>
-        GDALMetadata(
-          rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions,
-          dataset.getAllMetadata(GDALWarp.SOURCE, 0),
-          (1 until dataset.bandCount).toList.map(dataset.getAllMetadata(GDALWarp.SOURCE, _))
+          dataset.getMetadata(GDALDataset.SOURCE, domains, 0),
+          (1 until dataset.bandCount).toList.map(dataset.getMetadata(GDALDataset.SOURCE, domains, _))
         )
     }
   }
 
-  def apply[F[_] : Monad](rasterSource: RasterSourceF[F], dataset: F[GDALDataset], domains: GDALMetadataDomainList): F[GDALMetadata] = {
-    (rasterSource: F[RasterMetadata], dataset).mapN(GDALMetadata.apply(_, _, domains))
+  def apply(rasterSource: RasterMetadata, dataset: GDALDataset): GDALMetadata = {
+    GDALMetadata(
+      rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions,
+      dataset.getAllMetadata(GDALDataset.SOURCE, 0),
+      (1 until dataset.bandCount).toList.map(dataset.getAllMetadata(GDALDataset.SOURCE, _))
+    )
   }
+
+  def apply[F[_] : Monad](rasterSource: RasterSourceF[F], dataset: F[GDALDataset], domains: List[GDALMetadataDomain]): F[GDALMetadata] =
+    (rasterSource: F[RasterMetadata], dataset).mapN(GDALMetadata.apply(_, _, domains))
+
+  def apply[F[_] : Monad](rasterSource: RasterSourceF[F], dataset: F[GDALDataset]): F[GDALMetadata] =
+    (rasterSource: F[RasterMetadata], dataset).mapN(GDALMetadata.apply)
 }
