@@ -25,7 +25,6 @@ import geotrellis.store._
 import geotrellis.layer._
 import geotrellis.vector._
 
-
 case class Layer(id: LayerId, metadata: TileLayerMetadata[SpatialKey], bandCount: Int) {
   /** GridExtent of the data pixels in the layer */
   def gridExtent: GridExtent[Long] = metadata.layout.createAlignedGridExtent(metadata.extent)
@@ -62,27 +61,35 @@ class GeotrellisRasterSource(
   lazy val reader = CollectionLayerReader(attributeStore, dataPath.path)
 
   // read metadata directly instead of searching sourceLayers to avoid unneeded reads
-  lazy val metadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
+  lazy val layerMetadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
 
-  lazy val gridExtent: GridExtent[Long] = metadata.layout.createAlignedGridExtent(metadata.extent)
+  lazy val gridExtent: GridExtent[Long] = layerMetadata.layout.createAlignedGridExtent(layerMetadata.extent)
 
-  def crs: CRS = metadata.crs
+  def crs: CRS = layerMetadata.crs
 
-  def cellType: CellType = dstCellType.getOrElse(metadata.cellType)
+  def cellType: CellType = dstCellType.getOrElse(layerMetadata.cellType)
 
   // reference to this will fully initilze the sourceLayers stream
   lazy val resolutions: List[GridExtent[Long]] = sourceLayers.map(_.gridExtent).toList
 
+  def metadata: GeoTrellisMetadata = GeoTrellisMetadata(
+    this, Map(
+      "catalogURI" -> dataPath.path,
+      "layerName"  -> layerId.name,
+      "zoomLevel"  -> layerId.zoom.toString,
+      "bandCount"  -> bandCount.toString
+    )
+  )
+
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
-    GeotrellisRasterSource.read(reader, layerId, metadata, extent, bands).map { convertRaster }
+    GeotrellisRasterSource.read(reader, layerId, layerMetadata, extent, bands).map(convertRaster)
   }
 
-  def read(bounds: GridBounds[Long], bands: Seq[Int]): Option[Raster[MultibandTile]] = {
+  def read(bounds: GridBounds[Long], bands: Seq[Int]): Option[Raster[MultibandTile]] =
     bounds
       .intersection(this.gridBounds)
       .map(gridExtent.extentFor(_).buffer(- cellSize.width / 2, - cellSize.height / 2))
       .flatMap(read(_, bands))
-  }
 
   override def readExtents(extents: Traversable[Extent], bands: Seq[Int]): Iterator[Raster[MultibandTile]] =
     extents.toIterator.flatMap(read(_, bands))

@@ -69,6 +69,15 @@ class GeotrellisResampleRasterSource(
 
   lazy val resolutions: List[GridExtent[Long]] = sourceLayers.map(_.gridExtent).toList
 
+  def metadata: GeoTrellisMetadata = GeoTrellisMetadata(
+    this, Map(
+      "catalogURI" -> dataPath.path,
+      "layerName"  -> layerId.name,
+      "zoomLevel"  -> layerId.zoom.toString,
+      "bandCount"  -> bandCount.toString
+    )
+  )
+
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val tileBounds = sourceLayer.metadata.mapTransform.extentToBounds(extent)
     def msg = s"\u001b[32mread($extent)\u001b[0m = ${dataPath.toString} ${sourceLayer.id} ${sourceLayer.metadata.cellSize} @ ${sourceLayer.metadata.crs} TO $cellSize -- reading ${tileBounds.size} tiles"

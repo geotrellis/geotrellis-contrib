@@ -16,6 +16,7 @@
 
 package geotrellis.contrib.vlm.gdal
 
+import geotrellis.contrib.vlm.gdal.GDALDataset.DatasetType
 import geotrellis.contrib.vlm._
 import geotrellis.contrib.vlm.avro._
 import geotrellis.proj4._
@@ -24,27 +25,56 @@ import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector._
 
-import com.azavea.gdal.GDALWarp
-
 case class GDALRasterSource(
   dataPath: GDALDataPath,
   options: GDALWarpOptions = GDALWarpOptions.EMPTY,
   private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource {
+
+  /**
+    * All the information received from the JNI side should be cached on the JVM side,
+    * to minimize JNI calls. Too aggressive JNI functions usage can lead to a significant performance regression
+    * as the result of the often memory copy.
+    *
+    * For the each JNI call the proxy function will send arguments into the C bindings,
+    * on the C side the result would be computed and sent to the JVM side (memory copy happened two times).
+    *
+    * Since it would happen for each call, much safer and faster would be to remember once computed value in a JVM memory
+    * and interact only with it: it will allow to minimize JNI calls, speed up function calls and will allow to memoize some
+    * potentially sensitive data.
+    *
+    */
+
   val path: String = dataPath.path
 
-  lazy val datasetType: Int = options.datasetType
+  lazy val datasetType: DatasetType = options.datasetType
 
   // current dataset
   @transient lazy val dataset: GDALDataset =
     GDALDataset(path, options.toWarpOptionsList.toArray)
+
+  /**
+    * Fetches a default metadata from the default domain.
+    * If there is a need in some custom domain, use the metadataForDomain function.
+    */
+  lazy val metadata: GDALMetadata = GDALMetadata(this, dataset, DefaultDomain :: Nil)
+
+  /**
+    * Fetches a metadata from the specified [[GDALMetadataDomain]] list.
+    */
+  def metadataForDomain(domainList: List[GDALMetadataDomain]): GDALMetadata = GDALMetadata(this, dataset, domainList)
+
+  /**
+    * Fetches a metadata from all domains.
+    */
+  def metadataForAllDomains: GDALMetadata = GDALMetadata(this, dataset)
 
   lazy val bandCount: Int = dataset.bandCount
 
   lazy val crs: CRS = dataset.crs
 
   // noDataValue from the previous step
-  lazy val noDataValue: Option[Double] = dataset.noDataValue(GDALWarp.SOURCE)
+  lazy val noDataValue: Option[Double] = dataset.noDataValue(GDALDataset.SOURCE)
 
   lazy val dataType: Int = dataset.dataType
 

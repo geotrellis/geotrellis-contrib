@@ -18,21 +18,17 @@ package geotrellis.contrib.vlm.gdal
 
 import geotrellis.contrib.vlm.geotiff.GeoTiffRasterSource
 import geotrellis.contrib.vlm._
-import geotrellis.proj4.WebMercator
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.resample._
 import geotrellis.raster.testkit._
-import geotrellis.raster.reproject.Reproject
 import geotrellis.vector._
 import geotrellis.spark._
-import geotrellis.spark.tiling._
 import geotrellis.layer._
 import geotrellis.util._
 
 import cats.implicits._
 import org.scalatest._
-import java.net.MalformedURLException
 
 class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRasterMatchers with GivenWhenThen {
 
@@ -170,6 +166,11 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
           }
         }
       }
+    }
+
+    it("should read the same metadata as GeoTiffRasterSource") {
+      lazy val tsource = GeoTiffRasterSource(uri)
+      source.metadata.attributes.mapValues(_.toUpperCase) shouldBe tsource.metadata.attributes.mapValues(_.toUpperCase)
     }
   }
 }

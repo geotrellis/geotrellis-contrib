@@ -16,10 +16,14 @@
 
 package geotrellis.contrib.vlm
 
-import geotrellis.contrib.vlm.gdal.config.GDALOptionsConfig
-import geotrellis.contrib.vlm.gdal.GDALDataset.DatasetType
-
-package object gdal extends gdal.Implicits {
-  val acceptableDatasets: Set[DatasetType] = GDALOptionsConfig.getAcceptableDatasets
-  val numberOfAttempts: Int = GDALOptionsConfig.getNumberOfAttempts
+trait RasterSourceMetadata extends RasterMetadata {
+  /**
+    * Return the "base" metadata, usually it is a zero band metadata,
+    * a metadata that is valid for the entire source and for the zero band
+    */
+  def attributes: Map[String, String]
+  /**
+    * Return a per band metadata
+    */
+  def attributesForBand(band: Int): Map[String, String]
 }

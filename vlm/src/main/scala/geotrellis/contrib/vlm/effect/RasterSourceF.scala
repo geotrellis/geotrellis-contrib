@@ -32,20 +32,8 @@ import cats.syntax.functor._
 import cats.syntax.apply._
 import cats.instances.list._
 
-abstract class RasterSourceF[F[_]: Monad] extends Serializable {
+abstract class RasterSourceF[F[_]: Monad] extends RasterSourceMetadataF[F] with Serializable {
   def dataPath: DataPath
-  def crs: F[CRS]
-  def bandCount: F[Int]
-  def cellType: F[CellType]
-  def size: F[Long] = (cols, rows).mapN (_ * _)
-  def dimensions: F[(Long, Long)] = (cols, rows).mapN((c, r) => (c, r))
-  def gridBounds: F[GridBounds[Long]] = (cols, rows).mapN { case (c, r) => GridBounds(0, 0, c - 1, r - 1) }
-  def cellSize: F[CellSize] = gridExtent.map(_.cellSize)
-  def gridExtent: F[GridExtent[Long]]
-  def resolutions: F[List[GridExtent[Long]]]
-  def extent: F[Extent] = gridExtent.map(_.extent)
-  def cols: F[Long] = gridExtent.map(_.cols)
-  def rows: F[Long] = gridExtent.map(_.rows)
 
   private[vlm] def targetCellType: Option[TargetCellType]
 

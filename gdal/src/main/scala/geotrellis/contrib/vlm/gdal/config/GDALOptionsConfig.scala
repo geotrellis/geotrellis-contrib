@@ -17,11 +17,13 @@
 package geotrellis.contrib.vlm.gdal.config
 
 import com.azavea.gdal.GDALWarp
+import geotrellis.contrib.vlm.gdal.GDALDataset
+import geotrellis.contrib.vlm.gdal.GDALDataset.DatasetType
 import pureconfig.generic.auto._
 
 import scala.collection.concurrent.TrieMap
 
-case class GDALOptionsConfig(options: Map[String, String] = Map(), acceptableDatasets: List[String] = List("SOURCE", "WARPED"), numberOfAttempts: Int = 1 << 20) {
+case class GDALOptionsConfig(options: Map[String, String] = Map.empty, acceptableDatasets: List[String] = List("SOURCE", "WARPED"), numberOfAttempts: Int = 1 << 20) {
   def set: Unit = {
     // register first config options from the conf file
     options.foreach { case (key, value) => GDALWarp.set_config_option(key, value) }
@@ -29,13 +31,13 @@ case class GDALOptionsConfig(options: Map[String, String] = Map(), acceptableDat
     GDALOptionsConfig.setRegistryOptions
   }
 
-  def getAcceptableDatasets: Set[Int] = {
+  def getAcceptableDatasets: Set[DatasetType] = {
     val res = acceptableDatasets.collect {
-      case "SOURCE" => GDALWarp.SOURCE
-      case "WARPED" => GDALWarp.WARPED
+      case "SOURCE" => GDALDataset.SOURCE
+      case "WARPED" => GDALDataset.WARPED
     }
 
-    if(res.nonEmpty) res.toSet else Set(GDALWarp.SOURCE, GDALWarp.WARPED)
+    if(res.nonEmpty) res.toSet else Set(GDALDataset.SOURCE, GDALDataset.WARPED)
   }
 
   def getNumberOfAttempts: Int = if(numberOfAttempts > 0) numberOfAttempts else 1 << 20

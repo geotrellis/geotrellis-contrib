@@ -42,41 +42,11 @@ import java.util.ServiceLoader
   * @groupdesc reproject Functions to resample raster data in target projection.
   * @groupprio reproject 2
   */
-trait RasterSource extends CellGrid[Long] with Serializable {
+trait RasterSource extends CellGrid[Long] with RasterMetadata with Serializable {
   def dataPath: DataPath
-  def crs: CRS
-  def bandCount: Int
-  def cellType: CellType
 
-  /** Cell size at which rasters will be read when using this [[RasterSource]]
-    *
-    * Note: some re-sampling of underlying raster data may be required to produce this cell size.
-    */
-  def cellSize: CellSize = gridExtent.cellSize
-
-  def gridExtent: GridExtent[Long]
-
-  /** All available resolutions for this raster source
-    *
-    * <li> For base [[RasterSource]] instance this will be resolutions of available overviews.
-    * <li> For reprojected [[RasterSource]] these resolutions represent an estimate where
-    *      each cell in target CRS has ''approximately'' the same geographic coverage as a cell in the source CRS.
-    *
-    * When reading raster data the underlying implementation will have to sample from one of these resolutions.
-    * It is possible that a read request for a small bounding box will results in significant IO request when the target
-    * cell size is much larger than closest available resolution.
-    *
-    * __Note__: It is expected but not guaranteed that the extent each [[RasterExtent]] in this list will be the same.
-    */
-  def resolutions: List[GridExtent[Long]]
-
-  def extent: Extent = gridExtent.extent
-
-  /** Raster pixel column count */
-  def cols: Long = gridExtent.cols
-
-  /** Raster pixel row count */
-  def rows: Long = gridExtent.rows
+  /** All available RasterSource metadata */
+  def metadata: RasterSourceMetadata
 
   protected def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): RasterSource
 

@@ -56,6 +56,15 @@ class GeotrellisReprojectRasterSource(
 
   def cellType: CellType = dstCellType.getOrElse(sourceLayer.metadata.cellType)
 
+  def metadata: GeoTrellisMetadata = GeoTrellisMetadata(
+    this, Map(
+      "catalogURI" -> dataPath.path,
+      "layerName"  -> layerId.name,
+      "zoomLevel"  -> layerId.zoom.toString,
+      "bandCount"  -> bandCount.toString
+    )
+  )
+
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val transform = Transform(sourceLayer.metadata.crs, crs)
     val backTransform = Transform(crs, sourceLayer.metadata.crs)

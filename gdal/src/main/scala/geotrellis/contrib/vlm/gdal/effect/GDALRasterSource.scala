@@ -17,7 +17,8 @@
 package geotrellis.contrib.vlm.gdal.effect
 
 import geotrellis.contrib.vlm._
-import geotrellis.contrib.vlm.gdal.{GDALDataPath, GDALDataset, GDALWarpOptions}
+import geotrellis.contrib.vlm.gdal.{DefaultDomain, GDALDataPath, GDALDataset, GDALMetadata, GDALMetadataDomain, GDALWarpOptions}
+import geotrellis.contrib.vlm.gdal.GDALDataset.DatasetType
 import geotrellis.contrib.vlm.effect._
 import geotrellis.contrib.vlm.effect.geotiff.UnsafeLift
 import geotrellis.contrib.vlm.avro._
@@ -26,7 +27,6 @@ import geotrellis.raster._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector._
-import com.azavea.gdal.GDALWarp
 
 import cats._
 import cats.syntax.flatMap._
@@ -36,12 +36,11 @@ import cats.syntax.functor._
 case class GDALRasterSource[F[_]: Monad: UnsafeLift](
   dataPath: GDALDataPath,
   options: F[GDALWarpOptions] = GDALWarpOptions.EMPTY,
-  private[vlm] val targetCellType: Option[TargetCellType] = None,
-  private[vlm] val domains: List[String] = List("") // by default we read only the minimum amount of raster tags
+  private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSourceF[F] {
   val path: String = dataPath.path
 
-  lazy val datasetType: F[Int] = options.map(_.datasetType)
+  lazy val datasetType: F[DatasetType] = options.map(_.datasetType)
 
   // current dataset
   @transient lazy val datasetF: F[GDALDataset] =
@@ -52,7 +51,7 @@ case class GDALRasterSource[F[_]: Monad: UnsafeLift](
   lazy val crs: F[CRS] = datasetF.map(_.crs)
 
   // noDataValue from the previous step
-  lazy val noDataValue: F[Option[Double]] = datasetF.map(_.noDataValue(GDALWarp.SOURCE))
+  lazy val noDataValue: F[Option[Double]] = datasetF.map(_.noDataValue(GDALDataset.SOURCE))
 
   lazy val dataType: F[Int] = datasetF.map(_.dataType)
 
@@ -70,6 +69,22 @@ case class GDALRasterSource[F[_]: Monad: UnsafeLift](
     */
   lazy val resolutions: F[List[GridExtent[Long]]] =
     (datasetF, datasetType).mapN { case (dataset, datasetType) => dataset.resolutions(datasetType).map(_.toGridType[Long]) }
+
+  /**
+    * Fetches a default metadata from the default domain.
+    * If there is a need in some custom domain, use the metadataForDomain function.
+    */
+  lazy val metadata: F[GDALMetadata] = GDALMetadata(this, datasetF, DefaultDomain :: Nil)
+
+  /**
+    * Fetches a metadata from the specified [[GDALMetadataDomain]] list.
+    */
+  def metadataForDomain(domainList: List[GDALMetadataDomain]): F[GDALMetadata] = GDALMetadata(this, datasetF, domainList)
+
+  /**
+    * Fetches a metadata from all domains.
+    */
+  def metadataForAllDomains: F[GDALMetadata] = GDALMetadata(this, datasetF)
 
   override def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): F[Iterator[Raster[MultibandTile]]] = {
     UnsafeLift[F].apply {
