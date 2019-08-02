@@ -205,10 +205,10 @@ object RasterSource {
   final class TileToLayoutOps(val self: RasterSource) {
     def tileToLayout[K: TileToLayout](
       layout: LayoutDefinition,
-      keyTransformation: (RasterSource, SpatialKey) => K,
+      keyTransform: (RasterSource, SpatialKey) => K,
       resampleMethod: ResampleMethod = NearestNeighbor
     ): LayoutTileSource[K] =
-      TileToLayout[K].tileToLayout(self, layout, keyTransformation, resampleMethod)
+      TileToLayout[K].tileToLayout(self, layout, keyTransform, resampleMethod)
 
     def tileToLayoutSpatial(
       layout: LayoutDefinition,
@@ -218,10 +218,10 @@ object RasterSource {
 
     def tileToLayoutTemporal(
       layout: LayoutDefinition,
-      keyTransformation: (RasterSource, SpatialKey) => SpaceTimeKey,
+      keyTransform: (RasterSource, SpatialKey) => SpaceTimeKey,
       resampleMethod: ResampleMethod = NearestNeighbor
     ): LayoutTileSource[SpaceTimeKey] =
-      TileToLayout[SpaceTimeKey].tileToLayout(self, layout, keyTransformation, resampleMethod)
+      TileToLayout[SpaceTimeKey].tileToLayout(self, layout, keyTransform, resampleMethod)
   }
 
   def apply(path: String): RasterSource = {

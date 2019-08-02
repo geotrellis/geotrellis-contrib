@@ -147,7 +147,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
     val LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
     val contextRDD: MultibandTileLayerRDD[SpaceTimeKey] =
-      RasterSourceRDD.tiledLayerRDDTemporal(
+      RasterSourceRDD.tiledLayerRDD(
         sourceRDD, layout, (rs, key) => SpaceTimeKey(
           key,
           {

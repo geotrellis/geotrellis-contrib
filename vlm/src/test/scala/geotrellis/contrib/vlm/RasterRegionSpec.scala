@@ -65,14 +65,14 @@ class RasterRegionSpec extends FunSpec with TestEnvironment with BetterRasterMat
 
       val refRdd = srcRdd.flatMap { src =>
         // too easy? whats missing
-        val tileSource = LayoutTileSource(src, layout)
+        val tileSource = LayoutTileSource.spatial(src, layout)
         tileSource.keys.toIterator.map { key => (key, tileSource.rasterRegionForKey(key).get) }
       }
 
       // TADA! Jobs done.
       ContextRDD(refRdd, tlm)
       // NEXT:
-      // - coembine the bands to complete the test
+      // - combine the bands to complete the test
       // - make an app for this and run it againt WSEL rasters
       // - run aup on EMR, figure out how to set AWS secret keys?
     }

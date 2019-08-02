@@ -25,11 +25,12 @@ import geotrellis.util._
   *
   * @param source raster source that can be queried by bounding box
   * @param layout definition of a tile grid over the pixel grid
+  * @param keyTransform defines the key transformation you want to apply to the spatially tiled data
   */
 class LayoutTileSource[K: SpatialComponent](
   val source: RasterSource,
   val layout: LayoutDefinition,
-  val keyTransformation: (RasterSource, SpatialKey) => K
+  val keyTransform: (RasterSource, SpatialKey) => K
 ) {
   LayoutTileSource.requireGridAligned(source.gridExtent, layout)
 
@@ -153,7 +154,7 @@ class LayoutTileSource[K: SpatialComponent](
           intersection.ymax + buffY
         )
 
-        layout.mapTransform.keysForGeometry(buffered.toPolygon).map(keyTransformation(source, _))
+        layout.mapTransform.keysForGeometry(buffered.toPolygon).map(keyTransform(source, _))
       case None =>
         Set.empty[K]
     }
@@ -170,11 +171,11 @@ class LayoutTileSource[K: SpatialComponent](
 }
 
 object LayoutTileSource {
-  def apply(source: RasterSource, layout: LayoutDefinition, keyTransformation: (RasterSource, SpatialKey) => SpatialKey = (_, k) => k): LayoutTileSource[SpatialKey] =
-    new LayoutTileSource(source, layout, keyTransformation)
+  def spatial(source: RasterSource, layout: LayoutDefinition, keyTransform: (RasterSource, SpatialKey) => SpatialKey = (_, k) => k): LayoutTileSource[SpatialKey] =
+    new LayoutTileSource(source, layout, keyTransform)
 
-  def temporal(source: RasterSource, layout: LayoutDefinition, keyTransformation: (RasterSource, SpatialKey) => SpaceTimeKey): LayoutTileSource[SpaceTimeKey] =
-    new LayoutTileSource(source, layout, keyTransformation)
+  def temporal(source: RasterSource, layout: LayoutDefinition, keyTransform: (RasterSource, SpatialKey) => SpaceTimeKey): LayoutTileSource[SpaceTimeKey] =
+    new LayoutTileSource(source, layout, keyTransform)
 
   private def requireGridAligned(a: GridExtent[Long], b: GridExtent[Long]): Unit = {
     import org.scalactic._

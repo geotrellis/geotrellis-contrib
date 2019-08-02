@@ -29,31 +29,31 @@ trait TileToLayout[K] extends Serializable {
   def tileToLayout(
     rs: RasterSource,
     layout: LayoutDefinition,
-    keyTransformation: (RasterSource, SpatialKey) => K,
+    keyTransform: (RasterSource, SpatialKey) => K,
     resampleMethod: ResampleMethod = NearestNeighbor
   ): LayoutTileSource[K]
 }
 
 object TileToLayout {
-  def apply[K: TileToLayout] = implicitly[TileToLayout[K]]
+  def apply[K: TileToLayout]: TileToLayout[K] = implicitly
 
   implicit val spatialTileToLayout = new TileToLayout[SpatialKey] {
     def tileToLayout(
       rs: RasterSource,
       layout: LayoutDefinition,
-      keyTransformation: (RasterSource, SpatialKey) => SpatialKey = (_, sk) => sk,
+      keyTransform: (RasterSource, SpatialKey) => SpatialKey = (_, sk) => sk,
       resampleMethod: ResampleMethod = NearestNeighbor
      ): LayoutTileSource[SpatialKey] =
-      LayoutTileSource(rs.resampleToGrid(layout, resampleMethod), layout, keyTransformation)
+      LayoutTileSource.spatial(rs.resampleToGrid(layout, resampleMethod), layout, keyTransform)
   }
 
   implicit val spaceTimeTileToLayout = new TileToLayout[SpaceTimeKey] {
     def tileToLayout(
       rs: RasterSource,
       layout: LayoutDefinition,
-      keyTransformation: (RasterSource, SpatialKey) => SpaceTimeKey,
+      keyTransform: (RasterSource, SpatialKey) => SpaceTimeKey,
       resampleMethod: ResampleMethod = NearestNeighbor
     ): LayoutTileSource[SpaceTimeKey] =
-      LayoutTileSource.temporal(rs.resampleToGrid(layout, resampleMethod), layout, keyTransformation)
+      LayoutTileSource.temporal(rs.resampleToGrid(layout, resampleMethod), layout, keyTransform)
   }
 }
