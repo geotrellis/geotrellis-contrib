@@ -16,18 +16,19 @@
 
 package geotrellis.contrib.vlm.spark
 
-import java.time.{ZoneOffset, ZonedDateTime}
-
 import geotrellis.contrib.vlm.geotiff._
 import geotrellis.contrib.vlm.{BetterRasterMatchers, GlobalLayout, RasterRegion, RasterSource, Resource, TargetGrid}
 import geotrellis.proj4._
 import geotrellis.raster._
-import geotrellis.raster.resample.{Bilinear, NearestNeighbor}
+import geotrellis.raster.resample.Bilinear
 import geotrellis.spark._
 import geotrellis.spark.testkit._
 import geotrellis.layer._
+
 import org.apache.spark.rdd._
 import org.scalatest._
+
+import java.time.{ZoneOffset, ZonedDateTime}
 
 class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
 
@@ -41,7 +42,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
           .map(uri => GeoTiffRasterSource(uri): RasterSource)
           .cache()
 
-      val metadata = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
+      val metadata = RasterSummary.fromRDD(sourceRDD)
       val rasterSource = GeoTiffRasterSource(inputPath)
 
       rasterSource.crs shouldBe metadata.crs
@@ -64,11 +65,11 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
           .map(uri => GeoTiffRasterSource(uri).reproject(targetCRS, method = method): RasterSource)
           .cache()
 
-      val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
+      val summary = RasterSummary.fromRDD(sourceRDD)
       val layoutLevel @ LayoutLevel(zoom, layout) = summary.levelFor(layoutScheme)
-      val tiledLayoutSource = sourceRDD.map(_.tileToLayoutSpatial(layout, method))
+      val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
 
-      val summaryCollected = RasterSummary.fromRDD[RasterSource, Long](tiledLayoutSource.map(_.source))
+      val summaryCollected = RasterSummary.fromRDD(tiledLayoutSource.map(_.source))
       val summaryResampled = summary.resample(TargetGrid(layout))
 
       val metadata = summary.toTileLayerMetadata(layoutLevel)
@@ -106,9 +107,9 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
         .cache()
 
     // collect raster summary
-    val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
+    val summary = RasterSummary.fromRDD(sourceRDD)
     val layoutLevel @ LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
-    val tiledLayoutSource = sourceRDD.map(_.tileToLayoutSpatial(layout, method))
+    val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
 
     // Create RDD of references, references contain information how to read rasters
     val rasterRefRdd: RDD[(SpatialKey, RasterRegion)] = tiledLayoutSource.flatMap(_.keyedRasterRegions())
@@ -143,21 +144,19 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
         .map(uri => GeoTiffRasterSource(uri).reproject(targetCRS, method = method): RasterSource)
         .cache()
 
+    // function to lift SpatialKeys to SpaceTimeKeys during the metadata collection and during tiling
+    def keyTransform: (RasterSource, SpatialKey) => SpaceTimeKey = (rs, key) => SpaceTimeKey(key, {
+      val date = raw"(\d{4})-(\d{2})-(\d{2})".r.findFirstMatchIn(rs.dataPath.toString)
+      val Some((y, m, d)) = date.map { d => (d.group(1).toInt, d.group(2).toInt, d.group(3).toInt) }
+
+      TemporalKey(ZonedDateTime.of(y, m, d, 0, 0, 0, 0, ZoneOffset.UTC).toInstant.toEpochMilli)
+    })
+
     // collect raster summary
-    val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
+    val summary = RasterSummary.fromRDD(sourceRDD, keyTransform)
     val LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
     val contextRDD: MultibandTileLayerRDD[SpaceTimeKey] =
-      RasterSourceRDD.tiledLayerRDD(
-        sourceRDD, layout, (rs, key) => SpaceTimeKey(
-          key,
-          {
-            val date = raw"(\d{4})-(\d{2})-(\d{2})".r.findFirstMatchIn(rs.dataPath.toString)
-            val Some((y, m, d)) = date.map { d => (d.group(1).toInt, d.group(2).toInt, d.group(3).toInt) }
-
-            TemporalKey(ZonedDateTime.of(y, m, d, 0, 0, 0, 0, ZoneOffset.UTC).toInstant.toEpochMilli)
-          }
-        ), rasterSummary = Some(summary)
-      )
+      RasterSourceRDD.tiledLayerRDD(sourceRDD, layout, keyTransform, rasterSummary = Some(summary))
 
     val (minDate, maxDate) = expectedDates.head -> expectedDates.last
 

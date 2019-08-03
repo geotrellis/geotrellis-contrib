@@ -223,7 +223,7 @@ class GDALRasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRa
             rsWithDatasetsTriggered(
               rsWithDatasetsTriggered(GDALRasterSource(filePathByIndex(i)))
                 .reprojectToGrid(targetCRS, layout)
-            ).tileToLayoutSpatial(layout)
+            ).tileToLayout(layout)
           )
 
         /** Simulate possible RF backsplash calls */

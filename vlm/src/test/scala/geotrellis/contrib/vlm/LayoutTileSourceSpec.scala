@@ -118,7 +118,7 @@ class LayoutTileSourceSpec extends FunSpec with RasterMatchers with BetterRaster
         val result =
           GeoTiffRasterSource(path)
             .reproject(WebMercator)
-            .tileToLayoutSpatial(layoutDefinition)
+            .tileToLayout(layoutDefinition)
             .read(SpatialKey(c, r), subsetBands)
             .get
 

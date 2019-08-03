@@ -171,11 +171,14 @@ class LayoutTileSource[K: SpatialComponent](
 }
 
 object LayoutTileSource {
-  def spatial(source: RasterSource, layout: LayoutDefinition, keyTransform: (RasterSource, SpatialKey) => SpatialKey = (_, k) => k): LayoutTileSource[SpatialKey] =
+  def apply[K: SpatialComponent](source: RasterSource, layout: LayoutDefinition, keyTransform: (RasterSource, SpatialKey) => K): LayoutTileSource[K] =
     new LayoutTileSource(source, layout, keyTransform)
 
+  def spatial(source: RasterSource, layout: LayoutDefinition, keyTransform: (RasterSource, SpatialKey) => SpatialKey = (_, k) => k): LayoutTileSource[SpatialKey] =
+    apply(source, layout, keyTransform)
+
   def temporal(source: RasterSource, layout: LayoutDefinition, keyTransform: (RasterSource, SpatialKey) => SpaceTimeKey): LayoutTileSource[SpaceTimeKey] =
-    new LayoutTileSource(source, layout, keyTransform)
+    apply(source, layout, keyTransform)
 
   private def requireGridAligned(a: GridExtent[Long], b: GridExtent[Long]): Unit = {
     import org.scalactic._

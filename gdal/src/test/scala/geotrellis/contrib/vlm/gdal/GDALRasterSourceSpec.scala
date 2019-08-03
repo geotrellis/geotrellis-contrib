@@ -140,7 +140,7 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
             )
           }.toList
 
-        val layoutSource = source.tileToLayoutSpatial(layout)
+        val layoutSource = source.tileToLayout(layout)
         val actual: List[(SpatialKey, MultibandTile)] = layoutSource.readAll().toList
 
         withClue(s"actual.size: ${actual.size} expected.size: ${expected.size}") {

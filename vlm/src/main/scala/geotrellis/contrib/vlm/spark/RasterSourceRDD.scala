@@ -16,13 +16,13 @@
 
 package geotrellis.contrib.vlm.spark
 
-import geotrellis.contrib.vlm.{LayoutTileSource, RasterRegion, RasterSource, ReadingSource, TileToLayout}
-import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
-import geotrellis.raster.{ArrayTile, MultibandTile, NODATA, Tile}
+import geotrellis.contrib.vlm._
+import geotrellis.raster.resample._
+import geotrellis.raster._
 import geotrellis.layer._
 import geotrellis.spark.{ContextRDD, MultibandTileLayerRDD}
 import geotrellis.util._
-import geotrellis.vector.Extent
+
 import org.apache.spark.rdd._
 import org.apache.spark.{Partitioner, SparkContext}
 
@@ -30,8 +30,6 @@ import scala.collection.mutable.ArrayBuilder
 import scala.reflect.ClassTag
 
 object RasterSourceRDD {
-  import RasterSource._
-
   final val DEFAULT_PARTITION_BYTES: Long = 128l * 1024 * 1024
 
   def read(
@@ -68,29 +66,10 @@ object RasterSourceRDD {
     keyTransform: (RasterSource, SpatialKey) => K,
     partitionBytes: Long
   )(implicit sc: SparkContext): MultibandTileLayerRDD[K] = {
-    val cellTypes = readingSources.map { _.source.cellType }.toSet
-    require(cellTypes.size == 1, s"All RasterSources must have the same CellType, but multiple ones were found: $cellTypes")
-
-    val projections = readingSources.map { _.source.crs }.toSet
-    require(
-      projections.size == 1,
-      s"All RasterSources must be in the same projection, but multiple ones were found: $projections"
-    )
-
-    val cellType = cellTypes.head
-    val crs = projections.head
-
-    val mapTransform = layout.mapTransform
-    val (layerExtent, layerKeyBounds) = readingSources.map { rs =>
-      val extent = rs.source.extent
-      val KeyBounds(minKey, maxKey) = KeyBounds(mapTransform(extent))
-      val actualKeyBounds = KeyBounds(keyTransform(rs.source, minKey), keyTransform(rs.source, maxKey))
-
-      (extent, actualKeyBounds)
-    }.reduce[(Extent, KeyBounds[K])] { case ((extentl, kbl), (extentr, kbr)) => (extentl.combine(extentr), kbl.combine(kbr)) }
-
+    val summary = RasterSummary.fromSeq(readingSources.map(_.source), keyTransform)
+    val cellType = summary.cellType
     val tileSize = layout.tileCols * layout.tileRows * cellType.bytes
-    val layerMetadata = TileLayerMetadata(cellType, layout, layerExtent, crs, layerKeyBounds)
+    val layerMetadata = summary.toTileLayerMetadata(layout, 0)._1
 
     def getNoDataTile = ArrayTile.alloc(cellType, layout.tileCols, layout.tileRows).fill(NODATA).interpretAs(cellType)
 
@@ -106,8 +85,7 @@ object RasterSourceRDD {
           source.sourceToTargetBand.map { case (sourceBand, targetBand) =>
             (key, (targetBand, layoutSource.read(key, Seq(sourceBand))))
           }
-        }
-        }
+        } }
       }
 
     sourcesRDD.persist()
@@ -173,18 +151,16 @@ object RasterSourceRDD {
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpaceTimeKey] =
     read[SpaceTimeKey](readingSourcesRDD, layout, keyTransform, partitioner)
 
-  def read[K: SpatialComponent: TileToLayout: Ordering: ClassTag](
+  def read[K: SpatialComponent: Boundable: TileToLayout: ClassTag](
     readingSourcesRDD: RDD[ReadingSource],
     layout: LayoutDefinition,
     keyTransform: (RasterSource, SpatialKey) => K,
     partitioner: Option[Partitioner]
   )(implicit sc: SparkContext): MultibandTileLayerRDD[K] = {
     val rasterSourcesRDD = readingSourcesRDD.map { _.source }
-    val summary = RasterSummary.fromRDD[RasterSource, Long](rasterSourcesRDD)
-
+    val summary = RasterSummary.fromRDD(rasterSourcesRDD, keyTransform)
     val cellType = summary.cellType
-
-    val layerMetadata: TileLayerMetadata[SpatialKey] = summary.toTileLayerMetadata(layout, 0)._1
+    val layerMetadata = summary.toTileLayerMetadata(layout, 0)._1
 
     def getNoDataTile = ArrayTile.alloc(cellType, layout.tileCols, layout.tileRows).fill(NODATA).interpretAs(cellType)
 
@@ -203,10 +179,6 @@ object RasterSourceRDD {
           }
         }
       })
-
-    // TODO: refactor metadata collection
-    val layerMetadataK: TileLayerMetadata[K] =
-      layerMetadata.copy[K](bounds = KeyBounds(keyedRDD.map(_._1).min(), keyedRDD.map(_._1).max()))
 
     val groupedRDD: RDD[(K, Iterable[(Int, Option[MultibandTile])])] = {
       // The number of partitions estimated by RasterSummary can sometimes be much
@@ -237,7 +209,7 @@ object RasterSourceRDD {
         }
       }, preservesPartitioning = true)
 
-    ContextRDD(result, layerMetadataK)
+    ContextRDD(result, layerMetadata)
   }
 
   def tiledLayerRDD(sources: RDD[RasterSource], layout: LayoutDefinition)(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
@@ -247,7 +219,7 @@ object RasterSourceRDD {
     sources: RDD[RasterSource],
     layout: LayoutDefinition,
     resampleMethod: ResampleMethod,
-    rasterSummary: Option[RasterSummary],
+    rasterSummary: Option[RasterSummary[SpatialKey]],
     partitioner: Option[Partitioner]
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
     tiledLayerRDD[SpatialKey](sources, layout, (_, sk) => sk, resampleMethod, rasterSummary, partitioner)
@@ -264,31 +236,27 @@ object RasterSourceRDD {
     layout: LayoutDefinition,
     keyTransform: (RasterSource, SpatialKey) => SpaceTimeKey,
     resampleMethod: ResampleMethod,
-    rasterSummary: Option[RasterSummary],
+    rasterSummary: Option[RasterSummary[SpaceTimeKey]],
     partitioner: Option[Partitioner]
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpaceTimeKey] =
     tiledLayerRDD[SpaceTimeKey](sources, layout, keyTransform, resampleMethod, rasterSummary, partitioner)
 
-  def tiledLayerRDD[K: SpatialComponent: TileToLayout: Ordering: ClassTag](
+  def tiledLayerRDD[K: SpatialComponent: Boundable: TileToLayout: ClassTag](
     sources: RDD[RasterSource],
     layout: LayoutDefinition,
     keyTransform: (RasterSource, SpatialKey) => K,
     resampleMethod: ResampleMethod = NearestNeighbor,
-    rasterSummary: Option[RasterSummary] = None,
+    rasterSummary: Option[RasterSummary[K]] = None,
     partitioner: Option[Partitioner] = None
   )(implicit sc: SparkContext): MultibandTileLayerRDD[K] = {
-    val summary = rasterSummary.getOrElse(RasterSummary.fromRDD[RasterSource, Long](sources))
-    val layerMetadata: TileLayerMetadata[SpatialKey] = summary.toTileLayerMetadata(layout, 0)._1
+    val summary = rasterSummary.getOrElse(RasterSummary.fromRDD(sources, keyTransform))
+    val layerMetadata = summary.toTileLayerMetadata(layout, 0)._1
 
-    val tiledLayoutSourceRDD: RDD[LayoutTileSource[K]] =
+    val tiledLayoutSourceRDD =
       sources.map { _.tileToLayout(layout, keyTransform, resampleMethod) }
 
     val rasterRegionRDD: RDD[(K, RasterRegion)] =
       tiledLayoutSourceRDD.flatMap { _.keyedRasterRegions() }
-
-    // TODO: refactor metadata collection
-    val layerMetadataK: TileLayerMetadata[K] =
-      layerMetadata.copy[K](bounds = KeyBounds(rasterRegionRDD.map(_._1).min(), rasterRegionRDD.map(_._1).max()))
 
     // The number of partitions estimated by RasterSummary can sometimes be much
     // lower than what the user set. Therefore, we assume that the larger value
@@ -305,7 +273,7 @@ object RasterSourceRDD {
           )
         }
 
-    ContextRDD(tiledRDD, layerMetadataK)
+    ContextRDD(tiledRDD, layerMetadata)
   }
 
   def spatial(
@@ -329,44 +297,25 @@ object RasterSourceRDD {
   def temporal(source: RasterSource, layout: LayoutDefinition, keyTransform: (RasterSource, SpatialKey) => SpaceTimeKey)(implicit sc: SparkContext): MultibandTileLayerRDD[SpaceTimeKey] =
     temporal(Seq(source), layout, keyTransform)
 
-  def apply[K: SpatialComponent: TileToLayout: Ordering: ClassTag](
+  def apply[K: SpatialComponent: Boundable: TileToLayout](
     sources: Seq[RasterSource],
     layout: LayoutDefinition,
     keyTransform: (RasterSource, SpatialKey) => K,
     partitionBytes: Long = DEFAULT_PARTITION_BYTES
   )(implicit sc: SparkContext): MultibandTileLayerRDD[K] = {
-
-    val cellTypes = sources.map { _.cellType }.toSet
-    require(cellTypes.size == 1, s"All RasterSources must have the same CellType, but multiple ones were found: $cellTypes")
-
-    val projections = sources.map { _.crs }.toSet
-    require(
-      projections.size == 1,
-      s"All RasterSources must be in the same projection, but multiple ones were found: $projections"
-    )
-
-    val cellType = cellTypes.head
-    val crs = projections.head
-
-    val mapTransform = layout.mapTransform
-    val extent = mapTransform.extent
-    val combinedExtents = sources.map { _.extent }.reduce { _ combine _ }
-
-    val layerKeyBounds = KeyBounds(mapTransform(combinedExtents))
-
-    val layerMetadata =
-      TileLayerMetadata[SpatialKey](cellType, layout, combinedExtents, crs, layerKeyBounds)
+    val summary = RasterSummary.fromSeq(sources, keyTransform)
+    val extent = summary.extent
+    val cellType = summary.cellType
+    val tileSize = layout.tileCols * layout.tileRows * cellType.bytes
+    val layerMetadata = summary.toTileLayerMetadata(layout, 0)._1
 
     val sourcesRDD: RDD[(RasterSource, Array[SpatialKey])] =
       sc.parallelize(sources).flatMap { source =>
         val keys: Traversable[SpatialKey] =
           extent.intersection(source.extent) match {
-            case Some(intersection) =>
-              layout.mapTransform.keysForGeometry(intersection.toPolygon)
-            case None =>
-              Seq.empty[SpatialKey]
+            case Some(intersection) => layout.mapTransform.keysForGeometry(intersection.toPolygon)
+            case None => Seq.empty[SpatialKey]
           }
-        val tileSize = layout.tileCols * layout.tileRows * cellType.bytes
         partition(keys, partitionBytes)( _ => tileSize).map { res => (source, res) }
       }
 
@@ -374,10 +323,8 @@ object RasterSourceRDD {
 
     val repartitioned = {
       val count = sourcesRDD.count.toInt
-      if (count > sourcesRDD.partitions.size)
-        sourcesRDD.repartition(count)
-      else
-        sourcesRDD
+      if (count > sourcesRDD.partitions.size) sourcesRDD.repartition(count)
+      else sourcesRDD
     }
 
     val result: RDD[(K, MultibandTile)] =
@@ -387,13 +334,9 @@ object RasterSourceRDD {
         tileSource.readAll(keysK.toIterator)
       }
 
-    // TODO: refactor metadata collection
-    val layerMetadataK: TileLayerMetadata[K] =
-      layerMetadata.copy[K](bounds = KeyBounds(result.map(_._1).min(), result.map(_._1).max()))
-
     sourcesRDD.unpersist()
 
-    ContextRDD(result, layerMetadataK)
+    ContextRDD(result, layerMetadata)
   }
 
   /** Partition a set of chunks not to exceed certain size per partition */
