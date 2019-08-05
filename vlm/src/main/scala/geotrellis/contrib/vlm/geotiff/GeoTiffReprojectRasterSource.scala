@@ -36,8 +36,10 @@ case class GeoTiffReprojectRasterSource(
   private[vlm] val targetCellType: Option[TargetCellType] = None,
   private val baseTiff: Option[MultibandGeoTiff] = None
 ) extends RasterSource { self =>
+  def name: GeoTiffDataPath = dataPath
+
   @transient lazy val tiff: MultibandGeoTiff =
-    baseTiff.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.path), streaming = true))
+    baseTiff.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.value), streaming = true))
 
   protected lazy val baseCRS: CRS = tiff.crs
   protected lazy val baseGridExtent: GridExtent[Long] = tiff.rasterExtent.toGridType[Long]

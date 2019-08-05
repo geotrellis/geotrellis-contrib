@@ -17,7 +17,7 @@
 package geotrellis.contrib.vlm.effect.geotiff
 
 import geotrellis.contrib.vlm._
-import geotrellis.contrib.vlm.geotiff.GeoTiffMetadata
+import geotrellis.contrib.vlm.geotiff.{GeoTiffDataPath, GeoTiffMetadata}
 import geotrellis.contrib.vlm.effect._
 import geotrellis.proj4._
 import geotrellis.raster._
@@ -27,23 +27,23 @@ import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector.Extent
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.util.RangeReader
-
 import cats._
 import cats.syntax.flatMap._
 import cats.syntax.apply._
 import cats.syntax.functor._
 
 case class GeoTiffResampleRasterSource[F[_]: Monad: UnsafeLift](
-  dataPath: DataPath,
+  dataPath: GeoTiffDataPath,
   resampleGrid: ResampleGrid[Long],
   method: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
   private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSourceF[F] {
+  def name: GeoTiffDataPath = dataPath
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
   // memoize tiff, not useful only in a local fs case
-  @transient lazy val tiff: MultibandGeoTiff = GeoTiffReader.readMultiband(RangeReader(dataPath.path), streaming = true)
+  @transient lazy val tiff: MultibandGeoTiff = GeoTiffReader.readMultiband(RangeReader(dataPath.value), streaming = true)
   @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(tiff)
 
   def crs: F[CRS] = tiffF.map(_.crs)

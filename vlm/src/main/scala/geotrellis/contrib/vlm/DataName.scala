@@ -16,22 +16,16 @@
 
 package geotrellis.contrib.vlm
 
-import java.net.URI
-
 /**
- * Represents the path to data that is to be read.
- */
-trait DataPath extends DataName {
-
-  /**
-    * The given path to the data. This can be formatted in a number of different
-    * ways depending on which [[RasterSource]] is to be used. For more information
-    * on the different ways of formatting this string, see the docs on the
-    * DataPath for that given soure.
-    */
+  * Represents the path to data or name of the data that is to be read.
+  */
+trait DataName {
   def value: String
-
   override def toString: String = value
+}
 
-  def toURI: URI = new URI(value)
+case class StringDataName(value: String) extends DataName
+
+object DataName {
+  implicit def stringToDataName(str: String): DataName = StringDataName(str)
 }

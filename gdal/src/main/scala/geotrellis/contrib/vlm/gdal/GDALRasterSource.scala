@@ -45,7 +45,8 @@ case class GDALRasterSource(
     *
     */
 
-  val path: String = dataPath.path
+  def name: GDALDataPath = dataPath
+  val path: String = dataPath.value
 
   lazy val datasetType: DatasetType = options.datasetType
 

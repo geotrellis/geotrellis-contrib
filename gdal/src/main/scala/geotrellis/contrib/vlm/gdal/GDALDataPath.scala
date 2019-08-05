@@ -26,7 +26,7 @@ import java.net.MalformedURLException
 
 /** Represents and formats a path that points to a files to be read by GDAL.
  *
- *  @param path Path to the file. This path can be formatted in the following
+ *  @param value Path to the file. This path can be formatted in the following
  *    styles: `VSI`, `URI`, or relative path if the file is local. In addition,
  *    this path can be prefixed with, '''gdal+''' to signify that the target GeoTiff
  *    is to be read in only by [[GDALRasterSource]].
@@ -39,7 +39,7 @@ import java.net.MalformedURLException
  *
  *  @example "zip+s3://bucket/prefix/zipped-data.zip!data.tif"
  */
-case class GDALDataPath(path: String) extends DataPath
+case class GDALDataPath(value: String) extends DataPath
 
 object GDALDataPath {
   val PREFIX = "gdal+"

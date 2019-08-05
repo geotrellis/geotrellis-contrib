@@ -14,24 +14,10 @@
  * limitations under the License.
  */
 
-package geotrellis.contrib.vlm
+package geotrellis.contrib.vlm.effect
 
-import java.net.URI
+import geotrellis.contrib.vlm.DataName
 
-/**
- * Represents the path to data that is to be read.
- */
-trait DataPath extends DataName {
-
-  /**
-    * The given path to the data. This can be formatted in a number of different
-    * ways depending on which [[RasterSource]] is to be used. For more information
-    * on the different ways of formatting this string, see the docs on the
-    * DataPath for that given soure.
-    */
-  def value: String
-
-  override def toString: String = value
-
-  def toURI: URI = new URI(value)
+trait NamedRasterSourceF[F[_]] { self: RasterSourceF[F] =>
+  def name: DataName
 }

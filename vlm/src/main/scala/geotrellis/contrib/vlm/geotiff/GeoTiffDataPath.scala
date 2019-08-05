@@ -28,7 +28,7 @@ import java.net.MalformedURLException
 /** Represents a VALID path that points to a GeoTiff to be read.
  *  @note The target file must have a file extension.
  *
- *  @param path Path to a GeoTiff. There are two ways to format this `String`: either
+ *  @param value Path to a GeoTiff. There are two ways to format this `String`: either
  *    in the `URI` format, or as a relative path if the file is local. In addition,
  *    this path can be prefixed with, '''gtiff+''' to signify that the target GeoTiff
  *    is to be read in only by [[GeoTiffRasterSource]].
@@ -38,7 +38,7 @@ import java.net.MalformedURLException
  *
  *  @note Capitalization of the extension is not regarded.
  */
-case class GeoTiffDataPath(path: String) extends DataPath
+case class GeoTiffDataPath(value: String) extends DataPath
 
 object GeoTiffDataPath {
   val PREFIX = "gtiff+"

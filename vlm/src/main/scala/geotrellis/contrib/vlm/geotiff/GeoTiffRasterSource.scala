@@ -30,8 +30,10 @@ case class GeoTiffRasterSource(
   private[vlm] val targetCellType: Option[TargetCellType] = None,
   private val baseTiff: Option[MultibandGeoTiff] = None
 ) extends RasterSource {
+  def name: GeoTiffDataPath = dataPath
+
   @transient lazy val tiff: MultibandGeoTiff =
-    baseTiff.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.path), streaming = true))
+    baseTiff.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.value), streaming = true))
 
   lazy val gridExtent: GridExtent[Long] = tiff.rasterExtent.toGridType[Long]
   lazy val resolutions: List[GridExtent[Long]] = gridExtent :: tiff.overviews.map(_.rasterExtent.toGridType[Long])

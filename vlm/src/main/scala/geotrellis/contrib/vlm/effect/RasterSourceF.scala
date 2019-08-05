@@ -32,9 +32,7 @@ import cats.syntax.functor._
 import cats.syntax.apply._
 import cats.instances.list._
 
-abstract class RasterSourceF[F[_]: Monad] extends RasterSourceMetadataF[F] with Serializable {
-  def dataPath: DataPath
-
+abstract class RasterSourceF[F[_]: Monad] extends RasterSourceMetadataF[F] with NamedRasterSourceF[F] with Serializable {
   private[vlm] def targetCellType: Option[TargetCellType]
 
   protected[vlm] lazy val dstCellType: Option[CellType] =

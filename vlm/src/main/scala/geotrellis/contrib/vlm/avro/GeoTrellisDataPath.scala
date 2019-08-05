@@ -26,7 +26,7 @@ import java.net.MalformedURLException
 
 /** Represents a path that points to a GeoTrellis layer saved in a catalog.
  *
- *  @param path Path to the layer. This can be either an Avro or COG layer.
+ *  @param value Path to the layer. This can be either an Avro or COG layer.
  *    The given path needs to be in a `URI` format that include the following query
  *    parameters:
  *      - '''layer''': The name of the layer.
@@ -40,7 +40,7 @@ import java.net.MalformedURLException
  *  @example "gt+file:///tmp/catalog?layer=name&zoom=5"
  *  @note The order of the query parameters does not matter.
  */
-case class GeoTrellisDataPath(path: String, layerName: String, zoomLevel: Option[Int], bandCount: Option[Int]) extends DataPath {
+case class GeoTrellisDataPath(value: String, layerName: String, zoomLevel: Option[Int], bandCount: Option[Int]) extends DataPath {
   def  layerId: LayerId = LayerId(layerName, zoomLevel.get)
 }
 

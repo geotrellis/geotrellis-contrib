@@ -38,7 +38,8 @@ case class GDALRasterSource[F[_]: Monad: UnsafeLift](
   options: F[GDALWarpOptions] = GDALWarpOptions.EMPTY,
   private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSourceF[F] {
-  val path: String = dataPath.path
+  def name: GDALDataPath = dataPath
+  val path: String = dataPath.value
 
   lazy val datasetType: F[DatasetType] = options.map(_.datasetType)
 

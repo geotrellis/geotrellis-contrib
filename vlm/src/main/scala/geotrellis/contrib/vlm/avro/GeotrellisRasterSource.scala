@@ -42,6 +42,7 @@ class GeotrellisRasterSource(
   val sourceLayers: Stream[Layer],
   val targetCellType: Option[TargetCellType]
 ) extends RasterSource {
+  def name: GeoTrellisDataPath = dataPath
   val layerId: LayerId = dataPath.layerId
 
   val bandCount: Int = dataPath.bandCount.getOrElse(1)
@@ -55,10 +56,10 @@ class GeotrellisRasterSource(
     )
 
   def this(dataPath: GeoTrellisDataPath) =
-    this(AttributeStore(dataPath.path), dataPath)
+    this(AttributeStore(dataPath.value), dataPath)
 
 
-  lazy val reader = CollectionLayerReader(attributeStore, dataPath.path)
+  lazy val reader = CollectionLayerReader(attributeStore, dataPath.value)
 
   // read metadata directly instead of searching sourceLayers to avoid unneeded reads
   lazy val layerMetadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
@@ -74,7 +75,7 @@ class GeotrellisRasterSource(
 
   def metadata: GeoTrellisMetadata = GeoTrellisMetadata(
     this, Map(
-      "catalogURI" -> dataPath.path,
+      "catalogURI" -> dataPath.value,
       "layerName"  -> layerId.name,
       "zoomLevel"  -> layerId.zoom.toString,
       "bandCount"  -> bandCount.toString

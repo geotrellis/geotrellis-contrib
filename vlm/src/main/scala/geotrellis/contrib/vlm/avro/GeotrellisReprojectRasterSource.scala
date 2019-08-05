@@ -41,8 +41,9 @@ class GeotrellisReprojectRasterSource(
   val errorThreshold: Double = 0.125,
   val targetCellType: Option[TargetCellType]
 ) extends RasterSource with LazyLogging { self =>
+  def name: GeoTrellisDataPath = dataPath
 
-  lazy val reader = CollectionLayerReader(attributeStore, dataPath.path)
+  lazy val reader = CollectionLayerReader(attributeStore, dataPath.value)
 
   lazy val resolutions: List[GridExtent[Long]] = {
     sourceLayers.map { layer =>
@@ -58,7 +59,7 @@ class GeotrellisReprojectRasterSource(
 
   def metadata: GeoTrellisMetadata = GeoTrellisMetadata(
     this, Map(
-      "catalogURI" -> dataPath.path,
+      "catalogURI" -> dataPath.value,
       "layerName"  -> layerId.name,
       "zoomLevel"  -> layerId.zoom.toString,
       "bandCount"  -> bandCount.toString
@@ -154,7 +155,7 @@ class GeotrellisReprojectRasterSource(
   }
 
   override def toString: String =
-    s"GeoTrellisReprojectRasterSource(${dataPath.path},$layerId,$crs,$gridExtent,${resampleMethod})"
+    s"GeoTrellisReprojectRasterSource(${dataPath.value},$layerId,$crs,$gridExtent,${resampleMethod})"
 }
 
 object GeotrellisReprojectRasterSource {
