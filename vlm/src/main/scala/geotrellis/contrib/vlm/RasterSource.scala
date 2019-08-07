@@ -201,28 +201,18 @@ object RasterSource {
     GetComponent(rs => ProjectedExtent(rs.extent, rs.crs))
 
   implicit class TileToLayoutOps(val self: RasterSource) {
-    def tileToLayout[K: TileToLayout](
+    def tileToLayout[K: SpatialComponent](
       layout: LayoutDefinition,
-      keyTransform: (RasterSource, SpatialKey) => K,
-      resampleMethod: ResampleMethod
+      tileKeyTransform: SpatialKey => K,
+      resampleMethod: ResampleMethod = NearestNeighbor
     ): LayoutTileSource[K] =
-      TileToLayout[K].tileToLayout(self, layout, keyTransform, resampleMethod)
+      LayoutTileSource(self.resampleToGrid(layout, resampleMethod), layout, tileKeyTransform)
 
     def tileToLayout(layout: LayoutDefinition, resampleMethod: ResampleMethod): LayoutTileSource[SpatialKey] =
-      TileToLayout[SpatialKey].tileToLayout(self, layout, (_, sk) => sk, resampleMethod)
+      tileToLayout(layout, identity, resampleMethod)
 
     def tileToLayout(layout: LayoutDefinition): LayoutTileSource[SpatialKey] =
       tileToLayout(layout, NearestNeighbor)
-
-    def tileToLayout(
-      layout: LayoutDefinition,
-      keyTransform: (RasterSource, SpatialKey) => SpaceTimeKey,
-      resampleMethod: ResampleMethod = NearestNeighbor
-    ): LayoutTileSource[SpaceTimeKey] =
-      TileToLayout[SpaceTimeKey].tileToLayout(self, layout, keyTransform, resampleMethod)
-
-    def tileToLayout(layout: LayoutDefinition, keyTransform: (RasterSource, SpatialKey) => SpaceTimeKey): LayoutTileSource[SpaceTimeKey] =
-      tileToLayout(layout, keyTransform, NearestNeighbor)
   }
 
   def apply(path: String): RasterSource = {
