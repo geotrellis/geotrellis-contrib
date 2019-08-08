@@ -27,14 +27,14 @@ import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.util.RangeReader
 
 case class GeoTiffResampleRasterSource(
-  dataPath: GeoTiffDataPath,
-  resampleGrid: ResampleGrid[Long],
-  method: ResampleMethod = NearestNeighbor,
-  strategy: OverviewStrategy = AutoHigherResolution,
-  private[vlm] val targetCellType: Option[TargetCellType] = None,
-  private val baseTiff: Option[MultibandGeoTiff] = None
+                                        dataPath: GeoTiffPath,
+                                        resampleGrid: ResampleGrid[Long],
+                                        method: ResampleMethod = NearestNeighbor,
+                                        strategy: OverviewStrategy = AutoHigherResolution,
+                                        private[vlm] val targetCellType: Option[TargetCellType] = None,
+                                        private val baseTiff: Option[MultibandGeoTiff] = None
 ) extends RasterSource { self =>
-  def name: GeoTiffDataPath = dataPath
+  def name: GeoTiffPath = dataPath
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
   @transient lazy val tiff: MultibandGeoTiff =

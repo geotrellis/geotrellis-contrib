@@ -37,17 +37,17 @@ case class Layer(id: LayerId, metadata: TileLayerMetadata[SpatialKey], bandCount
   * @param dataPath geotrellis catalog DataPath
   */
 class GeotrellisRasterSource(
-  val attributeStore: AttributeStore,
-  val dataPath: GeoTrellisDataPath,
-  val sourceLayers: Stream[Layer],
-  val targetCellType: Option[TargetCellType]
+                              val attributeStore: AttributeStore,
+                              val dataPath: GeoTrellisPath,
+                              val sourceLayers: Stream[Layer],
+                              val targetCellType: Option[TargetCellType]
 ) extends RasterSource {
-  def name: GeoTrellisDataPath = dataPath
+  def name: GeoTrellisPath = dataPath
   val layerId: LayerId = dataPath.layerId
 
   val bandCount: Int = dataPath.bandCount.getOrElse(1)
 
-  def this(attributeStore: AttributeStore, dataPath: GeoTrellisDataPath) =
+  def this(attributeStore: AttributeStore, dataPath: GeoTrellisPath) =
     this(
       attributeStore,
       dataPath,
@@ -55,7 +55,7 @@ class GeotrellisRasterSource(
       None
     )
 
-  def this(dataPath: GeoTrellisDataPath) =
+  def this(dataPath: GeoTrellisPath) =
     this(AttributeStore(dataPath.value), dataPath)
 
 

@@ -16,7 +16,7 @@
 
 package geotrellis.contrib.vlm.geotiff
 
-import geotrellis.contrib.vlm.DataPath
+import geotrellis.contrib.vlm.SourcePath
 
 import cats.syntax.option._
 import io.lemonlabs.uri.Uri
@@ -38,23 +38,23 @@ import java.net.MalformedURLException
  *
  *  @note Capitalization of the extension is not regarded.
  */
-case class GeoTiffDataPath(value: String) extends DataPath
+case class GeoTiffPath(value: String) extends SourcePath
 
-object GeoTiffDataPath {
+object GeoTiffPath {
   val PREFIX = "gtiff+"
 
-  implicit def toGeoTiffDataPath(path: String): GeoTiffDataPath = parse(path)
+  implicit def toGeoTiffDataPath(path: String): GeoTiffPath = parse(path)
 
-  def parseOption(path: String, percentEncoder: PercentEncoder = PercentEncoder(PATH_CHARS_TO_ENCODE ++ Set('%', '?', '#'))): Option[GeoTiffDataPath] = {
+  def parseOption(path: String, percentEncoder: PercentEncoder = PercentEncoder(PATH_CHARS_TO_ENCODE ++ Set('%', '?', '#'))): Option[GeoTiffPath] = {
     val upath = percentEncoder.encode(path, "UTF-8")
-    Uri.parseOption(upath).fold(Option.empty[GeoTiffDataPath]) { uri =>
-      GeoTiffDataPath(uri.schemeOption.fold(uri.toStringRaw) { scheme =>
+    Uri.parseOption(upath).fold(Option.empty[GeoTiffPath]) { uri =>
+      GeoTiffPath(uri.schemeOption.fold(uri.toStringRaw) { scheme =>
         uri.withScheme(scheme.split("\\+").last).toStringRaw
       }).some
     }
   }
 
-  def parse(path: String, percentEncoder: PercentEncoder = PercentEncoder(PATH_CHARS_TO_ENCODE ++ Set('%', '?', '#'))): GeoTiffDataPath =
+  def parse(path: String, percentEncoder: PercentEncoder = PercentEncoder(PATH_CHARS_TO_ENCODE ++ Set('%', '?', '#'))): GeoTiffPath =
     parseOption(path, percentEncoder).getOrElse(throw new MalformedURLException(s"Unable to parse GeoTiffDataPath: $path"))
 }
 

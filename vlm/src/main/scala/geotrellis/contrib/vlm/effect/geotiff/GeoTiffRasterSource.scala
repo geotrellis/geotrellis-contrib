@@ -18,7 +18,7 @@ package geotrellis.contrib.vlm.effect.geotiff
 
 import geotrellis.contrib.vlm._
 import geotrellis.contrib.vlm.effect._
-import geotrellis.contrib.vlm.geotiff.{GeoTiffDataPath, GeoTiffMetadata}
+import geotrellis.contrib.vlm.geotiff.{GeoTiffPath, GeoTiffMetadata}
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
@@ -35,10 +35,10 @@ import cats.syntax.functor._
 import cats.instances.list._
 
 case class GeoTiffRasterSource[F[_]: Monad: UnsafeLift](
-  dataPath: GeoTiffDataPath,
-  private[vlm] val targetCellType: Option[TargetCellType] = None
+                                                         dataPath: GeoTiffPath,
+                                                         private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSourceF[F] {
-  def name: GeoTiffDataPath = dataPath
+  def name: GeoTiffPath = dataPath
   // memoize tiff, not useful only in a local fs case
   @transient lazy val tiff: MultibandGeoTiff = GeoTiffReader.readMultiband(RangeReader(dataPath.value), streaming = true)
   @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(tiff)

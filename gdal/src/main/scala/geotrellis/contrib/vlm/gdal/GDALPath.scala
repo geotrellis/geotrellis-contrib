@@ -16,7 +16,7 @@
 
 package geotrellis.contrib.vlm.gdal
 
-import geotrellis.contrib.vlm.DataPath
+import geotrellis.contrib.vlm.SourcePath
 
 import cats.syntax.option._
 import io.lemonlabs.uri._
@@ -39,18 +39,18 @@ import java.net.MalformedURLException
  *
  *  @example "zip+s3://bucket/prefix/zipped-data.zip!data.tif"
  */
-case class GDALDataPath(value: String) extends DataPath
+case class GDALPath(value: String) extends SourcePath
 
-object GDALDataPath {
+object GDALPath {
   val PREFIX = "gdal+"
 
-  implicit def toGDALDataPath(path: String): GDALDataPath = GDALDataPath.parse(path)
+  implicit def toGDALDataPath(path: String): GDALPath = GDALPath.parse(path)
 
   def parseOption(
     path: String,
     compressedFileDelimiter: Option[String] = "!".some,
     percentEncoder: PercentEncoder = PercentEncoder(PATH_CHARS_TO_ENCODE ++ Set('%', '?', '#'))
-  ): Option[GDALDataPath] = {
+  ): Option[GDALPath] = {
     import Schemes._
 
     // Trying to read something locally on Windows matters
@@ -108,14 +108,14 @@ object GDALDataPath {
             }
           }
 
-    vsiPath.map(GDALDataPath(_))
+    vsiPath.map(GDALPath(_))
   }
 
   def parse(
     path: String,
     compressedFileDelimiter: Option[String] = "!".some,
     percentEncoder: PercentEncoder = PercentEncoder(PATH_CHARS_TO_ENCODE ++ Set('%', '?', '#'))
-  ): GDALDataPath =
+  ): GDALPath =
     parseOption(path, compressedFileDelimiter, percentEncoder)
       .getOrElse(throw new MalformedURLException(s"Unable to parse GDALDataPath: $path"))
 }

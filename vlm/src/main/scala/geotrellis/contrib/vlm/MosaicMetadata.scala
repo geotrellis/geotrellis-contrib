@@ -16,7 +16,7 @@
 
 package geotrellis.contrib.vlm
 
-import geotrellis.contrib.vlm.effect.RasterSourceF
+import geotrellis.contrib.vlm.effect.RasterSourceMetadataF
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellType, GridExtent}
 
@@ -25,6 +25,7 @@ import cats.Monad
 import cats.syntax.apply._
 
 case class MosaicMetadata(
+  name: SourceName,
   crs: CRS,
   bandCount: Int,
   cellType: CellType,
@@ -39,8 +40,8 @@ case class MosaicMetadata(
 
 object MosaicMetadata {
   def apply(rasterSource: RasterMetadata, list: NonEmptyList[RasterSourceMetadata]): MosaicMetadata =
-    MosaicMetadata(rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions, list)
+    MosaicMetadata(rasterSource.name, rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions, list)
 
-  def apply[F[_]: Monad](rasterSource: RasterSourceF[F], list: F[NonEmptyList[RasterSourceMetadata]]): F[MosaicMetadata] =
+  def apply[F[_]: Monad](rasterSource: RasterSourceMetadataF[F], list: F[NonEmptyList[RasterSourceMetadata]]): F[MosaicMetadata] =
     (rasterSource: F[RasterMetadata], list).mapN(MosaicMetadata.apply)
 }

@@ -16,8 +16,8 @@
 
 package geotrellis.contrib.vlm.geotiff
 
-import geotrellis.contrib.vlm.effect.RasterSourceF
-import geotrellis.contrib.vlm.{RasterMetadata, RasterSourceMetadata}
+import geotrellis.contrib.vlm.effect.RasterSourceMetadataF
+import geotrellis.contrib.vlm.{RasterMetadata, RasterSourceMetadata, SourceName}
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellType, GridExtent}
 import geotrellis.raster.io.geotiff.Tags
@@ -26,6 +26,7 @@ import cats.Monad
 import cats.syntax.apply._
 
 case class GeoTiffMetadata(
+  name: SourceName,
   crs: CRS,
   bandCount: Int,
   cellType: CellType,
@@ -41,8 +42,8 @@ case class GeoTiffMetadata(
 
 object GeoTiffMetadata {
   def apply(rasterSource: RasterMetadata, tags: Tags): GeoTiffMetadata =
-    GeoTiffMetadata(rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions, tags)
+    GeoTiffMetadata(rasterSource.name, rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions, tags)
 
-  def apply[F[_]: Monad](rasterSource: RasterSourceF[F], tags: F[Tags]): F[GeoTiffMetadata] =
+  def apply[F[_]: Monad](rasterSource: RasterSourceMetadataF[F], tags: F[Tags]): F[GeoTiffMetadata] =
     (rasterSource: F[RasterMetadata], tags).mapN(GeoTiffMetadata.apply)
 }

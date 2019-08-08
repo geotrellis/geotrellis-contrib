@@ -19,13 +19,11 @@ package geotrellis.contrib.vlm
 /**
   * Represents the path to data or name of the data that is to be read.
   */
-trait DataName {
-  def value: String
-  override def toString: String = value
-}
+trait SourceName extends Serializable
 
-case class StringDataName(value: String) extends DataName
+case class StringName(value: String) extends SourceName
+case object EmptyName extends SourceName
 
-object DataName {
-  implicit def stringToDataName(str: String): DataName = StringDataName(str)
+object SourceName {
+  implicit def stringToDataName(str: String): SourceName = if(str.isEmpty) EmptyName else StringName(str)
 }

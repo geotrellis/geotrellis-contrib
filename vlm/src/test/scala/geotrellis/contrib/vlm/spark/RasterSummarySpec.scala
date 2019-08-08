@@ -54,7 +54,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
     }
 
     it("should collect summary for a tiled to layout source") {
-      val inputPath = GeoTiffDataPath(Resource.path("img/aspect-tiled.tif"))
+      val inputPath = GeoTiffPath(Resource.path("img/aspect-tiled.tif"))
       val files = inputPath :: Nil
       val targetCRS = WebMercator
       val method = Bilinear
@@ -94,7 +94,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
   }
 
   it("should create ContextRDD from RDD of GeoTiffRasterSources") {
-    val inputPath = GeoTiffDataPath(Resource.path("img/aspect-tiled.tif"))
+    val inputPath = GeoTiffPath(Resource.path("img/aspect-tiled.tif"))
     val files = inputPath :: Nil
     val targetCRS = WebMercator
     val method = Bilinear
@@ -133,7 +133,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
       val Array(y, m, d) = str.split("-").map(_.toInt)
       ZonedDateTime.of(y, m, d,0,0,0,0, ZoneOffset.UTC).toInstant.toEpochMilli
     }
-    val files = dates.map { str => GeoTiffDataPath(Resource.path(s"img/aspect-tiled-$str.tif")) }
+    val files = dates.map { str => GeoTiffPath(Resource.path(s"img/aspect-tiled-$str.tif")) }
     val targetCRS = WebMercator
     val method = Bilinear
     val layoutScheme = ZoomedLayoutScheme(targetCRS, tileSize = 256)

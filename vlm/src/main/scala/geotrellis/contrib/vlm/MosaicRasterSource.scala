@@ -135,9 +135,9 @@ object MosaicRasterSource {
     }
 
   def apply(sourcesList: NonEmptyList[RasterSource], targetCRS: CRS, targetGridExtent: GridExtent[Long]): MosaicRasterSource =
-    apply(sourcesList, targetCRS, targetGridExtent, "")
+    apply(sourcesList, targetCRS, targetGridExtent, EmptyName)
 
-  def apply(sourcesList: NonEmptyList[RasterSource], targetCRS: CRS, targetGridExtent: GridExtent[Long], rasterSourceName: DataName): MosaicRasterSource = {
+  def apply(sourcesList: NonEmptyList[RasterSource], targetCRS: CRS, targetGridExtent: GridExtent[Long], rasterSourceName: SourceName): MosaicRasterSource = {
     new MosaicRasterSource {
       val name = rasterSourceName
       val sources = sourcesList map { _.reprojectToGrid(targetCRS, gridExtent) }
@@ -148,9 +148,9 @@ object MosaicRasterSource {
   }
 
   def apply(sourcesList: NonEmptyList[RasterSource], targetCRS: CRS): MosaicRasterSource =
-    apply(sourcesList, targetCRS, "")
+    apply(sourcesList, targetCRS, EmptyName)
 
-  def apply(sourcesList: NonEmptyList[RasterSource], targetCRS: CRS, rasterSourceName: DataName): MosaicRasterSource = {
+  def apply(sourcesList: NonEmptyList[RasterSource], targetCRS: CRS, rasterSourceName: SourceName): MosaicRasterSource = {
     new MosaicRasterSource {
       val name = rasterSourceName
       val sources = sourcesList map { _.reprojectToGrid(targetCRS, sourcesList.head.gridExtent) }
@@ -171,7 +171,7 @@ object MosaicRasterSource {
   }
 
   @SuppressWarnings(Array("TraversableHead", "TraversableTail"))
-  def unsafeFromList(sourcesList: List[RasterSource], targetCRS: CRS = WebMercator, targetGridExtent: Option[GridExtent[Long]], rasterSourceName: DataName = ""): MosaicRasterSource =
+  def unsafeFromList(sourcesList: List[RasterSource], targetCRS: CRS = WebMercator, targetGridExtent: Option[GridExtent[Long]], rasterSourceName: SourceName = EmptyName): MosaicRasterSource =
     new MosaicRasterSource {
       val name = rasterSourceName
       val sources = NonEmptyList(sourcesList.head, sourcesList.tail)

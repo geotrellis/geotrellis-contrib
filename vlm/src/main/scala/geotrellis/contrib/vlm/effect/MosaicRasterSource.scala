@@ -52,18 +52,6 @@ abstract class MosaicRasterSource[F[_]: Monad: Par] extends RasterSourceF[F] {
   val crs: F[CRS]
   def gridExtent: F[GridExtent[Long]]
 
-  /**
-    * Uri is required only for compatibility with RasterSource.
-    *
-    * It doesn't make sense to access "the" URI for a collection, so this throws an exception.
-    */
-  def dataPath: DataPath = throw new NotImplementedError(
-    """
-      | MosaicRasterSources don't have a single dataPath. Perhaps you wanted the dataPath from
-      | one of this MosaicRasterSource's sources?
-    """.trim.stripMargin
-  )
-
   val targetCellType = None
 
   /**
@@ -169,7 +157,7 @@ object MosaicRasterSource {
     sourcesList: F[NonEmptyList[RasterSourceF[F]]],
     targetCRS: F[CRS],
     targetGridExtent: F[GridExtent[Long]],
-    rasterSourceName: DataName
+    rasterSourceName: SourceName
   ): MosaicRasterSource[F] =
     new MosaicRasterSource[F] {
       def name = rasterSourceName
@@ -183,7 +171,7 @@ object MosaicRasterSource {
   def apply[F[_]: Monad: Par](sourcesList: F[NonEmptyList[RasterSourceF[F]]], targetCRS: F[CRS]): MosaicRasterSource[F] =
     apply(sourcesList, targetCRS, "")
 
-  def apply[F[_]: Monad: Par](sourcesList: F[NonEmptyList[RasterSourceF[F]]], targetCRS: F[CRS], rasterSourceName: DataName): MosaicRasterSource[F] =
+  def apply[F[_]: Monad: Par](sourcesList: F[NonEmptyList[RasterSourceF[F]]], targetCRS: F[CRS], rasterSourceName: SourceName): MosaicRasterSource[F] =
     new MosaicRasterSource[F] {
       def name = rasterSourceName
       val sources = {
@@ -222,7 +210,7 @@ object MosaicRasterSource {
     sourcesList: List[RasterSourceF[F]],
     targetCRS: CRS = WebMercator,
     targetGridExtent: Option[GridExtent[Long]],
-    rasterSourceName: DataName = ""
+    rasterSourceName: SourceName = ""
   ): MosaicRasterSource[F] =
     new MosaicRasterSource[F] {
       def name = rasterSourceName

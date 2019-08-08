@@ -187,13 +187,13 @@ class RasterSourceRDDSpec extends FunSpec with TestEnvironment with BetterRaster
 
     val cellType = rasterSource.cellType
 
-    val multibandTilePath = GeoTiffDataPath(s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled-0-1-2.tif")
+    val multibandTilePath = GeoTiffPath(s"${new File("").getAbsolutePath}/src/test/resources/img/aspect-tiled-0-1-2.tif")
 
     val noDataTile = ArrayTile.alloc(cellType, rasterSource.cols.toInt, rasterSource.rows.toInt).fill(NODATA).interpretAs(cellType)
 
-    val paths: Seq[GeoTiffDataPath] =
+    val paths: Seq[GeoTiffPath] =
       0 to 5 map { index =>
-        GeoTiffDataPath(filePathByIndex(index))
+        GeoTiffPath(filePathByIndex(index))
       }
 
     val expectedMultibandTile = {

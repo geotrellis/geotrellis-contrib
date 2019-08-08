@@ -16,8 +16,8 @@
 
 package geotrellis.contrib.vlm.gdal
 
-import geotrellis.contrib.vlm.{RasterMetadata, RasterSourceMetadata}
-import geotrellis.contrib.vlm.effect.RasterSourceF
+import geotrellis.contrib.vlm.{RasterMetadata, RasterSourceMetadata, SourceName}
+import geotrellis.contrib.vlm.effect.RasterSourceMetadataF
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellType, GridExtent}
 
@@ -25,6 +25,7 @@ import cats.Monad
 import cats.syntax.apply._
 
 case class GDALMetadata(
+  name: SourceName,
   crs: CRS,
   bandCount: Int,
   cellType: CellType,
@@ -45,10 +46,10 @@ object GDALMetadata {
   def apply(rasterSource: RasterMetadata, dataset: GDALDataset, domains: List[GDALMetadataDomain]): GDALMetadata = {
     domains match {
       case Nil =>
-        GDALMetadata(rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions)
+        GDALMetadata(rasterSource.name, rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions)
       case _ =>
         GDALMetadata(
-          rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions,
+          rasterSource.name, rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions,
           dataset.getMetadata(GDALDataset.SOURCE, domains, 0),
           (1 until dataset.bandCount).toList.map(dataset.getMetadata(GDALDataset.SOURCE, domains, _))
         )
@@ -57,15 +58,15 @@ object GDALMetadata {
 
   def apply(rasterSource: RasterMetadata, dataset: GDALDataset): GDALMetadata = {
     GDALMetadata(
-      rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions,
+      rasterSource.name, rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions,
       dataset.getAllMetadata(GDALDataset.SOURCE, 0),
       (1 until dataset.bandCount).toList.map(dataset.getAllMetadata(GDALDataset.SOURCE, _))
     )
   }
 
-  def apply[F[_] : Monad](rasterSource: RasterSourceF[F], dataset: F[GDALDataset], domains: List[GDALMetadataDomain]): F[GDALMetadata] =
+  def apply[F[_] : Monad](rasterSource: RasterSourceMetadataF[F], dataset: F[GDALDataset], domains: List[GDALMetadataDomain]): F[GDALMetadata] =
     (rasterSource: F[RasterMetadata], dataset).mapN(GDALMetadata.apply(_, _, domains))
 
-  def apply[F[_] : Monad](rasterSource: RasterSourceF[F], dataset: F[GDALDataset]): F[GDALMetadata] =
+  def apply[F[_] : Monad](rasterSource: RasterSourceMetadataF[F], dataset: F[GDALDataset]): F[GDALMetadata] =
     (rasterSource: F[RasterMetadata], dataset).mapN(GDALMetadata.apply)
 }

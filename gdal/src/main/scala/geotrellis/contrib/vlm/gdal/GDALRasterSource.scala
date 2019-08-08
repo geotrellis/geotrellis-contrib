@@ -26,9 +26,9 @@ import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector._
 
 case class GDALRasterSource(
-  dataPath: GDALDataPath,
-  options: GDALWarpOptions = GDALWarpOptions.EMPTY,
-  private[vlm] val targetCellType: Option[TargetCellType] = None
+                             dataPath: GDALPath,
+                             options: GDALWarpOptions = GDALWarpOptions.EMPTY,
+                             private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource {
 
   /**
@@ -45,7 +45,7 @@ case class GDALRasterSource(
     *
     */
 
-  def name: GDALDataPath = dataPath
+  def name: GDALPath = dataPath
   val path: String = dataPath.value
 
   lazy val datasetType: DatasetType = options.datasetType

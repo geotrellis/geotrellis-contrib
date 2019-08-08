@@ -17,7 +17,7 @@
 package geotrellis.contrib.vlm.effect.geotiff
 
 import geotrellis.contrib.vlm._
-import geotrellis.contrib.vlm.geotiff.{GeoTiffDataPath, GeoTiffMetadata}
+import geotrellis.contrib.vlm.geotiff.{GeoTiffPath, GeoTiffMetadata}
 import geotrellis.contrib.vlm.effect._
 import geotrellis.proj4._
 import geotrellis.raster._
@@ -33,13 +33,13 @@ import cats.syntax.apply._
 import cats.syntax.functor._
 
 case class GeoTiffResampleRasterSource[F[_]: Monad: UnsafeLift](
-  dataPath: GeoTiffDataPath,
-  resampleGrid: ResampleGrid[Long],
-  method: ResampleMethod = NearestNeighbor,
-  strategy: OverviewStrategy = AutoHigherResolution,
-  private[vlm] val targetCellType: Option[TargetCellType] = None
+                                                                 dataPath: GeoTiffPath,
+                                                                 resampleGrid: ResampleGrid[Long],
+                                                                 method: ResampleMethod = NearestNeighbor,
+                                                                 strategy: OverviewStrategy = AutoHigherResolution,
+                                                                 private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSourceF[F] {
-  def name: GeoTiffDataPath = dataPath
+  def name: GeoTiffPath = dataPath
   def resampleMethod: Option[ResampleMethod] = Some(method)
 
   // memoize tiff, not useful only in a local fs case

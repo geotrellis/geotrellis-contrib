@@ -44,15 +44,15 @@ import com.typesafe.scalalogging.LazyLogging
  * @param resampleMethod Resampling method used when fitting data to target grid
  */
 class GeotrellisResampleRasterSource(
-  val attributeStore: AttributeStore,
-  val dataPath: GeoTrellisDataPath,
-  val layerId: LayerId,
-  val sourceLayers: Stream[Layer],
-  val gridExtent: GridExtent[Long],
-  val resampleMethod: ResampleMethod = NearestNeighbor,
-  val targetCellType: Option[TargetCellType] = None
+                                      val attributeStore: AttributeStore,
+                                      val dataPath: GeoTrellisPath,
+                                      val layerId: LayerId,
+                                      val sourceLayers: Stream[Layer],
+                                      val gridExtent: GridExtent[Long],
+                                      val resampleMethod: ResampleMethod = NearestNeighbor,
+                                      val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource with LazyLogging { self =>
-  def name: GeoTrellisDataPath = dataPath
+  def name: GeoTrellisPath = dataPath
 
   lazy val reader = CollectionLayerReader(attributeStore, dataPath.value)
 

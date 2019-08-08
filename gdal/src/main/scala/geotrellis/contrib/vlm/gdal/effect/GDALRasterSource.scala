@@ -17,7 +17,7 @@
 package geotrellis.contrib.vlm.gdal.effect
 
 import geotrellis.contrib.vlm._
-import geotrellis.contrib.vlm.gdal.{DefaultDomain, GDALDataPath, GDALDataset, GDALMetadata, GDALMetadataDomain, GDALWarpOptions}
+import geotrellis.contrib.vlm.gdal.{DefaultDomain, GDALPath, GDALDataset, GDALMetadata, GDALMetadataDomain, GDALWarpOptions}
 import geotrellis.contrib.vlm.gdal.GDALDataset.DatasetType
 import geotrellis.contrib.vlm.effect._
 import geotrellis.contrib.vlm.effect.geotiff.UnsafeLift
@@ -34,11 +34,11 @@ import cats.syntax.apply._
 import cats.syntax.functor._
 
 case class GDALRasterSource[F[_]: Monad: UnsafeLift](
-  dataPath: GDALDataPath,
-  options: F[GDALWarpOptions] = GDALWarpOptions.EMPTY,
-  private[vlm] val targetCellType: Option[TargetCellType] = None
+                                                      dataPath: GDALPath,
+                                                      options: F[GDALWarpOptions] = GDALWarpOptions.EMPTY,
+                                                      private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSourceF[F] {
-  def name: GDALDataPath = dataPath
+  def name: GDALPath = dataPath
   val path: String = dataPath.value
 
   lazy val datasetType: F[DatasetType] = options.map(_.datasetType)

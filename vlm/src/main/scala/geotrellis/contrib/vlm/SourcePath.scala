@@ -21,7 +21,7 @@ import java.net.URI
 /**
  * Represents the path to data that is to be read.
  */
-trait DataPath extends DataName {
+trait SourcePath extends SourceName {
 
   /**
     * The given path to the data. This can be formatted in a number of different

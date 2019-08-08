@@ -29,19 +29,19 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.io.AnsiColor._
 
 class GeotrellisReprojectRasterSource(
-  val attributeStore: AttributeStore,
-  val dataPath: GeoTrellisDataPath,
-  val layerId: LayerId,
-  val sourceLayers: Stream[Layer],
-  val gridExtent: GridExtent[Long],
-  val crs: CRS,
-  val targetResampleGrid: ResampleGrid[Long] = IdentityResampleGrid,
-  val resampleMethod: ResampleMethod = NearestNeighbor,
-  val strategy: OverviewStrategy = AutoHigherResolution,
-  val errorThreshold: Double = 0.125,
-  val targetCellType: Option[TargetCellType]
+                                       val attributeStore: AttributeStore,
+                                       val dataPath: GeoTrellisPath,
+                                       val layerId: LayerId,
+                                       val sourceLayers: Stream[Layer],
+                                       val gridExtent: GridExtent[Long],
+                                       val crs: CRS,
+                                       val targetResampleGrid: ResampleGrid[Long] = IdentityResampleGrid,
+                                       val resampleMethod: ResampleMethod = NearestNeighbor,
+                                       val strategy: OverviewStrategy = AutoHigherResolution,
+                                       val errorThreshold: Double = 0.125,
+                                       val targetCellType: Option[TargetCellType]
 ) extends RasterSource with LazyLogging { self =>
-  def name: GeoTrellisDataPath = dataPath
+  def name: GeoTrellisPath = dataPath
 
   lazy val reader = CollectionLayerReader(attributeStore, dataPath.value)
 

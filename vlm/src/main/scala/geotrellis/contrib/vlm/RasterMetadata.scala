@@ -21,6 +21,8 @@ import geotrellis.raster.{CellSize, CellType, GridExtent, RasterExtent}
 import geotrellis.vector.Extent
 
 trait RasterMetadata {
+  /** Source name, that can be a path or any name that is associated with Raster */
+  def name: SourceName
   def crs: CRS
   def bandCount: Int
   def cellType: CellType
@@ -58,6 +60,7 @@ trait RasterMetadata {
 
 /** Base RasterSourceMetadata used for the RasterSourceMetadata[F] ~> F[RasterSourceMetadata] transformation. */
 case class BaseRasterMetadata(
+  name: SourceName,
   crs: CRS,
   bandCount: Int,
   cellType: CellType,

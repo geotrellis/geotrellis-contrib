@@ -103,7 +103,7 @@ class GDALRasterSourceSpec extends FunSpec with RasterMatchers with BetterRaster
       GDALRasterSource(uri).extent should be (GeoTiffRasterSource(uri).extent)
 
       val p = Resource.path("img/extent-bug.tif")
-      GDALRasterSource(GDALDataPath(p)).extent should be (GeoTiffRasterSource(p).extent)
+      GDALRasterSource(GDALPath(p)).extent should be (GeoTiffRasterSource(p).extent)
     }
 
     it("should not fail on creation of the GDALRasterSource on a 'malformed URI', since we don't know if it is a path or it is a scheme") {

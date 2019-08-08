@@ -32,7 +32,7 @@ object KeyExtractor {
 
   val spatialKeyExtractor: KeyExtractor.Aux[SpatialKey, Unit] = new KeyExtractor[SpatialKey] {
     type M = Unit
-    def getMetadata(rs: RasterSource): Unit = {}
+    def getMetadata(rs: RasterSource): Unit = ()
     def getKey(metadata: Unit, spatialKey: SpatialKey): SpatialKey = spatialKey
   }
 }
@@ -44,7 +44,7 @@ trait TemporalKeyExtractor extends KeyExtractor[SpaceTimeKey] {
 }
 
 object TemporalKeyExtractor {
-  def fromPath(parseTime: DataPath => ZonedDateTime): KeyExtractor.Aux[SpaceTimeKey, ZonedDateTime] = new TemporalKeyExtractor {
-    def getMetadata(rs: RasterSource): ZonedDateTime = parseTime(rs.dataPath)
+  def fromPath(parseTime: SourceName => ZonedDateTime): KeyExtractor.Aux[SpaceTimeKey, ZonedDateTime] = new TemporalKeyExtractor {
+    def getMetadata(rs: RasterSource): ZonedDateTime = parseTime(rs.name)
   }
 }
