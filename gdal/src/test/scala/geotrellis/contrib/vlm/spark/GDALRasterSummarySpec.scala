@@ -42,7 +42,7 @@ class GDALRasterSummarySpec extends FunSpec with TestEnvironment with BetterRast
           .map(uri => GDALRasterSource(uri): RasterSource)
           .cache()
 
-      val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
+      val summary = RasterSummary.fromRDD(sourceRDD)
       val rasterSource = GDALRasterSource(inputPath)
 
       rasterSource.crs shouldBe summary.crs
@@ -66,14 +66,14 @@ class GDALRasterSummarySpec extends FunSpec with TestEnvironment with BetterRast
           .map(uri => GDALRasterSource(uri).reproject(targetCRS, method = method): RasterSource)
           .cache()
 
-      val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
-      val layoutLevel @ LayoutLevel(zoom, layout) = summary.levelFor(layoutScheme)
+      val summary = RasterSummary.fromRDD(sourceRDD)
+      val LayoutLevel(zoom, layout) = summary.levelFor(layoutScheme)
       val tiledRDD = sourceRDD.map(_.tileToLayout(layout, method))
 
-      val summaryCollected = RasterSummary.fromRDD[RasterSource, Long](tiledRDD.map(_.source))
+      val summaryCollected = RasterSummary.fromRDD(tiledRDD.map(_.source))
       val summaryResampled = summary.resample(TargetGrid(layout))
 
-      val metadata = summary.toTileLayerMetadata(layoutLevel)
+      val metadata = summary.toTileLayerMetadata(layout)
       val metadataResampled = summaryResampled.toTileLayerMetadata(GlobalLayout(256, zoom, 0.1))
 
       metadata shouldBe metadataResampled
@@ -118,8 +118,8 @@ class GDALRasterSummarySpec extends FunSpec with TestEnvironment with BetterRast
         .cache()
 
     // collect raster summary
-    val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
-    val layoutLevel @ LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
+    val summary = RasterSummary.fromRDD(sourceRDD)
+    val LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
 
     val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
 
@@ -132,7 +132,7 @@ class GDALRasterSummarySpec extends FunSpec with TestEnvironment with BetterRast
           iter.flatMap { rr => rr.raster.toSeq.flatMap(_.tile.bands) }
         } } // read rasters
 
-    val (metadata, _) = summary.toTileLayerMetadata(layoutLevel)
+    val metadata = summary.toTileLayerMetadata(layout)
     val contextRDD: MultibandTileLayerRDD[SpatialKey] = ContextRDD(tileRDD, metadata)
 
     val res = contextRDD.collect()

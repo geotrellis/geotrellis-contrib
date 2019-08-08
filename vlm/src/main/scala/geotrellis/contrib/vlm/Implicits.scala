@@ -16,10 +16,15 @@
 
 package geotrellis.contrib.vlm
 
+import geotrellis.layer.Boundable
 import geotrellis.proj4.{CRS, Transform}
 import geotrellis.raster.GridExtent
 import geotrellis.raster.reproject.Reproject.Options
 import geotrellis.raster.reproject.ReprojectRasterExtent
+
+import jp.ne.opt.chronoscala.Imports._
+
+import java.time.ZonedDateTime
 
 trait Implicits extends Serializable {
   implicit class gridExtentMethods[N: spire.math.Integral](self: GridExtent[N]) {
@@ -34,6 +39,16 @@ trait Implicits extends Serializable {
       }
 
     def reproject(src: CRS, dest: CRS): GridExtent[N] = reproject(src, dest, Options.DEFAULT)
+  }
+
+  implicit val zonedDateTimeBoundable = new Boundable[ZonedDateTime] {
+    def minBound(p1: ZonedDateTime, p2: ZonedDateTime): ZonedDateTime = if(p1 <= p2) p1 else p2
+    def maxBound(p1: ZonedDateTime, p2: ZonedDateTime): ZonedDateTime = if(p1 > p2) p1 else p2
+  }
+
+  implicit val unitBoundable = new Boundable[Unit] {
+    def minBound(p1: Unit, p2: Unit): Unit = p1
+    def maxBound(p1: Unit, p2: Unit): Unit = p1
   }
 }
 

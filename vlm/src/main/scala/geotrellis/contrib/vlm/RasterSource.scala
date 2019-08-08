@@ -21,7 +21,7 @@ import geotrellis.raster._
 import geotrellis.raster.resample._
 import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
-import geotrellis.layer.LayoutDefinition
+import geotrellis.layer._
 import geotrellis.util.GetComponent
 
 import java.util.ServiceLoader
@@ -166,15 +166,6 @@ trait RasterSource extends CellGrid[Long] with RasterMetadata with Serializable 
   def readBounds(bounds: Traversable[GridBounds[Long]]): Iterator[Raster[MultibandTile]] =
     bounds.toIterator.flatMap(read(_, (0 until bandCount)).toIterator)
 
-  /**
-    * Applies the given [[LayoutDefinition]] to the source data producing a [[LayoutTileSource]].
-    * In order to fit to the given layout, the source data is resampled to match the Extent
-    * and CellSize of the layout.
-    *
-    */
-  def tileToLayout(layout: LayoutDefinition, resampleMethod: ResampleMethod = NearestNeighbor): LayoutTileSource =
-    LayoutTileSource(resampleToGrid(layout, resampleMethod), layout)
-
   private[vlm] def targetCellType: Option[TargetCellType]
 
   protected lazy val dstCellType: Option[CellType] =
@@ -208,6 +199,21 @@ trait RasterSource extends CellGrid[Long] with RasterMetadata with Serializable 
 object RasterSource {
   implicit def projectedExtentComponent[T <: RasterSource]: GetComponent[T, ProjectedExtent] =
     GetComponent(rs => ProjectedExtent(rs.extent, rs.crs))
+
+  implicit class TileToLayoutOps(val self: RasterSource) {
+    def tileToLayout[K: SpatialComponent](
+      layout: LayoutDefinition,
+      tileKeyTransform: SpatialKey => K,
+      resampleMethod: ResampleMethod = NearestNeighbor
+    ): LayoutTileSource[K] =
+      LayoutTileSource(self.resampleToGrid(layout, resampleMethod), layout, tileKeyTransform)
+
+    def tileToLayout(layout: LayoutDefinition, resampleMethod: ResampleMethod): LayoutTileSource[SpatialKey] =
+      tileToLayout(layout, identity, resampleMethod)
+
+    def tileToLayout(layout: LayoutDefinition): LayoutTileSource[SpatialKey] =
+      tileToLayout(layout, NearestNeighbor)
+  }
 
   def apply(path: String): RasterSource = {
     import scala.collection.JavaConverters._

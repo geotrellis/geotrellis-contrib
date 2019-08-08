@@ -18,31 +18,39 @@ package geotrellis.contrib.vlm
 
 import geotrellis.raster._
 import geotrellis.layer._
+import geotrellis.util._
 
 /** Reads tiles by key from a [[RasterSource]] as keyed by a [[LayoutDefinition]]
   * @note It is required that the [[RasterSource]] is pixel aligned with the [[LayoutDefinition]]
   *
   * @param source raster source that can be queried by bounding box
   * @param layout definition of a tile grid over the pixel grid
+  * @param tileKeyTransform defines the key transformation you want to apply to the spatially tiled data
   */
-class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
+class LayoutTileSource[K: SpatialComponent](
+  val source: RasterSource,
+  val layout: LayoutDefinition,
+  val tileKeyTransform: SpatialKey => K
+) {
   LayoutTileSource.requireGridAligned(source.gridExtent, layout)
 
   def sourceColOffset: Long = ((source.extent.xmin - layout.extent.xmin) / layout.cellwidth).toLong
   def sourceRowOffset: Long = ((layout.extent.ymax - source.extent.ymax) / layout.cellheight).toLong
 
-  def rasterRegionForKey(key: SpatialKey): Option[RasterRegion] = {
-    val col = key.col.toLong
-    val row = key.row.toLong
+  def rasterRegionForKey(key: K): Option[RasterRegion] = {
+    val spatialComponent = key.getComponent[SpatialKey]
+    val col = spatialComponent.col.toLong
+    val row = spatialComponent.row.toLong
     /**
      * We need to do this manually instead of using RasterExtent.gridBoundsFor because
      * the target pixel area isn't always square.
      */
     val sourcePixelBounds = GridBounds[Long](
-      colMin = (col * layout.tileCols - sourceColOffset),
-      rowMin = (row * layout.tileRows - sourceRowOffset),
-      colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset),
-      rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset))
+      colMin = col * layout.tileCols - sourceColOffset,
+      rowMin = row * layout.tileRows - sourceRowOffset,
+      colMax = (col+1) * layout.tileCols - 1 - sourceColOffset,
+      rowMax = (row+1) * layout.tileRows - 1 - sourceRowOffset
+    )
 
     if (source.gridBounds.intersects(sourcePixelBounds))
       Some(RasterRegion(source, sourcePixelBounds))
@@ -50,21 +58,23 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
       None
   }
 
-  def read(key: SpatialKey): Option[MultibandTile] =
+  def read(key: K): Option[MultibandTile] =
     read(key, 0 until source.bandCount)
 
   /** Read tile according to key.
     * If tile area intersects source partially the non-intersecting pixels will be filled with NODATA.
     * If tile area does not intersect source None will be returned.
     */
-  def read(key: SpatialKey, bands: Seq[Int]): Option[MultibandTile] = {
-    val col = key.col.toLong
-    val row = key.row.toLong
+  def read(key: K, bands: Seq[Int]): Option[MultibandTile] = {
+    val spatialComponent = key.getComponent[SpatialKey]
+    val col = spatialComponent.col.toLong
+    val row = spatialComponent.row.toLong
     val sourcePixelBounds = GridBounds(
-      colMin = (col * layout.tileCols - sourceColOffset),
-      rowMin = (row * layout.tileRows - sourceRowOffset),
-      colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset),
-      rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset))
+      colMin = col * layout.tileCols - sourceColOffset,
+      rowMin = row * layout.tileRows - sourceRowOffset,
+      colMax = (col+1) * layout.tileCols - 1 - sourceColOffset,
+      rowMax = (row+1) * layout.tileRows - 1 - sourceRowOffset
+    )
 
     for {
       bounds <- sourcePixelBounds.intersection(source.gridBounds)
@@ -88,16 +98,18 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
     * If each tile area intersects source partially the non-intersecting pixels will be filled with NODATA.
     * If tile area does not intersect source it will be excluded from result iterator.
     */
-  def readAll(keys: Iterator[SpatialKey], bands: Seq[Int]): Iterator[(SpatialKey, MultibandTile)] =
+  def readAll(keys: Iterator[K], bands: Seq[Int]): Iterator[(K, MultibandTile)] =
     for {
       key <- keys
-      col = key.col.toLong
-      row = key.row.toLong
+      spatialComponent = key.getComponent[SpatialKey]
+      col = spatialComponent.col.toLong
+      row = spatialComponent.row.toLong
       sourcePixelBounds = GridBounds(
-        colMin = (col * layout.tileCols - sourceColOffset),
-        rowMin = (row * layout.tileRows - sourceRowOffset),
-        colMax = ((col+1) * layout.tileCols - 1 - sourceColOffset),
-        rowMax = ((row+1) * layout.tileRows - 1 - sourceRowOffset))
+        colMin = col * layout.tileCols - sourceColOffset,
+        rowMin = row * layout.tileRows - sourceRowOffset,
+        colMax = (col+1) * layout.tileCols - 1 - sourceColOffset,
+        rowMax = (row+1) * layout.tileRows - 1 - sourceRowOffset
+      )
       bounds <- sourcePixelBounds.intersection(source.gridBounds)
       raster <- source.read(bounds, bands)
     } yield {
@@ -116,15 +128,15 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
       (key, tile)
     }
 
-  def readAll(keys: Iterator[SpatialKey]): Iterator[(SpatialKey, MultibandTile)] =
+  def readAll(keys: Iterator[K]): Iterator[(K, MultibandTile)] =
     readAll(keys, 0 until source.bandCount)
 
   /** Read all available tiles */
-  def readAll(): Iterator[(SpatialKey, MultibandTile)] =
+  def readAll(): Iterator[(K, MultibandTile)] =
     readAll(keys.toIterator)
 
   /** Set of keys that can be read from this tile source */
-  def keys: Set[SpatialKey] = {
+  def keys: Set[K] = {
     lazy val buffX = layout.cellSize.width * -0.25
     lazy val buffY = layout.cellSize.height * -0.25
 
@@ -142,14 +154,14 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
           intersection.ymax + buffY
         )
 
-        layout.mapTransform.keysForGeometry(buffered.toPolygon)
+        layout.mapTransform.keysForGeometry(buffered.toPolygon).map(tileKeyTransform)
       case None =>
-        Set.empty[SpatialKey]
+        Set.empty[K]
     }
   }
 
   /** All intersecting RasterRegions with their respective keys */
-  def keyedRasterRegions(): Iterator[(SpatialKey, RasterRegion)] =
+  def keyedRasterRegions(): Iterator[(K, RasterRegion)] =
     keys
       .toIterator
       .flatMap { key =>
@@ -159,8 +171,14 @@ class LayoutTileSource(val source: RasterSource, val layout: LayoutDefinition) {
 }
 
 object LayoutTileSource {
-  def apply(source: RasterSource, layout: LayoutDefinition): LayoutTileSource =
-    new LayoutTileSource(source, layout)
+  def apply[K: SpatialComponent](source: RasterSource, layout: LayoutDefinition, tileKeyTransform: SpatialKey => K): LayoutTileSource[K] =
+    new LayoutTileSource(source, layout, tileKeyTransform)
+
+  def spatial(source: RasterSource, layout: LayoutDefinition): LayoutTileSource[SpatialKey] =
+    new LayoutTileSource(source, layout, identity)
+
+  def temporal(source: RasterSource, layout: LayoutDefinition, tileKeyTransform: SpatialKey => SpaceTimeKey): LayoutTileSource[SpaceTimeKey] =
+    new LayoutTileSource(source, layout, tileKeyTransform)
 
   private def requireGridAligned(a: GridExtent[Long], b: GridExtent[Long]): Unit = {
     import org.scalactic._

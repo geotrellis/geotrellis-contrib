@@ -32,13 +32,13 @@ class LayoutTileSourceSpec extends FunSpec with RasterMatchers with BetterRaster
   lazy val rasterSource = GeoTiffRasterSource(testFile)
   val scheme = FloatingLayoutScheme(256)
   lazy val layout = scheme.levelFor(rasterSource.extent, rasterSource.cellSize).layout
-  lazy val source = new LayoutTileSource(rasterSource, layout)
+  lazy val source = LayoutTileSource.spatial(rasterSource, layout)
 
   val mbTestFile = Resource.path("img/multiband.tif")
   lazy val mbTiff = GeoTiffReader.readMultiband(mbTestFile, streaming = false)
   lazy val mbRasterSource = GeoTiffRasterSource(mbTestFile)
   lazy val mbLayout = scheme.levelFor(mbRasterSource.extent, mbRasterSource.cellSize).layout
-  lazy val mbSource = new LayoutTileSource(mbRasterSource, mbLayout)
+  lazy val mbSource = LayoutTileSource.spatial(mbRasterSource, mbLayout)
 
   it("should read all the keys") {
     val keys = source.layout

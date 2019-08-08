@@ -17,7 +17,7 @@
 package geotrellis.contrib.vlm.spark
 
 import geotrellis.contrib.vlm.geotiff._
-import geotrellis.contrib.vlm.{BetterRasterMatchers, GlobalLayout, RasterRegion, RasterSource, Resource, TargetGrid}
+import geotrellis.contrib.vlm._
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.resample.Bilinear
@@ -27,6 +27,8 @@ import geotrellis.layer._
 
 import org.apache.spark.rdd._
 import org.scalatest._
+
+import java.time.{ZoneOffset, ZonedDateTime}
 
 class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMatchers with GivenWhenThen {
 
@@ -40,7 +42,7 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
           .map(uri => GeoTiffRasterSource(uri): RasterSource)
           .cache()
 
-      val metadata = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
+      val metadata = RasterSummary.fromRDD(sourceRDD)
       val rasterSource = GeoTiffRasterSource(inputPath)
 
       rasterSource.crs shouldBe metadata.crs
@@ -63,14 +65,14 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
           .map(uri => GeoTiffRasterSource(uri).reproject(targetCRS, method = method): RasterSource)
           .cache()
 
-      val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
-      val layoutLevel @ LayoutLevel(zoom, layout) = summary.levelFor(layoutScheme)
+      val summary = RasterSummary.fromRDD(sourceRDD)
+      val LayoutLevel(zoom, layout) = summary.levelFor(layoutScheme)
       val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
 
-      val summaryCollected = RasterSummary.fromRDD[RasterSource, Long](tiledLayoutSource.map(_.source))
+      val summaryCollected = RasterSummary.fromRDD(tiledLayoutSource.map(_.source))
       val summaryResampled = summary.resample(TargetGrid(layout))
 
-      val metadata = summary.toTileLayerMetadata(layoutLevel)
+      val metadata = summary.toTileLayerMetadata(layout)
       val metadataResampled = summaryResampled.toTileLayerMetadata(GlobalLayout(256, zoom, 0.1))
 
       metadata shouldBe metadataResampled
@@ -105,8 +107,8 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
         .cache()
 
     // collect raster summary
-    val summary = RasterSummary.fromRDD[RasterSource, Long](sourceRDD)
-    val layoutLevel @ LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
+    val summary = RasterSummary.fromRDD(sourceRDD)
+    val LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
     val tiledLayoutSource = sourceRDD.map(_.tileToLayout(layout, method))
 
     // Create RDD of references, references contain information how to read rasters
@@ -116,12 +118,66 @@ class RasterSummarySpec extends FunSpec with TestEnvironment with BetterRasterMa
         .groupByKey(SpatialPartitioner(summary.estimatePartitionsNumber))
         .mapValues { iter => MultibandTile(iter.flatMap(_.raster.toSeq.flatMap(_.tile.bands))) } // read rasters
 
-    val (metadata, _) = summary.toTileLayerMetadata(layoutLevel)
+    val metadata = summary.toTileLayerMetadata(layout)
     val contextRDD: MultibandTileLayerRDD[SpatialKey] = ContextRDD(tileRDD, metadata)
 
     contextRDD.count() shouldBe rasterRefRdd.count()
     contextRDD.count() shouldBe 72
 
     contextRDD.stitch.tile.band(0).renderPng().write("/tmp/raster-source-contextrdd.png")
+  }
+
+  it("should collect temporal contextRDD") {
+    val dates = "2018-01-01" :: "2018-02-01" :: "2018-03-01" :: Nil
+    val expectedDates = dates.map { str =>
+      val Array(y, m, d) = str.split("-").map(_.toInt)
+      ZonedDateTime.of(y, m, d,0,0,0,0, ZoneOffset.UTC).toInstant.toEpochMilli
+    }
+    val files = dates.map { str => GeoTiffDataPath(Resource.path(s"img/aspect-tiled-$str.tif")) }
+    val targetCRS = WebMercator
+    val method = Bilinear
+    val layoutScheme = ZoomedLayoutScheme(targetCRS, tileSize = 256)
+
+    // read sources
+    val sourceRDD: RDD[RasterSource] =
+      sc.parallelize(files, files.length)
+        .map(uri => GeoTiffRasterSource(uri).reproject(targetCRS, method = method): RasterSource)
+        .cache()
+
+    // Im mr. happy face now (with a knife and i bite people)
+    val temporalKeyExtractor = TemporalKeyExtractor.fromPath { path =>
+      val date = raw"(\d{4})-(\d{2})-(\d{2})".r.findFirstMatchIn(path.toString)
+      val Some((y, m, d)) = date.map { d => (d.group(1).toInt, d.group(2).toInt, d.group(3).toInt) }
+
+      ZonedDateTime.of(y, m, d, 0, 0, 0, 0, ZoneOffset.UTC)
+    }
+
+    // collect raster summary
+    val summary = RasterSummary.fromRDD(sourceRDD, temporalKeyExtractor.getMetadata)
+    // lets add layoutScheme overload
+    val LayoutLevel(_, layout) = summary.levelFor(layoutScheme)
+
+    val contextRDD =
+      RasterSourceRDD.tiledLayerRDD(sourceRDD, layout, temporalKeyExtractor, rasterSummary = Some(summary))
+
+    val (minDate, maxDate) = expectedDates.head -> expectedDates.last
+
+    contextRDD.metadata.bounds match {
+      case KeyBounds(minKey, maxKey) =>
+        minKey.instant shouldBe minDate
+        maxKey.instant shouldBe maxDate
+
+      case EmptyBounds => throw new Exception("EmptyBounds are not allowed here")
+    }
+
+    contextRDD.count() shouldBe 72 * dates.length
+
+    contextRDD
+      .toSpatial(minDate)
+      .stitch
+      .tile
+      .band(0)
+      .renderPng()
+      .write(s"/tmp/raster-source-contextrdd-${minDate}.png")
   }
 }
