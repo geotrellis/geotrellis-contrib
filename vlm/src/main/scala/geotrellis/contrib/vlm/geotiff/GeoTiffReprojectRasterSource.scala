@@ -42,8 +42,9 @@ case class GeoTiffReprojectRasterSource(
   protected lazy val baseCRS: CRS = tiff.crs
   protected lazy val baseGridExtent: GridExtent[Long] = tiff.rasterExtent.toGridType[Long]
 
-  protected lazy val transform = Transform(baseCRS, crs)
-  protected lazy val backTransform = Transform(crs, baseCRS)
+  // TODO: remove transient notation with Proj4 1.1 release
+  @transient protected lazy val transform = Transform(baseCRS, crs)
+  @transient protected lazy val backTransform = Transform(crs, baseCRS)
   
   override lazy val gridExtent: GridExtent[Long] = {
     lazy val reprojectedRasterExtent =
