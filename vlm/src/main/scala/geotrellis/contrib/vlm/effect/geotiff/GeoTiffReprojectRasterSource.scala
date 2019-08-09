@@ -17,16 +17,14 @@
 package geotrellis.contrib.vlm.effect.geotiff
 
 import geotrellis.contrib.vlm._
-import geotrellis.contrib.vlm.geotiff.{GeoTiffPath, GeoTiffMetadata}
-import geotrellis.contrib.vlm.effect._
+import geotrellis.contrib.vlm.geotiff.GeoTiffPath
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff._
 import geotrellis.raster.reproject._
 import geotrellis.raster.resample._
 import geotrellis.vector.Extent
-import geotrellis.raster.io.geotiff.reader.GeoTiffReader
-import geotrellis.util.RangeReader
+
 import cats._
 import cats.syntax.flatMap._
 import cats.syntax.traverse._
@@ -35,19 +33,14 @@ import cats.syntax.functor._
 import cats.instances.list._
 
 case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
-                                                                  dataPath: GeoTiffPath,
-                                                                  targetCRS: CRS,
-                                                                  targetResampleGrid: ResampleGrid[Long] = IdentityResampleGrid,
-                                                                  resampleMethod: ResampleMethod = NearestNeighbor,
-                                                                  strategy: OverviewStrategy = AutoHigherResolution,
-                                                                  errorThreshold: Double = 0.125,
-                                                                  private[vlm] val targetCellType: Option[TargetCellType] = None
-) extends RasterSourceF[F] {
-  def name: GeoTiffPath = dataPath
-  // memoize tiff, not useful only in a local fs case
-  @transient lazy val tiff: MultibandGeoTiff = GeoTiffReader.readMultiband(RangeReader(dataPath.value), streaming = true)
-  @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(tiff)
-
+  dataPath: GeoTiffPath,
+  targetCRS: CRS,
+  targetResampleGrid: ResampleGrid[Long] = IdentityResampleGrid,
+  resampleMethod: ResampleMethod = NearestNeighbor,
+  strategy: OverviewStrategy = AutoHigherResolution,
+  errorThreshold: Double = 0.125,
+  private[vlm] val targetCellType: Option[TargetCellType] = None
+) extends BaseGeoTiffRasterSource[F] {
   lazy val crs: F[CRS] = Monad[F].pure(targetCRS)
   protected lazy val baseCRS: F[CRS] = tiffF.map(_.crs)
   protected lazy val baseGridExtent: F[GridExtent[Long]] = tiffF.map(_.rasterExtent.toGridType[Long])
@@ -88,10 +81,6 @@ case class GeoTiffReprojectRasterSource[F[_]: Monad: UnsafeLift](
       // we're asked to match specific target resolution, estimate what resolution we need in source to sample it
     }
   }
-
-  def bandCount: F[Int] = tiffF.map(_.bandCount)
-  def cellType: F[CellType] = dstCellType.fold(tiffF.map(_.cellType))(Monad[F].pure)
-  def metadata: F[GeoTiffMetadata] = GeoTiffMetadata(this, tiffF.map(_.tags))
 
   def read(extent: Extent, bands: Seq[Int]): F[Raster[MultibandTile]] = {
     val bounds = gridExtent.map(_.gridBoundsFor(extent, clamp = false))

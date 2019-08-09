@@ -20,7 +20,7 @@ import geotrellis.proj4.CRS
 import geotrellis.raster.{CellSize, CellType, GridExtent, RasterExtent}
 import geotrellis.vector.Extent
 
-trait RasterMetadata {
+trait RasterMetadata extends Serializable {
   /** Source name, that can be a path or any name that is associated with Raster */
   def name: SourceName
   def crs: CRS
@@ -56,14 +56,14 @@ trait RasterMetadata {
 
   /** Raster pixel row count */
   def rows: Long = gridExtent.rows
-}
 
-/** Base RasterSourceMetadata used for the RasterSourceMetadata[F] ~> F[RasterSourceMetadata] transformation. */
-case class BaseRasterMetadata(
-  name: SourceName,
-  crs: CRS,
-  bandCount: Int,
-  cellType: CellType,
-  gridExtent: GridExtent[Long],
-  resolutions: List[GridExtent[Long]]
-) extends RasterMetadata
+  /**
+    * Return the "base" metadata, usually it is a zero band metadata,
+    * a metadata that is valid for the entire source and for the zero band
+    */
+  def attributes: Map[String, String]
+  /**
+    * Return a per band metadata
+    */
+  def attributesForBand(band: Int): Map[String, String]
+}

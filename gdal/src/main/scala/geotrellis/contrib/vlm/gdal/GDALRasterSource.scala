@@ -26,9 +26,9 @@ import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector._
 
 case class GDALRasterSource(
-                             dataPath: GDALPath,
-                             options: GDALWarpOptions = GDALWarpOptions.EMPTY,
-                             private[vlm] val targetCellType: Option[TargetCellType] = None
+  dataPath: GDALPath,
+  options: GDALWarpOptions = GDALWarpOptions.EMPTY,
+  private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSource {
 
   /**
@@ -59,6 +59,17 @@ case class GDALRasterSource(
     * If there is a need in some custom domain, use the metadataForDomain function.
     */
   lazy val metadata: GDALMetadata = GDALMetadata(this, dataset, DefaultDomain :: Nil)
+
+  /**
+    * Return the "base" metadata, usually it is a zero band metadata,
+    * a metadata that is valid for the entire source and for the zero band
+    */
+  def attributes: Map[String, String] = metadata.attributes
+
+  /**
+    * Return a per band metadata
+    */
+  def attributesForBand(band: Int): Map[String, String] = metadata.attributesForBand(band)
 
   /**
     * Fetches a metadata from the specified [[GDALMetadataDomain]] list.

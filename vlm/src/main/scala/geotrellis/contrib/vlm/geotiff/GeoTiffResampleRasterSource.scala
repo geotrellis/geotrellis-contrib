@@ -22,28 +22,18 @@ import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.reproject.{Reproject, ReprojectRasterExtent}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
-import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiff, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
-import geotrellis.raster.io.geotiff.reader.GeoTiffReader
-import geotrellis.util.RangeReader
+import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiff, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy, Tags}
 
 case class GeoTiffResampleRasterSource(
-                                        dataPath: GeoTiffPath,
-                                        resampleGrid: ResampleGrid[Long],
-                                        method: ResampleMethod = NearestNeighbor,
-                                        strategy: OverviewStrategy = AutoHigherResolution,
-                                        private[vlm] val targetCellType: Option[TargetCellType] = None,
-                                        private val baseTiff: Option[MultibandGeoTiff] = None
-) extends RasterSource { self =>
-  def name: GeoTiffPath = dataPath
+  dataPath: GeoTiffPath,
+  resampleGrid: ResampleGrid[Long],
+  method: ResampleMethod = NearestNeighbor,
+  strategy: OverviewStrategy = AutoHigherResolution,
+  private[vlm] val targetCellType: Option[TargetCellType] = None,
+  protected val baseTiff: Option[MultibandGeoTiff] = None
+) extends BaseGeoTiffRasterSource {
   def resampleMethod: Option[ResampleMethod] = Some(method)
-
-  @transient lazy val tiff: MultibandGeoTiff =
-    baseTiff.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.value), streaming = true))
-
   def crs: CRS = tiff.crs
-  def bandCount: Int = tiff.bandCount
-  def cellType: CellType = dstCellType.getOrElse(tiff.cellType)
-  def metadata: GeoTiffMetadata = GeoTiffMetadata(this, tiff.tags)
 
   override lazy val gridExtent: GridExtent[Long] = resampleGrid(tiff.rasterExtent.toGridType[Long])
   lazy val resolutions: List[GridExtent[Long]] = {

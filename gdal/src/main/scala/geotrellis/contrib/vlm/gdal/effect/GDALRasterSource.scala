@@ -34,9 +34,9 @@ import cats.syntax.apply._
 import cats.syntax.functor._
 
 case class GDALRasterSource[F[_]: Monad: UnsafeLift](
-                                                      dataPath: GDALPath,
-                                                      options: F[GDALWarpOptions] = GDALWarpOptions.EMPTY,
-                                                      private[vlm] val targetCellType: Option[TargetCellType] = None
+  dataPath: GDALPath,
+  options: F[GDALWarpOptions] = GDALWarpOptions.EMPTY,
+  private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSourceF[F] {
   def name: GDALPath = dataPath
   val path: String = dataPath.value
@@ -76,6 +76,17 @@ case class GDALRasterSource[F[_]: Monad: UnsafeLift](
     * If there is a need in some custom domain, use the metadataForDomain function.
     */
   lazy val metadata: F[GDALMetadata] = GDALMetadata(this, datasetF, DefaultDomain :: Nil)
+
+  /**
+    * Return the "base" metadata, usually it is a zero band metadata,
+    * a metadata that is valid for the entire source and for the zero band
+    */
+  def attributes: F[Map[String, String]] = metadata.map(_.attributes)
+
+  /**
+    * Return a per band metadata
+    */
+  def attributesForBand(band: Int): F[Map[String, String]] = metadata.map(_.attributesForBand(band))
 
   /**
     * Fetches a metadata from the specified [[GDALMetadataDomain]] list.

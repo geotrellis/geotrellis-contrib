@@ -17,15 +17,12 @@
 package geotrellis.contrib.vlm.effect.geotiff
 
 import geotrellis.contrib.vlm._
-import geotrellis.contrib.vlm.effect._
-import geotrellis.contrib.vlm.geotiff.{GeoTiffPath, GeoTiffMetadata}
+import geotrellis.contrib.vlm.geotiff.GeoTiffPath
 import geotrellis.proj4._
 import geotrellis.raster._
-import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
+import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiffMultibandTile, OverviewStrategy}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector._
-import geotrellis.raster.io.geotiff.reader.GeoTiffReader
-import geotrellis.util.RangeReader
 
 import cats._
 import cats.syntax.flatMap._
@@ -35,23 +32,15 @@ import cats.syntax.functor._
 import cats.instances.list._
 
 case class GeoTiffRasterSource[F[_]: Monad: UnsafeLift](
-                                                         dataPath: GeoTiffPath,
-                                                         private[vlm] val targetCellType: Option[TargetCellType] = None
-) extends RasterSourceF[F] {
-  def name: GeoTiffPath = dataPath
-  // memoize tiff, not useful only in a local fs case
-  @transient lazy val tiff: MultibandGeoTiff = GeoTiffReader.readMultiband(RangeReader(dataPath.value), streaming = true)
-  @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(tiff)
-
+  dataPath: GeoTiffPath,
+  private[vlm] val targetCellType: Option[TargetCellType] = None
+) extends BaseGeoTiffRasterSource[F] {
   lazy val gridExtent: F[GridExtent[Long]] = tiffF.map(_.rasterExtent.toGridType[Long])
   lazy val resolutions: F[List[GridExtent[Long]]] = tiffF.map { tiff =>
     tiff.rasterExtent.toGridType[Long] :: tiff.overviews.map(_.rasterExtent.toGridType[Long])
   }
 
   def crs: F[CRS] = tiffF.map(_.crs)
-  def bandCount: F[Int] = tiffF.map(_.bandCount)
-  def cellType: F[CellType] = dstCellType.fold(tiffF.map(_.cellType))(Monad[F].pure)
-  def metadata: F[GeoTiffMetadata] = GeoTiffMetadata(this, tiffF.map(_.tags))
 
   def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): GeoTiffReprojectRasterSource[F] =
     GeoTiffReprojectRasterSource(dataPath, targetCRS, resampleGrid, method, strategy, targetCellType = targetCellType)

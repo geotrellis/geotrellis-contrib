@@ -22,7 +22,6 @@ import geotrellis.raster._
 import geotrellis.raster.resample._
 import geotrellis.proj4._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
-import geotrellis.layer.LayoutDefinition
 // import geotrellis.util.GetComponent
 
 import cats._
@@ -32,7 +31,10 @@ import cats.syntax.functor._
 import cats.syntax.apply._
 import cats.instances.list._
 
-abstract class RasterSourceF[F[_]: Monad] extends RasterSourceMetadataF[F] with Serializable {
+abstract class RasterSourceF[F[_]: Monad] extends RasterMetadataF[F] with Serializable {
+  /** All available RasterSource metadata */
+  def metadata: F[_ <: RasterMetadata]
+
   private[vlm] def targetCellType: Option[TargetCellType]
 
   protected[vlm] lazy val dstCellType: Option[CellType] =

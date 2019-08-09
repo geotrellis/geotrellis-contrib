@@ -17,39 +17,28 @@
 package geotrellis.contrib.vlm.effect.geotiff
 
 import geotrellis.contrib.vlm._
-import geotrellis.contrib.vlm.geotiff.{GeoTiffPath, GeoTiffMetadata}
-import geotrellis.contrib.vlm.effect._
+import geotrellis.contrib.vlm.geotiff.GeoTiffPath
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff._
 import geotrellis.raster.reproject.{Reproject, ReprojectRasterExtent}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.vector.Extent
-import geotrellis.raster.io.geotiff.reader.GeoTiffReader
-import geotrellis.util.RangeReader
+
 import cats._
 import cats.syntax.flatMap._
 import cats.syntax.apply._
 import cats.syntax.functor._
 
 case class GeoTiffResampleRasterSource[F[_]: Monad: UnsafeLift](
-                                                                 dataPath: GeoTiffPath,
-                                                                 resampleGrid: ResampleGrid[Long],
-                                                                 method: ResampleMethod = NearestNeighbor,
-                                                                 strategy: OverviewStrategy = AutoHigherResolution,
-                                                                 private[vlm] val targetCellType: Option[TargetCellType] = None
-) extends RasterSourceF[F] {
-  def name: GeoTiffPath = dataPath
+  dataPath: GeoTiffPath,
+  resampleGrid: ResampleGrid[Long],
+  method: ResampleMethod = NearestNeighbor,
+  strategy: OverviewStrategy = AutoHigherResolution,
+  private[vlm] val targetCellType: Option[TargetCellType] = None
+) extends BaseGeoTiffRasterSource[F] {
   def resampleMethod: Option[ResampleMethod] = Some(method)
-
-  // memoize tiff, not useful only in a local fs case
-  @transient lazy val tiff: MultibandGeoTiff = GeoTiffReader.readMultiband(RangeReader(dataPath.value), streaming = true)
-  @transient lazy val tiffF: F[MultibandGeoTiff] = UnsafeLift[F].apply(tiff)
-
   def crs: F[CRS] = tiffF.map(_.crs)
-  def bandCount: F[Int] = tiffF.map(_.bandCount)
-  def cellType: F[CellType] = dstCellType.fold(tiffF.map(_.cellType))(Monad[F].pure)
-  def metadata: F[GeoTiffMetadata] = GeoTiffMetadata(this, tiffF.map(_.tags))
 
   lazy val gridExtent: F[GridExtent[Long]] = tiffF.map(_.rasterExtent.toGridType[Long])
   lazy val resolutions: F[List[GridExtent[Long]]] = {

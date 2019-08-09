@@ -64,16 +64,18 @@ trait MosaicRasterSource extends RasterSource {
   }
 
   /** All available RasterSources metadata. */
-  def metadata: MosaicMetadata = MosaicMetadata(this, sources.map(_.metadata))
+  def metadata: MosaicMetadata = MosaicMetadata(name, crs, bandCount, cellType, gridExtent, resolutions, sources)
+
+  def attributes: Map[String, String] = Map.empty
+
+  def attributesForBand(band: Int): Map[String, String] = Map.empty
 
   /**
     * All available resolutions for all RasterSources in this MosaicRasterSource
     *
     * @see [[geotrellis.contrib.vlm.RasterSource.resolutions]]
     */
-  def resolutions: List[GridExtent[Long]] = { val resolutions = sources map { _.resolutions }
-    resolutions.reduce
-  }
+  def resolutions: List[GridExtent[Long]] = sources.map { _.resolutions }.reduce
 
   /** Create a new MosaicRasterSource with sources transformed according to the provided
     * crs, options, and strategy, and a new crs

@@ -29,20 +29,18 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.io.AnsiColor._
 
 class GeotrellisReprojectRasterSource(
-                                       val attributeStore: AttributeStore,
-                                       val dataPath: GeoTrellisPath,
-                                       val layerId: LayerId,
-                                       val sourceLayers: Stream[Layer],
-                                       val gridExtent: GridExtent[Long],
-                                       val crs: CRS,
-                                       val targetResampleGrid: ResampleGrid[Long] = IdentityResampleGrid,
-                                       val resampleMethod: ResampleMethod = NearestNeighbor,
-                                       val strategy: OverviewStrategy = AutoHigherResolution,
-                                       val errorThreshold: Double = 0.125,
-                                       val targetCellType: Option[TargetCellType]
-) extends RasterSource with LazyLogging { self =>
-  def name: GeoTrellisPath = dataPath
-
+  val attributeStore: AttributeStore,
+  val dataPath: GeoTrellisPath,
+  val layerId: LayerId,
+  val sourceLayers: Stream[Layer],
+  val gridExtent: GridExtent[Long],
+  val crs: CRS,
+  val targetResampleGrid: ResampleGrid[Long] = IdentityResampleGrid,
+  val resampleMethod: ResampleMethod = NearestNeighbor,
+  val strategy: OverviewStrategy = AutoHigherResolution,
+  val errorThreshold: Double = 0.125,
+  val targetCellType: Option[TargetCellType]
+) extends BaseGeoTrellisRasterSource with LazyLogging { self =>
   lazy val reader = CollectionLayerReader(attributeStore, dataPath.value)
 
   lazy val resolutions: List[GridExtent[Long]] = {
@@ -56,15 +54,6 @@ class GeotrellisReprojectRasterSource(
   def bandCount: Int = sourceLayer.bandCount
 
   def cellType: CellType = dstCellType.getOrElse(sourceLayer.metadata.cellType)
-
-  def metadata: GeoTrellisMetadata = GeoTrellisMetadata(
-    this, Map(
-      "catalogURI" -> dataPath.value,
-      "layerName"  -> layerId.name,
-      "zoomLevel"  -> layerId.zoom.toString,
-      "bandCount"  -> bandCount.toString
-    )
-  )
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val transform = Transform(sourceLayer.metadata.crs, crs)

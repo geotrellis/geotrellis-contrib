@@ -37,16 +37,11 @@ case class Layer(id: LayerId, metadata: TileLayerMetadata[SpatialKey], bandCount
   * @param dataPath geotrellis catalog DataPath
   */
 class GeotrellisRasterSource(
-                              val attributeStore: AttributeStore,
-                              val dataPath: GeoTrellisPath,
-                              val sourceLayers: Stream[Layer],
-                              val targetCellType: Option[TargetCellType]
-) extends RasterSource {
-  def name: GeoTrellisPath = dataPath
-  val layerId: LayerId = dataPath.layerId
-
-  val bandCount: Int = dataPath.bandCount.getOrElse(1)
-
+  val attributeStore: AttributeStore,
+  val dataPath: GeoTrellisPath,
+  val sourceLayers: Stream[Layer],
+  val targetCellType: Option[TargetCellType]
+) extends BaseGeoTrellisRasterSource {
   def this(attributeStore: AttributeStore, dataPath: GeoTrellisPath) =
     this(
       attributeStore,
@@ -55,9 +50,9 @@ class GeotrellisRasterSource(
       None
     )
 
-  def this(dataPath: GeoTrellisPath) =
-    this(AttributeStore(dataPath.value), dataPath)
+  def this(dataPath: GeoTrellisPath) = this(AttributeStore(dataPath.value), dataPath)
 
+  def layerId: LayerId = dataPath.layerId
 
   lazy val reader = CollectionLayerReader(attributeStore, dataPath.value)
 
@@ -66,21 +61,14 @@ class GeotrellisRasterSource(
 
   lazy val gridExtent: GridExtent[Long] = layerMetadata.layout.createAlignedGridExtent(layerMetadata.extent)
 
+  val bandCount: Int = dataPath.bandCount.getOrElse(1)
+
   def crs: CRS = layerMetadata.crs
 
   def cellType: CellType = dstCellType.getOrElse(layerMetadata.cellType)
 
   // reference to this will fully initilze the sourceLayers stream
   lazy val resolutions: List[GridExtent[Long]] = sourceLayers.map(_.gridExtent).toList
-
-  def metadata: GeoTrellisMetadata = GeoTrellisMetadata(
-    this, Map(
-      "catalogURI" -> dataPath.value,
-      "layerName"  -> layerId.name,
-      "zoomLevel"  -> layerId.zoom.toString,
-      "bandCount"  -> bandCount.toString
-    )
-  )
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     GeotrellisRasterSource.read(reader, layerId, layerMetadata, extent, bands).map(convertRaster)

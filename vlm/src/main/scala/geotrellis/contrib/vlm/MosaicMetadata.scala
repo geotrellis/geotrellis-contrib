@@ -16,13 +16,10 @@
 
 package geotrellis.contrib.vlm
 
-import geotrellis.contrib.vlm.effect.RasterSourceMetadataF
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellType, GridExtent}
 
 import cats.data.NonEmptyList
-import cats.Monad
-import cats.syntax.apply._
 
 case class MosaicMetadata(
   name: SourceName,
@@ -31,17 +28,9 @@ case class MosaicMetadata(
   cellType: CellType,
   gridExtent: GridExtent[Long],
   resolutions: List[GridExtent[Long]],
-  list: NonEmptyList[RasterSourceMetadata]
-) extends RasterSourceMetadata {
+  list: NonEmptyList[RasterMetadata]
+) extends RasterMetadata {
   /** Mosaic metadata usually doesn't contain a metadata that is common for all RasterSources */
   def attributes: Map[String, String] = Map.empty
   def attributesForBand(band: Int): Map[String, String] = Map.empty
-}
-
-object MosaicMetadata {
-  def apply(rasterSource: RasterMetadata, list: NonEmptyList[RasterSourceMetadata]): MosaicMetadata =
-    MosaicMetadata(rasterSource.name, rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions, list)
-
-  def apply[F[_]: Monad](rasterSource: RasterSourceMetadataF[F], list: F[NonEmptyList[RasterSourceMetadata]]): F[MosaicMetadata] =
-    (rasterSource: F[RasterMetadata], list).mapN(MosaicMetadata.apply)
 }

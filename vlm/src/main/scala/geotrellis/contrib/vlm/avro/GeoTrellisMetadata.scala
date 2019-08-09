@@ -16,12 +16,9 @@
 
 package geotrellis.contrib.vlm.avro
 
-import geotrellis.contrib.vlm.effect.RasterSourceMetadataF
-import geotrellis.contrib.vlm.{RasterMetadata, RasterSourceMetadata, SourceName}
+import geotrellis.contrib.vlm.{RasterMetadata, SourceName}
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellType, GridExtent}
-import cats.Monad
-import cats.syntax.apply._
 
 case class GeoTrellisMetadata(
   name: SourceName,
@@ -31,15 +28,8 @@ case class GeoTrellisMetadata(
   gridExtent: GridExtent[Long],
   resolutions: List[GridExtent[Long]],
   attributes: Map[String, String]
-) extends RasterSourceMetadata {
+) extends RasterMetadata {
   /** GeoTrellis metadata doesn't allow to query a per band metadata by default. */
   def attributesForBand(band: Int): Map[String, String] = Map.empty
 }
 
-object GeoTrellisMetadata {
-  def apply(rasterSource: RasterMetadata, base: Map[String, String]): GeoTrellisMetadata =
-    GeoTrellisMetadata(rasterSource.name, rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions, base)
-
-  def apply[F[_]: Monad](rasterSource: RasterSourceMetadataF[F], base: F[Map[String, String]]): F[GeoTrellisMetadata] =
-    (rasterSource: F[RasterMetadata], base).mapN(GeoTrellisMetadata.apply)
-}

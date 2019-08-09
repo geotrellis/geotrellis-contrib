@@ -16,7 +16,7 @@
 
 package geotrellis.contrib.vlm.effect
 
-import geotrellis.contrib.vlm.{BaseRasterMetadata, RasterMetadata, RasterSourceMetadata, SourceName}
+import geotrellis.contrib.vlm.SourceName
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellSize, CellType, GridBounds, GridExtent}
 import geotrellis.vector.Extent
@@ -25,7 +25,7 @@ import cats._
 import cats.syntax.functor._
 import cats.syntax.apply._
 
-abstract class RasterSourceMetadataF[F[_]: Monad] {
+abstract class RasterMetadataF[F[_]: Monad] {
   def name: SourceName
   def crs: F[CRS]
   def bandCount: F[Int]
@@ -40,11 +40,13 @@ abstract class RasterSourceMetadataF[F[_]: Monad] {
   def cols: F[Long] = gridExtent.map(_.cols)
   def rows: F[Long] = gridExtent.map(_.rows)
 
-  /** All available RasterSource metadata */
-  def metadata: F[_ <: RasterSourceMetadata]
-}
-
-object RasterSourceMetadataF {
-  implicit def deliftF[F[_]: Monad](rs: RasterSourceMetadataF[F]): F[RasterMetadata] =
-    (Monad[F].pure(rs.name), rs.crs, rs.bandCount, rs.cellType, rs.gridExtent, rs.resolutions).mapN(BaseRasterMetadata)
+  /**
+    * Return the "base" metadata, usually it is a zero band metadata,
+    * a metadata that is valid for the entire source and for the zero band
+    */
+  def attributes: F[Map[String, String]]
+  /**
+    * Return a per band metadata
+    */
+  def attributesForBand(band: Int): F[Map[String, String]]
 }

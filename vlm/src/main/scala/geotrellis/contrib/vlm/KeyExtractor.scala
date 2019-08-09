@@ -22,7 +22,7 @@ import java.time.ZonedDateTime
 
 trait KeyExtractor[K] extends Serializable {
   type M
-  def getMetadata(rs: RasterSource): M
+  def getMetadata(rs: RasterMetadata): M
   def getKey(metadata: M, spatialKey: SpatialKey): K
 }
 
@@ -32,19 +32,19 @@ object KeyExtractor {
 
   val spatialKeyExtractor: KeyExtractor.Aux[SpatialKey, Unit] = new KeyExtractor[SpatialKey] {
     type M = Unit
-    def getMetadata(rs: RasterSource): Unit = ()
+    def getMetadata(rs: RasterMetadata): Unit = ()
     def getKey(metadata: Unit, spatialKey: SpatialKey): SpatialKey = spatialKey
   }
 }
 
 trait TemporalKeyExtractor extends KeyExtractor[SpaceTimeKey] {
   type M = ZonedDateTime
-  def getMetadata(rs: RasterSource): M
+  def getMetadata(rs: RasterMetadata): M
   def getKey(metadata: ZonedDateTime, spatialKey: SpatialKey): SpaceTimeKey = SpaceTimeKey(spatialKey, TemporalKey(metadata.toInstant.toEpochMilli))
 }
 
 object TemporalKeyExtractor {
   def fromPath(parseTime: SourceName => ZonedDateTime): KeyExtractor.Aux[SpaceTimeKey, ZonedDateTime] = new TemporalKeyExtractor {
-    def getMetadata(rs: RasterSource): ZonedDateTime = parseTime(rs.name)
+    def getMetadata(rs: RasterMetadata): ZonedDateTime = parseTime(rs.name)
   }
 }

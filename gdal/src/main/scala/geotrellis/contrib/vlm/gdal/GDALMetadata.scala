@@ -16,12 +16,16 @@
 
 package geotrellis.contrib.vlm.gdal
 
-import geotrellis.contrib.vlm.{RasterMetadata, RasterSourceMetadata, SourceName}
-import geotrellis.contrib.vlm.effect.RasterSourceMetadataF
+import geotrellis.contrib.vlm.{RasterMetadata, SourceName}
+import geotrellis.contrib.vlm.effect.RasterMetadataF
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellType, GridExtent}
 
 import cats.Monad
+import cats.instances.list._
+import cats.syntax.functor._
+import cats.syntax.flatMap._
+import cats.syntax.traverse._
 import cats.syntax.apply._
 
 case class GDALMetadata(
@@ -35,7 +39,7 @@ case class GDALMetadata(
   baseMetadata: Map[GDALMetadataDomain, Map[String, String]] = Map.empty,
   /** GDAL per band per domain metadata */
   bandsMetadata: List[Map[GDALMetadataDomain, Map[String, String]]] = Nil
-) extends RasterSourceMetadata {
+) extends RasterMetadata {
   /** Returns the GDAL metadata merged into a single metadata domain. */
   def attributes: Map[String, String] = baseMetadata.flatMap(_._2)
   /** Returns the GDAL per band metadata merged into a single metadata domain. */
@@ -43,7 +47,7 @@ case class GDALMetadata(
 }
 
 object GDALMetadata {
-  def apply(rasterSource: RasterMetadata, dataset: GDALDataset, domains: List[GDALMetadataDomain]): GDALMetadata = {
+  def apply(rasterSource: RasterMetadata, dataset: GDALDataset, domains: List[GDALMetadataDomain]): GDALMetadata =
     domains match {
       case Nil =>
         GDALMetadata(rasterSource.name, rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions)
@@ -54,19 +58,44 @@ object GDALMetadata {
           (1 until dataset.bandCount).toList.map(dataset.getMetadata(GDALDataset.SOURCE, domains, _))
         )
     }
-  }
 
-  def apply(rasterSource: RasterMetadata, dataset: GDALDataset): GDALMetadata = {
+  def apply(rasterSource: RasterMetadata, dataset: GDALDataset): GDALMetadata =
     GDALMetadata(
       rasterSource.name, rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions,
       dataset.getAllMetadata(GDALDataset.SOURCE, 0),
       (1 until dataset.bandCount).toList.map(dataset.getAllMetadata(GDALDataset.SOURCE, _))
     )
-  }
 
-  def apply[F[_] : Monad](rasterSource: RasterSourceMetadataF[F], dataset: F[GDALDataset], domains: List[GDALMetadataDomain]): F[GDALMetadata] =
-    (rasterSource: F[RasterMetadata], dataset).mapN(GDALMetadata.apply(_, _, domains))
+  def apply[F[_] : Monad](rasterSource: RasterMetadataF[F], dataset: F[GDALDataset], domains: List[GDALMetadataDomain]): F[GDALMetadata] =
+    domains match {
+      case Nil =>
+        (Monad[F].pure(rasterSource.name), rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions).mapN(GDALMetadata(_, _, _, _, _, _))
+      case _ =>
+        (Monad[F].pure(rasterSource.name),
+          rasterSource.crs,
+          rasterSource.bandCount,
+          rasterSource.cellType,
+          rasterSource.gridExtent,
+          rasterSource.resolutions,
+          dataset.map(_.getAllMetadata(GDALDataset.SOURCE, 0)),
+          dataset >>= { ds =>
+            (1 until ds.bandCount).toList.traverse { list =>
+              dataset.map(_.getMetadata(GDALDataset.SOURCE, domains, list))
+            }
+          }).mapN(apply)
+    }
 
-  def apply[F[_] : Monad](rasterSource: RasterSourceMetadataF[F], dataset: F[GDALDataset]): F[GDALMetadata] =
-    (rasterSource: F[RasterMetadata], dataset).mapN(GDALMetadata.apply)
+  def apply[F[_] : Monad](rasterSource: RasterMetadataF[F], dataset: F[GDALDataset]): F[GDALMetadata] =
+    (Monad[F].pure(rasterSource.name),
+     rasterSource.crs,
+     rasterSource.bandCount,
+     rasterSource.cellType,
+     rasterSource.gridExtent,
+     rasterSource.resolutions,
+     dataset.map(_.getAllMetadata(GDALDataset.SOURCE, 0)),
+     dataset >>= { ds =>
+       (1 until ds.bandCount).toList.traverse { list =>
+         dataset.map(_.getAllMetadata(GDALDataset.SOURCE, list))
+       }
+     }).mapN(apply)
 }
