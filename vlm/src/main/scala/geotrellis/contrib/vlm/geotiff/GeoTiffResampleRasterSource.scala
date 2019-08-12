@@ -32,13 +32,13 @@ case class GeoTiffResampleRasterSource(
   method: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
   private[vlm] val targetCellType: Option[TargetCellType] = None,
-  private[vlm] val baseTiff: Option[MultibandGeoTiff] = None
+  @transient private[vlm] val baseTiff: Option[MultibandGeoTiff] = None
 ) extends RasterSource {
   def resampleMethod: Option[ResampleMethod] = Some(method)
   def name: GeoTiffPath = dataPath
 
   @transient lazy val tiff: MultibandGeoTiff =
-    baseTiff.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.value), streaming = true))
+    Option(baseTiff).flatten.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.value), streaming = true))
 
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = dstCellType.getOrElse(tiff.cellType)
