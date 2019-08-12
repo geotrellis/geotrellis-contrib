@@ -49,7 +49,9 @@ class GeotrellisResampleRasterSource(
   val gridExtent: GridExtent[Long],
   val resampleMethod: ResampleMethod = NearestNeighbor,
   val targetCellType: Option[TargetCellType] = None
-) extends BaseGeoTrellisRasterSource with LazyLogging {
+) extends RasterSource with LazyLogging {
+  def name: GeoTrellisPath = dataPath
+
   lazy val reader = CollectionLayerReader(attributeStore, dataPath.value)
 
   /** Source layer metadata  that needs to be resampled */
@@ -63,6 +65,17 @@ class GeotrellisResampleRasterSource(
   def cellType: CellType = dstCellType.getOrElse(sourceLayer.metadata.cellType)
 
   def bandCount: Int = sourceLayer.bandCount
+
+  def attributes: Map[String, String] = Map(
+    "catalogURI" -> dataPath.value,
+    "layerName"  -> layerId.name,
+    "zoomLevel"  -> layerId.zoom.toString,
+    "bandCount"  -> bandCount.toString
+  )
+  /** GeoTrellis metadata doesn't allow to query a per band metadata by default. */
+  def attributesForBand(band: Int): Map[String, String] = Map.empty
+
+  def metadata: GeoTrellisMetadata = GeoTrellisMetadata(name, crs, bandCount, cellType, gridExtent, resolutions, attributes)
 
   lazy val resolutions: List[GridExtent[Long]] = sourceLayers.map(_.gridExtent).toList
 

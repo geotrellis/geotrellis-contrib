@@ -20,9 +20,11 @@ import geotrellis.contrib.vlm._
 import geotrellis.vector.Extent
 import geotrellis.proj4._
 import geotrellis.raster._
+import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.raster.reproject.{Reproject, ReprojectRasterExtent}
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiff, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy, Tags}
+import geotrellis.util.RangeReader
 
 case class GeoTiffResampleRasterSource(
   dataPath: GeoTiffPath,
@@ -30,9 +32,24 @@ case class GeoTiffResampleRasterSource(
   method: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
   private[vlm] val targetCellType: Option[TargetCellType] = None,
-  protected val baseTiff: Option[MultibandGeoTiff] = None
-) extends BaseGeoTiffRasterSource {
+  private[vlm] val baseTiff: Option[MultibandGeoTiff] = None
+) extends RasterSource {
   def resampleMethod: Option[ResampleMethod] = Some(method)
+  def name: GeoTiffPath = dataPath
+
+  @transient lazy val tiff: MultibandGeoTiff =
+    baseTiff.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.value), streaming = true))
+
+  def bandCount: Int = tiff.bandCount
+  def cellType: CellType = dstCellType.getOrElse(tiff.cellType)
+  def tags: Tags = tiff.tags
+  def metadata: GeoTiffMetadata = GeoTiffMetadata(name, crs, bandCount, cellType, gridExtent, resolutions, tags)
+
+  /** Returns the GeoTiff head tags. */
+  def attributes: Map[String, String] = tags.headTags
+  /** Returns the GeoTiff per band tags. */
+  def attributesForBand(band: Int): Map[String, String] = tags.bandTags.lift(band).getOrElse(Map.empty)
+
   def crs: CRS = tiff.crs
 
   override lazy val gridExtent: GridExtent[Long] = resampleGrid(tiff.rasterExtent.toGridType[Long])

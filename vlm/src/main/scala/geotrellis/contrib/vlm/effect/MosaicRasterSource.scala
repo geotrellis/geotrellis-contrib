@@ -151,7 +151,7 @@ object MosaicRasterSource {
     sourcesList: F[NonEmptyList[RasterSourceF[F]]],
     targetCRS: F[CRS],
     targetGridExtent: F[GridExtent[Long]]
-  ): MosaicRasterSource[F] = apply(sourcesList, targetCRS, targetGridExtent, "")
+  ): MosaicRasterSource[F] = apply(sourcesList, targetCRS, targetGridExtent, EmptyName)
 
   def apply[F[_]: Monad: Par](
     sourcesList: F[NonEmptyList[RasterSourceF[F]]],
@@ -169,7 +169,7 @@ object MosaicRasterSource {
     }
 
   def apply[F[_]: Monad: Par](sourcesList: F[NonEmptyList[RasterSourceF[F]]], targetCRS: F[CRS]): MosaicRasterSource[F] =
-    apply(sourcesList, targetCRS, "")
+    apply(sourcesList, targetCRS, EmptyName)
 
   def apply[F[_]: Monad: Par](sourcesList: F[NonEmptyList[RasterSourceF[F]]], targetCRS: F[CRS], rasterSourceName: SourceName): MosaicRasterSource[F] =
     new MosaicRasterSource[F] {
@@ -210,7 +210,7 @@ object MosaicRasterSource {
     sourcesList: List[RasterSourceF[F]],
     targetCRS: CRS = WebMercator,
     targetGridExtent: Option[GridExtent[Long]],
-    rasterSourceName: SourceName = ""
+    rasterSourceName: SourceName = EmptyName
   ): MosaicRasterSource[F] =
     new MosaicRasterSource[F] {
       def name = rasterSourceName

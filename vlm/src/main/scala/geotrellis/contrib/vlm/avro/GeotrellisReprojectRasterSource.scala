@@ -40,7 +40,9 @@ class GeotrellisReprojectRasterSource(
   val strategy: OverviewStrategy = AutoHigherResolution,
   val errorThreshold: Double = 0.125,
   val targetCellType: Option[TargetCellType]
-) extends BaseGeoTrellisRasterSource with LazyLogging { self =>
+) extends RasterSource with LazyLogging {
+  def name: GeoTrellisPath = dataPath
+
   lazy val reader = CollectionLayerReader(attributeStore, dataPath.value)
 
   lazy val resolutions: List[GridExtent[Long]] = {
@@ -54,6 +56,17 @@ class GeotrellisReprojectRasterSource(
   def bandCount: Int = sourceLayer.bandCount
 
   def cellType: CellType = dstCellType.getOrElse(sourceLayer.metadata.cellType)
+
+  def attributes: Map[String, String] = Map(
+    "catalogURI" -> dataPath.value,
+    "layerName"  -> layerId.name,
+    "zoomLevel"  -> layerId.zoom.toString,
+    "bandCount"  -> bandCount.toString
+  )
+  /** GeoTrellis metadata doesn't allow to query a per band metadata by default. */
+  def attributesForBand(band: Int): Map[String, String] = Map.empty
+
+  def metadata: GeoTrellisMetadata = GeoTrellisMetadata(name, crs, bandCount, cellType, gridExtent, resolutions, attributes)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val transform = Transform(sourceLayer.metadata.crs, crs)

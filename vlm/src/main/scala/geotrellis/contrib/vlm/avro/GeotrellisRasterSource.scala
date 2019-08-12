@@ -41,7 +41,9 @@ class GeotrellisRasterSource(
   val dataPath: GeoTrellisPath,
   val sourceLayers: Stream[Layer],
   val targetCellType: Option[TargetCellType]
-) extends BaseGeoTrellisRasterSource {
+) extends RasterSource {
+  def name: GeoTrellisPath = dataPath
+
   def this(attributeStore: AttributeStore, dataPath: GeoTrellisPath) =
     this(
       attributeStore,
@@ -66,6 +68,17 @@ class GeotrellisRasterSource(
   def crs: CRS = layerMetadata.crs
 
   def cellType: CellType = dstCellType.getOrElse(layerMetadata.cellType)
+
+  def attributes: Map[String, String] = Map(
+    "catalogURI" -> dataPath.value,
+    "layerName"  -> layerId.name,
+    "zoomLevel"  -> layerId.zoom.toString,
+    "bandCount"  -> bandCount.toString
+  )
+  /** GeoTrellis metadata doesn't allow to query a per band metadata by default. */
+  def attributesForBand(band: Int): Map[String, String] = Map.empty
+
+  def metadata: GeoTrellisMetadata = GeoTrellisMetadata(name, crs, bandCount, cellType, gridExtent, resolutions, attributes)
 
   // reference to this will fully initilze the sourceLayers stream
   lazy val resolutions: List[GridExtent[Long]] = sourceLayers.map(_.gridExtent).toList

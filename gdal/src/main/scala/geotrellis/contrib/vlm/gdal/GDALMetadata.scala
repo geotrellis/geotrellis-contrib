@@ -47,36 +47,36 @@ case class GDALMetadata(
 }
 
 object GDALMetadata {
-  def apply(rasterSource: RasterMetadata, dataset: GDALDataset, domains: List[GDALMetadataDomain]): GDALMetadata =
+  def apply(rasterMetadata: RasterMetadata, dataset: GDALDataset, domains: List[GDALMetadataDomain]): GDALMetadata =
     domains match {
       case Nil =>
-        GDALMetadata(rasterSource.name, rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions)
+        GDALMetadata(rasterMetadata.name, rasterMetadata.crs, rasterMetadata.bandCount, rasterMetadata.cellType, rasterMetadata.gridExtent, rasterMetadata.resolutions)
       case _ =>
         GDALMetadata(
-          rasterSource.name, rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions,
+          rasterMetadata.name, rasterMetadata.crs, rasterMetadata.bandCount, rasterMetadata.cellType, rasterMetadata.gridExtent, rasterMetadata.resolutions,
           dataset.getMetadata(GDALDataset.SOURCE, domains, 0),
           (1 until dataset.bandCount).toList.map(dataset.getMetadata(GDALDataset.SOURCE, domains, _))
         )
     }
 
-  def apply(rasterSource: RasterMetadata, dataset: GDALDataset): GDALMetadata =
+  def apply(rasterMetadata: RasterMetadata, dataset: GDALDataset): GDALMetadata =
     GDALMetadata(
-      rasterSource.name, rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions,
+      rasterMetadata.name, rasterMetadata.crs, rasterMetadata.bandCount, rasterMetadata.cellType, rasterMetadata.gridExtent, rasterMetadata.resolutions,
       dataset.getAllMetadata(GDALDataset.SOURCE, 0),
       (1 until dataset.bandCount).toList.map(dataset.getAllMetadata(GDALDataset.SOURCE, _))
     )
 
-  def apply[F[_] : Monad](rasterSource: RasterMetadataF[F], dataset: F[GDALDataset], domains: List[GDALMetadataDomain]): F[GDALMetadata] =
+  def apply[F[_] : Monad](rasterMetadata: RasterMetadataF[F], dataset: F[GDALDataset], domains: List[GDALMetadataDomain]): F[GDALMetadata] =
     domains match {
       case Nil =>
-        (Monad[F].pure(rasterSource.name), rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions).mapN(GDALMetadata(_, _, _, _, _, _))
+        (Monad[F].pure(rasterMetadata.name), rasterMetadata.crs, rasterMetadata.bandCount, rasterMetadata.cellType, rasterMetadata.gridExtent, rasterMetadata.resolutions).mapN(GDALMetadata(_, _, _, _, _, _))
       case _ =>
-        (Monad[F].pure(rasterSource.name),
-          rasterSource.crs,
-          rasterSource.bandCount,
-          rasterSource.cellType,
-          rasterSource.gridExtent,
-          rasterSource.resolutions,
+        (Monad[F].pure(rasterMetadata.name),
+          rasterMetadata.crs,
+          rasterMetadata.bandCount,
+          rasterMetadata.cellType,
+          rasterMetadata.gridExtent,
+          rasterMetadata.resolutions,
           dataset.map(_.getAllMetadata(GDALDataset.SOURCE, 0)),
           dataset >>= { ds =>
             (1 until ds.bandCount).toList.traverse { list =>
@@ -85,13 +85,13 @@ object GDALMetadata {
           }).mapN(apply)
     }
 
-  def apply[F[_] : Monad](rasterSource: RasterMetadataF[F], dataset: F[GDALDataset]): F[GDALMetadata] =
-    (Monad[F].pure(rasterSource.name),
-     rasterSource.crs,
-     rasterSource.bandCount,
-     rasterSource.cellType,
-     rasterSource.gridExtent,
-     rasterSource.resolutions,
+  def apply[F[_] : Monad](rasterMetadata: RasterMetadataF[F], dataset: F[GDALDataset]): F[GDALMetadata] =
+    (Monad[F].pure(rasterMetadata.name),
+     rasterMetadata.crs,
+     rasterMetadata.bandCount,
+     rasterMetadata.cellType,
+     rasterMetadata.gridExtent,
+     rasterMetadata.resolutions,
      dataset.map(_.getAllMetadata(GDALDataset.SOURCE, 0)),
      dataset >>= { ds =>
        (1 until ds.bandCount).toList.traverse { list =>
