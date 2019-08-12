@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Expose GDAL Metadata API, expose RasterSources Metadata API 
 - LayoutTileSource[K] implementation
 - Add Named RasterSources
+- Implement interpretAs on RasterSources
+
+### Fixed
+
+- In RasterSource, match on TargetCellType instead of ConvertTargetCellType to prevent always falling through
 
 ## [3.17.0] - 2019-07-23
 

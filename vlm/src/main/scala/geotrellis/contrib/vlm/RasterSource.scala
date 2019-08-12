@@ -174,7 +174,7 @@ trait RasterSource extends CellGrid[Long] with RasterMetadata {
 
   protected lazy val convertRaster: Raster[MultibandTile] => Raster[MultibandTile] =
     targetCellType match {
-      case Some(target: ConvertTargetCellType) =>
+      case Some(target: TargetCellType) =>
         (raster: Raster[MultibandTile]) => target(raster)
       case _ =>
         (raster: Raster[MultibandTile]) => raster
@@ -192,6 +192,9 @@ trait RasterSource extends CellGrid[Long] with RasterMetadata {
      */
   def convert(targetCellType: CellType): RasterSource =
     convert(ConvertTargetCellType(targetCellType))
+  
+  def interpretAs(targetCellType: CellType): RasterSource = 
+    convert(InterpretAsTargetCellType(targetCellType))
 }
 
 object RasterSource {
