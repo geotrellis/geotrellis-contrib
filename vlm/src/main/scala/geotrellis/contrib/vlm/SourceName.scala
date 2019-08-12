@@ -16,14 +16,14 @@
 
 package geotrellis.contrib.vlm
 
-trait RasterSourceMetadata extends RasterMetadata {
-  /**
-    * Return the "base" metadata, usually it is a zero band metadata,
-    * a metadata that is valid for the entire source and for the zero band
-    */
-  def attributes: Map[String, String]
-  /**
-    * Return a per band metadata
-    */
-  def attributesForBand(band: Int): Map[String, String]
+/**
+  * Represents the path to data or name of the data that is to be read.
+  */
+trait SourceName extends Serializable
+
+case class StringName(value: String) extends SourceName
+case object EmptyName extends SourceName
+
+object SourceName {
+  implicit def stringToDataName(str: String): SourceName = if(str.isEmpty) EmptyName else StringName(str)
 }

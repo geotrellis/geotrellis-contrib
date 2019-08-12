@@ -30,7 +30,7 @@ import scala.io.AnsiColor._
 
 class GeotrellisReprojectRasterSource(
   val attributeStore: AttributeStore,
-  val dataPath: GeoTrellisDataPath,
+  val dataPath: GeoTrellisPath,
   val layerId: LayerId,
   val sourceLayers: Stream[Layer],
   val gridExtent: GridExtent[Long],
@@ -40,9 +40,10 @@ class GeotrellisReprojectRasterSource(
   val strategy: OverviewStrategy = AutoHigherResolution,
   val errorThreshold: Double = 0.125,
   val targetCellType: Option[TargetCellType]
-) extends RasterSource with LazyLogging { self =>
+) extends RasterSource with LazyLogging {
+  def name: GeoTrellisPath = dataPath
 
-  lazy val reader = CollectionLayerReader(attributeStore, dataPath.path)
+  lazy val reader = CollectionLayerReader(attributeStore, dataPath.value)
 
   lazy val resolutions: List[GridExtent[Long]] = {
     sourceLayers.map { layer =>
@@ -56,14 +57,16 @@ class GeotrellisReprojectRasterSource(
 
   def cellType: CellType = dstCellType.getOrElse(sourceLayer.metadata.cellType)
 
-  def metadata: GeoTrellisMetadata = GeoTrellisMetadata(
-    this, Map(
-      "catalogURI" -> dataPath.path,
-      "layerName"  -> layerId.name,
-      "zoomLevel"  -> layerId.zoom.toString,
-      "bandCount"  -> bandCount.toString
-    )
+  def attributes: Map[String, String] = Map(
+    "catalogURI" -> dataPath.value,
+    "layerName"  -> layerId.name,
+    "zoomLevel"  -> layerId.zoom.toString,
+    "bandCount"  -> bandCount.toString
   )
+  /** GeoTrellis metadata doesn't allow to query a per band metadata by default. */
+  def attributesForBand(band: Int): Map[String, String] = Map.empty
+
+  def metadata: GeoTrellisMetadata = GeoTrellisMetadata(name, crs, bandCount, cellType, gridExtent, resolutions, attributes)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val transform = Transform(sourceLayer.metadata.crs, crs)
@@ -154,7 +157,7 @@ class GeotrellisReprojectRasterSource(
   }
 
   override def toString: String =
-    s"GeoTrellisReprojectRasterSource(${dataPath.path},$layerId,$crs,$gridExtent,${resampleMethod})"
+    s"GeoTrellisReprojectRasterSource(${dataPath.value},$layerId,$crs,$gridExtent,${resampleMethod})"
 }
 
 object GeotrellisReprojectRasterSource {

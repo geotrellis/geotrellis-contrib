@@ -102,7 +102,7 @@ case class RasterSummary[M](
 }
 
 object RasterSummary {
-  def collect[M: Boundable](rdd: RDD[RasterSource], getDimension: RasterSource => M): Seq[RasterSummary[M]] = {
+  def collect[M: Boundable](rdd: RDD[RasterSource], getDimension: RasterMetadata => M): Seq[RasterSummary[M]] = {
     rdd
       .map { rs =>
         val extent = rs.extent
@@ -117,7 +117,7 @@ object RasterSummary {
   }
 
   // TODO: should be refactored, we need to reproject all metadata into a common CRS. This code is for the current code simplification
-  def fromRDD[M: Boundable](rdd: RDD[RasterSource], getDimension: RasterSource => M): RasterSummary[M] = {
+  def fromRDD[M: Boundable](rdd: RDD[RasterSource], getDimension: RasterMetadata => M): RasterSummary[M] = {
     /* Notes on why this is awful:
     - scalac can't infer both GetComponent and type V as CellGrid[N]
     - very ad-hoc, why type constraint and lense?
@@ -134,7 +134,7 @@ object RasterSummary {
     all.head
   }
 
-  def fromSeq[M: Boundable](seq: Seq[RasterSource], getDimension: RasterSource => M): RasterSummary[M] = {
+  def fromSeq[M: Boundable](seq: Seq[RasterSource], getDimension: RasterMetadata => M): RasterSummary[M] = {
     val all =
       seq
         .map { rs =>

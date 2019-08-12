@@ -38,15 +38,13 @@ case class Layer(id: LayerId, metadata: TileLayerMetadata[SpatialKey], bandCount
   */
 class GeotrellisRasterSource(
   val attributeStore: AttributeStore,
-  val dataPath: GeoTrellisDataPath,
+  val dataPath: GeoTrellisPath,
   val sourceLayers: Stream[Layer],
   val targetCellType: Option[TargetCellType]
 ) extends RasterSource {
-  val layerId: LayerId = dataPath.layerId
+  def name: GeoTrellisPath = dataPath
 
-  val bandCount: Int = dataPath.bandCount.getOrElse(1)
-
-  def this(attributeStore: AttributeStore, dataPath: GeoTrellisDataPath) =
+  def this(attributeStore: AttributeStore, dataPath: GeoTrellisPath) =
     this(
       attributeStore,
       dataPath,
@@ -54,32 +52,36 @@ class GeotrellisRasterSource(
       None
     )
 
-  def this(dataPath: GeoTrellisDataPath) =
-    this(AttributeStore(dataPath.path), dataPath)
+  def this(dataPath: GeoTrellisPath) = this(AttributeStore(dataPath.value), dataPath)
 
+  def layerId: LayerId = dataPath.layerId
 
-  lazy val reader = CollectionLayerReader(attributeStore, dataPath.path)
+  lazy val reader = CollectionLayerReader(attributeStore, dataPath.value)
 
   // read metadata directly instead of searching sourceLayers to avoid unneeded reads
   lazy val layerMetadata = reader.attributeStore.readMetadata[TileLayerMetadata[SpatialKey]](layerId)
 
   lazy val gridExtent: GridExtent[Long] = layerMetadata.layout.createAlignedGridExtent(layerMetadata.extent)
 
+  val bandCount: Int = dataPath.bandCount.getOrElse(1)
+
   def crs: CRS = layerMetadata.crs
 
   def cellType: CellType = dstCellType.getOrElse(layerMetadata.cellType)
 
+  def attributes: Map[String, String] = Map(
+    "catalogURI" -> dataPath.value,
+    "layerName"  -> layerId.name,
+    "zoomLevel"  -> layerId.zoom.toString,
+    "bandCount"  -> bandCount.toString
+  )
+  /** GeoTrellis metadata doesn't allow to query a per band metadata by default. */
+  def attributesForBand(band: Int): Map[String, String] = Map.empty
+
+  def metadata: GeoTrellisMetadata = GeoTrellisMetadata(name, crs, bandCount, cellType, gridExtent, resolutions, attributes)
+
   // reference to this will fully initilze the sourceLayers stream
   lazy val resolutions: List[GridExtent[Long]] = sourceLayers.map(_.gridExtent).toList
-
-  def metadata: GeoTrellisMetadata = GeoTrellisMetadata(
-    this, Map(
-      "catalogURI" -> dataPath.path,
-      "layerName"  -> layerId.name,
-      "zoomLevel"  -> layerId.zoom.toString,
-      "bandCount"  -> bandCount.toString
-    )
-  )
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     GeotrellisRasterSource.read(reader, layerId, layerMetadata, extent, bands).map(convertRaster)

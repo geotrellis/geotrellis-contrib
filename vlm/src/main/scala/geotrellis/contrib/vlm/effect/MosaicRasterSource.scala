@@ -52,18 +52,6 @@ abstract class MosaicRasterSource[F[_]: Monad: Par] extends RasterSourceF[F] {
   val crs: F[CRS]
   def gridExtent: F[GridExtent[Long]]
 
-  /**
-    * Uri is required only for compatibility with RasterSource.
-    *
-    * It doesn't make sense to access "the" URI for a collection, so this throws an exception.
-    */
-  def dataPath: DataPath = throw new NotImplementedError(
-    """
-      | MosaicRasterSources don't have a single dataPath. Perhaps you wanted the dataPath from
-      | one of this MosaicRasterSource's sources?
-    """.trim.stripMargin
-  )
-
   val targetCellType = None
 
   /**
@@ -81,11 +69,11 @@ abstract class MosaicRasterSource[F[_]: Monad: Par] extends RasterSourceF[F] {
   }
 
   /** All available RasterSources metadata. */
-  def metadata: F[MosaicMetadata] =
-    MosaicMetadata(
-      this,
-      sources >>= { list => list.parTraverse { _.metadata.map { case md: RasterMetadata => md } } }
-    )
+  def metadata: F[MosaicMetadata] = (Monad[F].pure(name), crs, bandCount, cellType, gridExtent, resolutions, sources >>= { _.parTraverse { _.metadata.map { case md: RasterMetadata => md } } }).mapN(MosaicMetadata)
+
+  def attributes: F[Map[String, String]] = Monad[F].pure(Map.empty)
+
+  def attributesForBand(band: Int): F[Map[String, String]] = Monad[F].pure(Map.empty)
 
   /**
     * All available resolutions for all RasterSources in this MosaicRasterSource
@@ -158,8 +146,21 @@ object MosaicRasterSource {
       }
     }
 
-  def apply[F[_]: Monad: Par](sourcesList: F[NonEmptyList[RasterSourceF[F]]], targetCRS: F[CRS], targetGridExtent: F[GridExtent[Long]]) =
+
+  def apply[F[_]: Monad: Par](
+    sourcesList: F[NonEmptyList[RasterSourceF[F]]],
+    targetCRS: F[CRS],
+    targetGridExtent: F[GridExtent[Long]]
+  ): MosaicRasterSource[F] = apply(sourcesList, targetCRS, targetGridExtent, EmptyName)
+
+  def apply[F[_]: Monad: Par](
+    sourcesList: F[NonEmptyList[RasterSourceF[F]]],
+    targetCRS: F[CRS],
+    targetGridExtent: F[GridExtent[Long]],
+    rasterSourceName: SourceName
+  ): MosaicRasterSource[F] =
     new MosaicRasterSource[F] {
+      def name = rasterSourceName
       val sources = (targetCRS, targetGridExtent).mapN { case (targetCRS, targetGridExtent) =>
         sourcesList map { _.map(_.reprojectToGrid(targetCRS, targetGridExtent)) }
       }.flatten
@@ -168,7 +169,11 @@ object MosaicRasterSource {
     }
 
   def apply[F[_]: Monad: Par](sourcesList: F[NonEmptyList[RasterSourceF[F]]], targetCRS: F[CRS]): MosaicRasterSource[F] =
+    apply(sourcesList, targetCRS, EmptyName)
+
+  def apply[F[_]: Monad: Par](sourcesList: F[NonEmptyList[RasterSourceF[F]]], targetCRS: F[CRS], rasterSourceName: SourceName): MosaicRasterSource[F] =
     new MosaicRasterSource[F] {
+      def name = rasterSourceName
       val sources = {
         (sourcesList >>= (_.head.gridExtent), targetCRS).mapN { case (gridExtent, targetCRS) =>
           sourcesList.map(_.map {
@@ -204,9 +209,11 @@ object MosaicRasterSource {
   def unsafeFromList[F[_]: Monad: Par](
     sourcesList: List[RasterSourceF[F]],
     targetCRS: CRS = WebMercator,
-    targetGridExtent: Option[GridExtent[Long]]
+    targetGridExtent: Option[GridExtent[Long]],
+    rasterSourceName: SourceName = EmptyName
   ): MosaicRasterSource[F] =
     new MosaicRasterSource[F] {
+      def name = rasterSourceName
       val sources = Monad[F].pure(NonEmptyList(sourcesList.head, sourcesList.tail))
       val crs = Monad[F].pure(targetCRS)
       def gridExtent: F[GridExtent[Long]] = targetGridExtent.fold(sourcesList.head.gridExtent)(Monad[F].pure)

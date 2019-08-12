@@ -21,25 +21,34 @@ import geotrellis.vector._
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
-import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy, Tags}
+import geotrellis.raster.io.geotiff._
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.util.RangeReader
 
 case class GeoTiffRasterSource(
-  dataPath: GeoTiffDataPath,
+  dataPath: GeoTiffPath,
   private[vlm] val targetCellType: Option[TargetCellType] = None,
-  private val baseTiff: Option[MultibandGeoTiff] = None
+  private[vlm] val baseTiff: Option[MultibandGeoTiff] = None
 ) extends RasterSource {
+  def name: GeoTiffPath = dataPath
+
   @transient lazy val tiff: MultibandGeoTiff =
-    baseTiff.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.path), streaming = true))
+    baseTiff.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.value), streaming = true))
+
+  def bandCount: Int = tiff.bandCount
+  def cellType: CellType = dstCellType.getOrElse(tiff.cellType)
+  def tags: Tags = tiff.tags
+  def metadata: GeoTiffMetadata = GeoTiffMetadata(name, crs, bandCount, cellType, gridExtent, resolutions, tags)
+
+  /** Returns the GeoTiff head tags. */
+  def attributes: Map[String, String] = tags.headTags
+  /** Returns the GeoTiff per band tags. */
+  def attributesForBand(band: Int): Map[String, String] = tags.bandTags.lift(band).getOrElse(Map.empty)
+
+  def crs: CRS = tiff.crs
 
   lazy val gridExtent: GridExtent[Long] = tiff.rasterExtent.toGridType[Long]
   lazy val resolutions: List[GridExtent[Long]] = gridExtent :: tiff.overviews.map(_.rasterExtent.toGridType[Long])
-
-  def crs: CRS = tiff.crs
-  def bandCount: Int = tiff.bandCount
-  def cellType: CellType = dstCellType.getOrElse(tiff.cellType)
-  def metadata: GeoTiffMetadata = GeoTiffMetadata(this, tiff.tags)
 
   def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): GeoTiffReprojectRasterSource =
     GeoTiffReprojectRasterSource(dataPath, targetCRS, resampleGrid, method, strategy, targetCellType = targetCellType, baseTiff = Some(tiff))

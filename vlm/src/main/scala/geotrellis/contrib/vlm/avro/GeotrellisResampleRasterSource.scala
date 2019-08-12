@@ -20,13 +20,11 @@ import geotrellis.contrib.vlm._
 import geotrellis.vector._
 import geotrellis.proj4._
 import geotrellis.raster._
-import geotrellis.raster.reproject.Reproject
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
 import geotrellis.store._
 
 import com.typesafe.scalalogging.LazyLogging
-
 
 /** RasterSource that resamples on read from underlying GeoTrellis layer.
  *
@@ -45,15 +43,16 @@ import com.typesafe.scalalogging.LazyLogging
  */
 class GeotrellisResampleRasterSource(
   val attributeStore: AttributeStore,
-  val dataPath: GeoTrellisDataPath,
+  val dataPath: GeoTrellisPath,
   val layerId: LayerId,
   val sourceLayers: Stream[Layer],
   val gridExtent: GridExtent[Long],
   val resampleMethod: ResampleMethod = NearestNeighbor,
   val targetCellType: Option[TargetCellType] = None
-) extends RasterSource with LazyLogging { self =>
+) extends RasterSource with LazyLogging {
+  def name: GeoTrellisPath = dataPath
 
-  lazy val reader = CollectionLayerReader(attributeStore, dataPath.path)
+  lazy val reader = CollectionLayerReader(attributeStore, dataPath.value)
 
   /** Source layer metadata  that needs to be resampled */
   lazy val sourceLayer: Layer = sourceLayers.find(_.id == layerId).get
@@ -67,16 +66,18 @@ class GeotrellisResampleRasterSource(
 
   def bandCount: Int = sourceLayer.bandCount
 
-  lazy val resolutions: List[GridExtent[Long]] = sourceLayers.map(_.gridExtent).toList
-
-  def metadata: GeoTrellisMetadata = GeoTrellisMetadata(
-    this, Map(
-      "catalogURI" -> dataPath.path,
-      "layerName"  -> layerId.name,
-      "zoomLevel"  -> layerId.zoom.toString,
-      "bandCount"  -> bandCount.toString
-    )
+  def attributes: Map[String, String] = Map(
+    "catalogURI" -> dataPath.value,
+    "layerName"  -> layerId.name,
+    "zoomLevel"  -> layerId.zoom.toString,
+    "bandCount"  -> bandCount.toString
   )
+  /** GeoTrellis metadata doesn't allow to query a per band metadata by default. */
+  def attributesForBand(band: Int): Map[String, String] = Map.empty
+
+  def metadata: GeoTrellisMetadata = GeoTrellisMetadata(name, crs, bandCount, cellType, gridExtent, resolutions, attributes)
+
+  lazy val resolutions: List[GridExtent[Long]] = sourceLayers.map(_.gridExtent).toList
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val tileBounds = sourceLayer.metadata.mapTransform.extentToBounds(extent)

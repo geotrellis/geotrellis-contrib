@@ -16,33 +16,22 @@
 
 package geotrellis.contrib.vlm.geotiff
 
-import geotrellis.contrib.vlm.effect.RasterSourceF
-import geotrellis.contrib.vlm.{RasterMetadata, RasterSourceMetadata}
+import geotrellis.contrib.vlm.{RasterMetadata, SourceName}
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellType, GridExtent}
 import geotrellis.raster.io.geotiff.Tags
 
-import cats.Monad
-import cats.syntax.apply._
-
 case class GeoTiffMetadata(
+  name: SourceName,
   crs: CRS,
   bandCount: Int,
   cellType: CellType,
   gridExtent: GridExtent[Long],
   resolutions: List[GridExtent[Long]],
   tags: Tags
-) extends RasterSourceMetadata {
+) extends RasterMetadata {
   /** Returns the GeoTiff head tags. */
   def attributes: Map[String, String] = tags.headTags
   /** Returns the GeoTiff per band tags. */
   def attributesForBand(band: Int): Map[String, String] = tags.bandTags.lift(band).getOrElse(Map.empty)
-}
-
-object GeoTiffMetadata {
-  def apply(rasterSource: RasterMetadata, tags: Tags): GeoTiffMetadata =
-    GeoTiffMetadata(rasterSource.crs, rasterSource.bandCount, rasterSource.cellType, rasterSource.gridExtent, rasterSource.resolutions, tags)
-
-  def apply[F[_]: Monad](rasterSource: RasterSourceF[F], tags: F[Tags]): F[GeoTiffMetadata] =
-    (rasterSource: F[RasterMetadata], tags).mapN(GeoTiffMetadata.apply)
 }

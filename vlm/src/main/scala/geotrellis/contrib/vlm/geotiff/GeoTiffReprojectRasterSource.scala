@@ -22,22 +22,34 @@ import geotrellis.raster._
 import geotrellis.raster.reproject._
 import geotrellis.raster.resample._
 import geotrellis.proj4._
-import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiff, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy}
 import geotrellis.raster.io.geotiff.reader.GeoTiffReader
+import geotrellis.raster.io.geotiff.{AutoHigherResolution, GeoTiff, GeoTiffMultibandTile, MultibandGeoTiff, OverviewStrategy, Tags}
 import geotrellis.util.RangeReader
 
 case class GeoTiffReprojectRasterSource(
-  dataPath: GeoTiffDataPath,
+  dataPath: GeoTiffPath,
   crs: CRS,
   targetResampleGrid: ResampleGrid[Long] = IdentityResampleGrid,
   resampleMethod: ResampleMethod = NearestNeighbor,
   strategy: OverviewStrategy = AutoHigherResolution,
   errorThreshold: Double = 0.125,
   private[vlm] val targetCellType: Option[TargetCellType] = None,
-  private val baseTiff: Option[MultibandGeoTiff] = None
-) extends RasterSource { self =>
+  private[vlm] val baseTiff: Option[MultibandGeoTiff] = None
+) extends RasterSource {
+  def name: GeoTiffPath = dataPath
+
   @transient lazy val tiff: MultibandGeoTiff =
-    baseTiff.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.path), streaming = true))
+    baseTiff.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.value), streaming = true))
+
+  def bandCount: Int = tiff.bandCount
+  def cellType: CellType = dstCellType.getOrElse(tiff.cellType)
+  def tags: Tags = tiff.tags
+  def metadata: GeoTiffMetadata = GeoTiffMetadata(name, crs, bandCount, cellType, gridExtent, resolutions, tags)
+
+  /** Returns the GeoTiff head tags. */
+  def attributes: Map[String, String] = tags.headTags
+  /** Returns the GeoTiff per band tags. */
+  def attributesForBand(band: Int): Map[String, String] = tags.bandTags.lift(band).getOrElse(Map.empty)
 
   protected lazy val baseCRS: CRS = tiff.crs
   protected lazy val baseGridExtent: GridExtent[Long] = tiff.rasterExtent.toGridType[Long]
@@ -75,10 +87,6 @@ case class GeoTiffReprojectRasterSource(
         tiff.getClosestOverview(estimatedSource.cellSize, strategy)
     }
   }
-
-  def bandCount: Int = tiff.bandCount
-  def cellType: CellType = dstCellType.getOrElse(tiff.cellType)
-  def metadata: GeoTiffMetadata = GeoTiffMetadata(this, tiff.tags)
 
   def read(extent: Extent, bands: Seq[Int]): Option[Raster[MultibandTile]] = {
     val bounds = gridExtent.gridBoundsFor(extent, clamp = false)

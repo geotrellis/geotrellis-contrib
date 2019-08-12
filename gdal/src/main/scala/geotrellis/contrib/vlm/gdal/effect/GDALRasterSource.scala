@@ -17,7 +17,7 @@
 package geotrellis.contrib.vlm.gdal.effect
 
 import geotrellis.contrib.vlm._
-import geotrellis.contrib.vlm.gdal.{DefaultDomain, GDALDataPath, GDALDataset, GDALMetadata, GDALMetadataDomain, GDALWarpOptions}
+import geotrellis.contrib.vlm.gdal.{DefaultDomain, GDALPath, GDALDataset, GDALMetadata, GDALMetadataDomain, GDALWarpOptions}
 import geotrellis.contrib.vlm.gdal.GDALDataset.DatasetType
 import geotrellis.contrib.vlm.effect._
 import geotrellis.contrib.vlm.effect.geotiff.UnsafeLift
@@ -34,11 +34,12 @@ import cats.syntax.apply._
 import cats.syntax.functor._
 
 case class GDALRasterSource[F[_]: Monad: UnsafeLift](
-  dataPath: GDALDataPath,
+  dataPath: GDALPath,
   options: F[GDALWarpOptions] = GDALWarpOptions.EMPTY,
   private[vlm] val targetCellType: Option[TargetCellType] = None
 ) extends RasterSourceF[F] {
-  val path: String = dataPath.path
+  def name: GDALPath = dataPath
+  val path: String = dataPath.value
 
   lazy val datasetType: F[DatasetType] = options.map(_.datasetType)
 
@@ -75,6 +76,17 @@ case class GDALRasterSource[F[_]: Monad: UnsafeLift](
     * If there is a need in some custom domain, use the metadataForDomain function.
     */
   lazy val metadata: F[GDALMetadata] = GDALMetadata(this, datasetF, DefaultDomain :: Nil)
+
+  /**
+    * Return the "base" metadata, usually it is a zero band metadata,
+    * a metadata that is valid for the entire source and for the zero band
+    */
+  def attributes: F[Map[String, String]] = metadata.map(_.attributes)
+
+  /**
+    * Return a per band metadata
+    */
+  def attributesForBand(band: Int): F[Map[String, String]] = metadata.map(_.attributesForBand(band))
 
   /**
     * Fetches a metadata from the specified [[GDALMetadataDomain]] list.
