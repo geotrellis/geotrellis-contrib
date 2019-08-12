@@ -28,3 +28,8 @@ case class ConvertTargetCellType(cellType: CellType) extends TargetCellType {
   def apply(output: => Raster[MultibandTile]): Raster[MultibandTile] =
     output.mapTile { _.convert(cellType) }
 }
+
+case class InterpretAsTargetCellType(cellType: CellType) extends TargetCellType {
+  def apply(output: => Raster[MultibandTile]): Raster[MultibandTile] = 
+    output.mapTile { _.interpretAs(cellType) }
+}
