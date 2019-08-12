@@ -28,12 +28,12 @@ import geotrellis.util.RangeReader
 case class GeoTiffRasterSource(
   dataPath: GeoTiffPath,
   private[vlm] val targetCellType: Option[TargetCellType] = None,
-  private[vlm] val baseTiff: Option[MultibandGeoTiff] = None
+  @transient private[vlm] val baseTiff: Option[MultibandGeoTiff] = None
 ) extends RasterSource {
   def name: GeoTiffPath = dataPath
 
   @transient lazy val tiff: MultibandGeoTiff =
-    baseTiff.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.value), streaming = true))
+    Option(baseTiff).flatten.getOrElse(GeoTiffReader.readMultiband(RangeReader(dataPath.value), streaming = true))
 
   def bandCount: Int = tiff.bandCount
   def cellType: CellType = dstCellType.getOrElse(tiff.cellType)
