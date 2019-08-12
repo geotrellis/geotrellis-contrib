@@ -34,6 +34,13 @@ class GeoTiffRasterSourceSpec extends FunSpec with RasterMatchers with BetterRas
 
   lazy val source: GeoTiffRasterSource = new GeoTiffRasterSource(url)
 
+  it("should convert celltypes correctly") {
+    val rs = GeoTiffRasterSource(Resource.path("img/0_to_99.tif"))
+    val raster = rs.read(Extent(1,1,100,100)).get
+    val interpreted = rs.interpretAs(IntUserDefinedNoDataCellType(0)).read(Extent(1,1,100,100)).get
+    (interpreted.tile.band(0).get(0,0)) should be (Int.MinValue)
+  }
+
   it("should be able to read upper left corner") {
     val bounds = GridBounds(0, 0, 10, 10).toGridType[Long]
     val chip: Raster[MultibandTile] = source.read(bounds).get
