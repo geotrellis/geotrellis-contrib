@@ -18,7 +18,7 @@ package geotrellis.contrib.vlm.effect.geotiff
 
 import geotrellis.contrib.vlm.effect._
 import geotrellis.contrib.vlm._
-import geotrellis.contrib.vlm.geotiff.{GeoTiffMetadata, GeoTiffPath}
+import geotrellis.raster.geotiff.{GeoTiffMetadata, GeoTiffPath}
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.{MultibandGeoTiff, AutoHigherResolution, GeoTiffMultibandTile, OverviewStrategy, Tags}
