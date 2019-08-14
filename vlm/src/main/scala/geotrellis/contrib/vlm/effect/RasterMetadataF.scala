@@ -16,7 +16,7 @@
 
 package geotrellis.contrib.vlm.effect
 
-import geotrellis.contrib.vlm.SourceName
+import geotrellis.raster.SourceName
 import geotrellis.proj4.CRS
 import geotrellis.raster.{CellSize, CellType, GridBounds, GridExtent}
 import geotrellis.vector.Extent

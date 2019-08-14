@@ -16,12 +16,10 @@
 
 package geotrellis.contrib.vlm.gdal.effect
 
-import geotrellis.contrib.vlm._
-import geotrellis.contrib.vlm.gdal.{DefaultDomain, GDALPath, GDALDataset, GDALMetadata, GDALMetadataDomain, GDALWarpOptions}
-import geotrellis.contrib.vlm.gdal.GDALDataset.DatasetType
+import geotrellis.raster.gdal.{DefaultDomain, GDALPath, GDALDataset, GDALMetadata, GDALMetadataDomain, GDALWarpOptions}
+import geotrellis.raster.gdal.GDALDataset.DatasetType
 import geotrellis.contrib.vlm.effect._
 import geotrellis.contrib.vlm.effect.geotiff.UnsafeLift
-import geotrellis.contrib.vlm.avro._
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.{AutoHigherResolution, OverviewStrategy}
@@ -75,7 +73,7 @@ case class GDALRasterSource[F[_]: Monad: UnsafeLift](
     * Fetches a default metadata from the default domain.
     * If there is a need in some custom domain, use the metadataForDomain function.
     */
-  lazy val metadata: F[GDALMetadata] = GDALMetadata(this, datasetF, DefaultDomain :: Nil)
+  lazy val metadata: F[GDALMetadata] = GDALMetadataF(this, datasetF, DefaultDomain :: Nil)
 
   /**
     * Return the "base" metadata, usually it is a zero band metadata,
@@ -91,12 +89,12 @@ case class GDALRasterSource[F[_]: Monad: UnsafeLift](
   /**
     * Fetches a metadata from the specified [[GDALMetadataDomain]] list.
     */
-  def metadataForDomain(domainList: List[GDALMetadataDomain]): F[GDALMetadata] = GDALMetadata(this, datasetF, domainList)
+  def metadataForDomain(domainList: List[GDALMetadataDomain]): F[GDALMetadata] = GDALMetadataF(this, datasetF, domainList)
 
   /**
     * Fetches a metadata from all domains.
     */
-  def metadataForAllDomains: F[GDALMetadata] = GDALMetadata(this, datasetF)
+  def metadataForAllDomains: F[GDALMetadata] = GDALMetadataF(this, datasetF)
 
   override def readBounds(bounds: Traversable[GridBounds[Long]], bands: Seq[Int]): F[Iterator[Raster[MultibandTile]]] = {
     UnsafeLift[F].apply {

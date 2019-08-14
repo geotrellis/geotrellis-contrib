@@ -16,7 +16,6 @@
 
 package geotrellis.contrib.vlm.effect
 
-import geotrellis.contrib.vlm._
 import geotrellis.vector._
 import geotrellis.raster._
 import geotrellis.raster.resample._
@@ -78,7 +77,7 @@ abstract class MosaicRasterSource[F[_]: Monad: Par] extends RasterSourceF[F] {
   /**
     * All available resolutions for all RasterSources in this MosaicRasterSource
     *
-    * @see [[geotrellis.contrib.vlm.RasterSource.resolutions]]
+    * @see [[geotrellis.raster.RasterSource.resolutions]]
     */
   def resolutions: F[List[GridExtent[Long]]] = {
     val resolutions: F[NonEmptyList[List[GridExtent[Long]]]] = sources >>= (_.parTraverse(_.resolutions))
@@ -88,7 +87,7 @@ abstract class MosaicRasterSource[F[_]: Monad: Par] extends RasterSourceF[F] {
   /** Create a new MosaicRasterSource with sources transformed according to the provided
     * crs, options, and strategy, and a new crs
     *
-    * @see [[geotrellis.contrib.vlm.RasterSource.reproject]]
+    * @see [[geotrellis.raster.RasterSource.reproject]]
     */
   def reprojection(targetCRS: CRS, resampleGrid: ResampleGrid[Long] = IdentityResampleGrid, method: ResampleMethod = NearestNeighbor, strategy: OverviewStrategy = AutoHigherResolution): MosaicRasterSource[F] =
     MosaicRasterSource(
