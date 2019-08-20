@@ -47,7 +47,7 @@ object Dependencies {
 
   val gdal                    = "org.gdal"                    % "gdal"                       % Properties.envOrElse("GDAL_VERSION", "2.4.0")
 
-  val pureconfig              = "com.github.pureconfig"      %% "pureconfig"                 % "0.9.1"
+  val pureconfig              = "com.github.pureconfig"      %% "pureconfig"                 % "0.11.1"
   val logging                 = "com.typesafe.scala-logging" %% "scala-logging"              % "3.9.0"
   val scalatest               = "org.scalatest"              %% "scalatest"                  % "3.0.5"
   val scalactic               = "org.scalactic"              %% "scalactic"                  % "3.0.5"
