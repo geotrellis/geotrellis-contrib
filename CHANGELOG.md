@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.17.1] - 2019-08-26
+
 ### Added
 
-- Expose GDAL Metadata API, expose RasterSources Metadata API 
+- Expose GDAL Metadata API, expose RasterSources Metadata API
 - LayoutTileSource[K] implementation
 - Add Named RasterSources
 - Implement interpretAs on RasterSources
@@ -17,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - In RasterSource, match on TargetCellType instead of ConvertTargetCellType to prevent always falling through
+- RasterSource is now java serializable
 
 ## [3.17.0] - 2019-07-23
 
@@ -118,7 +121,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - GDAL: Tests do not pass
 
-[unreleased]: https://github.com/geotrellis/geotrellis-contrib/compare/v3.17.0...HEAD
+[unreleased]: https://github.com/geotrellis/geotrellis-contrib/compare/v3.17.1...HEAD
+[3.17.1]: https://github.com/geotrellis/geotrellis-contrib/compare/v3.17.0...v3.17.1
 [3.17.0]: https://github.com/geotrellis/geotrellis-contrib/compare/v3.16.0...v3.17.0
 [3.16.0]: https://github.com/geotrellis/geotrellis-contrib/compare/v3.15.0...v3.16.0
 [3.15.0]: https://github.com/geotrellis/geotrellis-contrib/compare/v3.14.0...v3.15.0
