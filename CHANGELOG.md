@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Move RasterSources into GeoTrellis core, only RasterSources effects are present in this repository now.
+
 ## [3.17.1] - 2019-08-26
 
 ### Added

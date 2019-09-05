@@ -35,7 +35,7 @@ object Dependencies {
   val gdalWarp                = "com.azavea.gdal"              % "gdal-warp-bindings"        % Version.gdalWarp
   val geotrellisGdal          = "com.azavea.geotrellis"       %% "geotrellis-gdal"           % Version.geotrellisGdal
   val geotrellisSpark         = "org.locationtech.geotrellis" %% "geotrellis-spark"          % Version.geotrellis
-  val geotrellisSparkTestKit  = "org.locationtech.geotrellis" %% "geotrellis-spark-testkit"  % Version.geotrellis
+  val geotrellisSparkTestkit  = "org.locationtech.geotrellis" %% "geotrellis-spark-testkit"  % Version.geotrellis
   val geotrellisS3            = "org.locationtech.geotrellis" %% "geotrellis-s3"             % Version.geotrellis
   val geotrellisRaster        = "org.locationtech.geotrellis" %% "geotrellis-raster"         % Version.geotrellis
   val geotrellisMacros        = "org.locationtech.geotrellis" %% "geotrellis-macros"         % Version.geotrellis
@@ -43,6 +43,7 @@ object Dependencies {
   val geotrellisVector        = "org.locationtech.geotrellis" %% "geotrellis-vector"         % Version.geotrellis
   val geotrellisUtil          = "org.locationtech.geotrellis" %% "geotrellis-util"           % Version.geotrellis
   val geotrellisShapefile     = "org.locationtech.geotrellis" %% "geotrellis-shapefile"      % Version.geotrellis
+  val geotrellisGDAL          = "org.locationtech.geotrellis" %% "geotrellis-gdal"           % Version.geotrellis
   val slickPG                 = "com.github.tminglei"         %% "slick-pg"                  % "0.16.3"
 
   val gdal                    = "org.gdal"                    % "gdal"                       % Properties.envOrElse("GDAL_VERSION", "2.4.0")

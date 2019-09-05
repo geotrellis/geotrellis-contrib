@@ -16,8 +16,8 @@
 
 package geotrellis.contrib.vlm.effect
 
-import geotrellis.contrib.vlm.effect.geotiff.GeoTiffRasterSource
-import geotrellis.raster.{MultibandTile, Raster}
+import geotrellis.contrib.vlm.effect.geotiff._
+import geotrellis.raster._
 import geotrellis.raster.resample.NearestNeighbor
 import geotrellis.vector.Extent
 import geotrellis.proj4.CRS
@@ -40,7 +40,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 class GeoTiffRasterSourceMultiThreadingSpec extends AsyncFunSpec with Matchers {
-  lazy val uri = geotrellis.contrib.vlm.Resource.path("img/aspect-tiled.tif")
+  lazy val uri = geotrellis.raster.testkit.Resource.path("img/aspect-tiled.tif")
 
   implicit val ec = ExecutionContext.global
   implicit lazy val cs = IO.contextShift(ec)

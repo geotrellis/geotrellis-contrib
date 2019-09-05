@@ -16,7 +16,6 @@
 
 package geotrellis.contrib.vlm.effect
 
-import geotrellis.contrib.vlm._
 import geotrellis.vector._
 import geotrellis.raster._
 import geotrellis.raster.resample._

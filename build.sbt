@@ -53,22 +53,14 @@ lazy val commonSettings = Seq(
   }
 )
 
-lazy val root = Project("geotrellis-contrib", file(".")).
-  aggregate(
-    vlm, gdal, slick, testkit
-  ).
-  settings(commonSettings: _*).
-  settings(publish / skip := true).
-  settings(
-    initialCommands in console :=
-      """
-      """
-  )
+lazy val root = Project("geotrellis-contrib", file("."))
+  .aggregate(vlm, gdal, slick)
+  .settings(commonSettings: _*)
+  .settings(publish / skip := true)
 
 lazy val IntegrationTest = config("it") extend Test
 
 lazy val vlm = project
-  .dependsOn(testkit % Test)
   .settings(commonSettings)
   .settings(
     organization := "com.azavea.geotrellis",
@@ -83,7 +75,8 @@ lazy val vlm = project
       catsPar,
       sparkCore % Provided,
       sparkSQL % Test,
-      geotrellisSparkTestKit % Test,
+      geotrellisSparkTestkit % Test,
+      geotrellisRasterTestkit % Test,
       scalatest % Test
     ),
     // caused by the AWS SDK v2
@@ -106,15 +99,12 @@ lazy val vlm = project
   .settings(
     initialCommands in console :=
       """
-        |import geotrellis.contrib.vlm._
-        |import geotrellis.contrib.vlm.geotiff._
-        |import geotrellis.contrib.vlm.avro._
+        |import geotrellis.contrib.vlm.effect._
       """.stripMargin
   )
 
 
 lazy val gdal = project
-  .dependsOn(testkit % Test)
   .dependsOn(vlm)
   .settings(commonSettings)
   .configs(IntegrationTest)
@@ -123,10 +113,11 @@ lazy val gdal = project
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-gdal",
     libraryDependencies ++= Seq(
-      gdalWarp,
+      geotrellisGDAL,
       sparkCore % Provided,
       sparkSQL % Test,
-      geotrellisSparkTestKit % Test,
+      geotrellisSparkTestkit % Test,
+      geotrellisRasterTestkit % Test,
       scalatest % Test,
       gdalBindings % Test
     ),
@@ -151,9 +142,7 @@ lazy val gdal = project
   .settings(
     initialCommands in console :=
       """
-        |import geotrellis.contrib.vlm._
-        |import geotrellis.contrib.vlm.geotiff._
-        |import geotrellis.contrib.vlm.gdal._
+        |import geotrellis.contrib.vlm.gdal.effect._
       """.stripMargin
   )
 
@@ -170,20 +159,6 @@ lazy val slick = project
     )
   )
   .settings(crossScalaVersions := Seq(scalaVersion.value))
-
-lazy val testkit = project
-  .settings(commonSettings)
-  .settings(
-    organization := "com.azavea.geotrellis",
-    name := "geotrellis-contrib-testkit",
-    libraryDependencies ++= Seq(
-      geotrellisSpark, // SpatialKey
-      geotrellisRasterTestkit,
-      geotrellisRaster,
-      geotrellisMacros,
-      scalatest % Provided
-    )
-  )
 
 lazy val benchmark = (project in file("benchmark"))
   .dependsOn(vlm)

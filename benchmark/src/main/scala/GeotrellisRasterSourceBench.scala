@@ -1,13 +1,13 @@
 package geotrellis.contrib.vlm
 
-import java.util.concurrent.TimeUnit
-import org.openjdk.jmh.annotations._
-import java.io.File
-import geotrellis.spark._
-import geotrellis.contrib.vlm.avro._
-import geotrellis.contrib.vlm.geotiff._
+import geotrellis.store._
+import geotrellis.raster.geotiff._
 import geotrellis.vector._
-import geotrellis.spark.tiling._
+import geotrellis.layer._
+
+import org.openjdk.jmh.annotations._
+
+import java.util.concurrent.TimeUnit
 
 @BenchmarkMode(Array(Mode.AverageTime))
 @State(Scope.Benchmark)
@@ -18,7 +18,7 @@ class GeotrellisRasterSourceBench {
   val layerId = LayerId("imgn31w092_13", 0)
 
   var rsGeoTiff: GeoTiffRasterSource = _
-  var rsGeoTrellis: GeotrellisRasterSource = _
+  var rsGeoTrellis: GeoTrellisRasterSource = _
   var windows: List[Extent] = Nil
 
   @Param(Array("100"))
@@ -26,8 +26,8 @@ class GeotrellisRasterSourceBench {
 
   @Setup(Level.Trial)
   def setupData(): Unit = {
-    rsGeoTiff = new GeoTiffRasterSource(tiffUri)
-    rsGeoTrellis = new GeotrellisRasterSource(catalogUri, layerId)
+    rsGeoTiff = GeoTiffRasterSource(tiffUri)
+    rsGeoTrellis = new GeoTrellisRasterSource(GeoTrellisPath(catalogUri, layerId.name, Some(layerId.zoom), None))
 
     windows = {
       // take every 5th window over the image for test
