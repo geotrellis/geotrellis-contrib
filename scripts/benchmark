@@ -1,0 +1,28 @@
+#!/bin/bash
+
+set -e
+
+if [[ -n "${GEOTRELLIS_CONTRIB_DEBUG}" ]]; then
+    set -x
+fi
+
+function usage() {
+    echo -n \
+        "Usage: $(basename "$0")
+Run GeoTrellis Contrib benchmarks
+"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    if [[ "${1:-}" == "--help" ]]; then
+        usage
+    else
+        echo "Executing GeoTrellis Contrib benchmarks"
+        pushd benchmark
+        make
+        popd
+        docker-compose \
+            run --rm benchmark \
+            "project benchmark" "jmh:run"
+    fi
+fi

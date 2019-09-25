@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Artifacts are published to https://oss.sonatype.org automatically via CircleCI
+  - The `bintray` resolver in build.sbt is no longer necessary as of this release
+  - Commits to the develop branch are available as SNAPSHOT releases
 - Move RasterSources into GeoTrellis core, only RasterSources effects are present in this repository now.
 
 ## [3.17.1] - 2019-08-26

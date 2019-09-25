@@ -1,21 +1,25 @@
-# Overview
+## Overview
 
-Brief description of what this PR does and why it's important
+Brief description of what this PR does, and why it is needed.
 
-## Demo
+### Checklist
 
-Optional. Screenshots, etc.
+- [ ] Description of PR is in an appropriate section of the CHANGELOG and grouped with similar changes if possible
 
-## Notes
+### Demo
 
-Optional. Extra context, ancillary topics, alternative strategies that didn't work out, etc.
+Optional. Screenshots, `http` examples, etc.
+
+### Notes
+
+Optional. Ancillary topics, caveats, alternative strategies that didn't work out, anything else.
 
 ## Testing Instructions
 
-Optional. Include if there's more specifics than "CI tests should pass".
-
-## Checklist
-
-- [ ] Add entry to CHANGELOG.md
+- How to test this PR
+- Prefer bulleted description
+- Start after checking out this branch
+- Include any setup required, such as bundling scripts, restarting services, etc.
+- Include test case, and expected output
 
 Closes #XXX

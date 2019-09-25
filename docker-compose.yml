@@ -1,0 +1,48 @@
+version: "2.3"
+services:
+  database:
+    # When this is updated, we'll have to handle creating the postgis extension
+    # somewhere in the test workflow. That's handled automatically on 0.1.0 but
+    # not on later versions
+    image: quay.io/azavea/postgis:0.1.0
+    environment:
+      - POSTGRES_USER=slick_tests
+      - POSTGRES_PASSWORD=slick_tests
+      - POSTGRES_DB=slick_tests
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+  sbt:
+    image: quay.io/azavea/openjdk-gdal:2.4-jdk8-slim
+    depends_on:
+      database:
+        condition: service_healthy
+    links:
+      - database:database.service.internal
+    environment:
+      - COURSIER_CACHE=/root/.coursier
+    volumes:
+      - .:/opt/geotrellis-contrib
+      - $HOME/.coursier:/root/.coursier
+      - $HOME/.ivy2:/root/.ivy2
+      - $HOME/.sbt:/root/.sbt
+    working_dir: /opt/geotrellis-contrib
+    entrypoint: ./sbt
+  benchmark:
+    build:
+      context: .
+      dockerfile: benchmark/Dockerfile
+    environment:
+      - AWS_PROFILE=geotrellis
+      - COURSIER_CACHE=/root/.coursier
+    volumes:
+      - .:/opt/geotrellis-contrib
+      - $HOME/.aws:/root/.aws:ro
+      - $HOME/.coursier:/root/.coursier
+      - $HOME/.ivy2:/root/.ivy2
+      - $HOME/.sbt:/root/.sbt
+    working_dir: /opt/geotrellis-contrib
+    entrypoint: ./sbt
