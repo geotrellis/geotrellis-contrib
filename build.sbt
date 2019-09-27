@@ -1,14 +1,22 @@
+import xerial.sbt.Sonatype._
 import Dependencies._
 
 scalaVersion := Version.scala
 scalaVersion in ThisBuild := Version.scala
 
-addCommandAlias("bintrayPublish", ";publish;bintrayRelease")
-
 lazy val commonSettings = Seq(
   scalaVersion := Version.scala,
   crossScalaVersions := Version.crossScala,
-  licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.html")),
+  // We are overriding the default behavior of sbt-git which, by default,
+  // only appends the `-SNAPSHOT` suffix if there are uncommitted
+  // changes in the workspace.
+  version := {
+    // Avoid Cyclic reference involving error
+    if (git.gitCurrentTags.value.isEmpty || git.gitUncommittedChanges.value)
+      git.gitDescribedVersion.value.get + "-SNAPSHOT"
+    else
+      git.gitDescribedVersion.value.get
+  },
   homepage := Some(url(Info.url)),
   scmInfo := Some(ScmInfo(
     url("https://github.com/geotrellis/geotrellis-contrib"), "scm:git:git@github.com:geotrellis/geotrellis-contrib.git"
@@ -23,8 +31,6 @@ lazy val commonSettings = Seq(
     "-language:experimental.macros",
     "-Ypartial-unification" // Required by Cats
   ),
-  publishMavenStyle := true,
-  publishArtifact in Test := false,
   pomIncludeRepository := { _ => false },
   addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.4" cross CrossVersion.binary),
   addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.1" cross CrossVersion.full),
@@ -35,33 +41,62 @@ lazy val commonSettings = Seq(
     "locationtech-snapshots" at "https://repo.locationtech.org/content/groups/snapshots",
     "osgeo" at "http://download.osgeo.org/webdav/geotools/",
     "geotrellis-staging" at "https://oss.sonatype.org/service/local/repositories/orglocationtechgeotrellis-1009/content"
-  ),
-  headerLicense := Some(HeaderLicense.ALv2("2019", "Azavea")),
-  bintrayOrganization := Some("azavea"),
-  bintrayRepository := "geotrellis",
-  bintrayPackageLabels := Seq("gis", "raster", "vector"),
-  bintrayReleaseOnPublish := false,
-  publishTo := {
-    val bintrayPublishTo = publishTo.value
-    val nexus = "http://nexus.internal.azavea.com"
+  )
+)
 
-    if (isSnapshot.value) {
-      Some("snapshots" at nexus + "/repository/azavea-snapshots")
-    } else {
-      bintrayPublishTo
-    }
-  }
+lazy val noPublishSettings = Seq(
+  publish := {},
+  publishLocal := {},
+  publishArtifact := false
+)
+
+lazy val publishSettings = Seq(
+  organization := "com.azavea.geotrellis",
+  organizationName := "GeoTrellis",
+  organizationHomepage := Some(new URL("https://geotrellis.io/")),
+  description := "GeoTrellis Contrib is a place to put GeoTrellis projects that are not included in GeoTrellis Core for one reason or another.",
+  headerLicense := Some(HeaderLicense.ALv2("2019", "Azavea")),
+  publishArtifact in Test := false
+) ++ sonatypeSettings ++ credentialSettings
+
+lazy val sonatypeSettings = Seq(
+  publishMavenStyle := true,
+
+  sonatypeProfileName := "com.azavea",
+  sonatypeProjectHosting := Some(GitHubHosting(user="geotrellis", repository="geotrellis-contrib", email="systems@azavea.com")),
+  developers := List(
+    Developer(id = "echeipesh", name = "Eugene Cheipesh", email = "echeipesh@azavea.com", url = url("https://github.com/echeipesh")),
+    Developer(id = "pomadchin", name = "Grigory Pomadchin", email = "gpomadchin@azavea.com", url = url("https://github.com/pomadchin"))
+  ),
+  licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
+  publishTo := sonatypePublishTo.value
+)
+
+lazy val credentialSettings = Seq(
+  credentials += Credentials(
+    "GnuPG Key ID",
+    "gpg",
+    System.getenv().get("GPG_KEY_ID"),
+    "ignored"
+  ),
+  credentials += Credentials(
+    "Sonatype Nexus Repository Manager",
+    "oss.sonatype.org",
+    System.getenv().get("SONATYPE_USERNAME"),
+    System.getenv().get("SONATYPE_PASSWORD")
+  )
 )
 
 lazy val root = Project("geotrellis-contrib", file("."))
   .aggregate(vlm, gdal, slick)
   .settings(commonSettings: _*)
-  .settings(publish / skip := true)
+  .settings(noPublishSettings)
 
 lazy val IntegrationTest = config("it") extend Test
 
 lazy val vlm = project
   .settings(commonSettings)
+  .settings(publishSettings)
   .settings(
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-vlm",
@@ -107,6 +142,7 @@ lazy val vlm = project
 lazy val gdal = project
   .dependsOn(vlm)
   .settings(commonSettings)
+  .settings(publishSettings)
   .configs(IntegrationTest)
   .settings(Defaults.itSettings)
   .settings(
@@ -148,7 +184,7 @@ lazy val gdal = project
 
 lazy val slick = project
   .settings(commonSettings)
-  .settings( publish / skip := true)
+  .settings(noPublishSettings)
   .settings(
     organization := "com.azavea.geotrellis",
     name := "geotrellis-contrib-slick",
@@ -163,12 +199,12 @@ lazy val slick = project
 lazy val benchmark = (project in file("benchmark"))
   .dependsOn(vlm)
   .settings(commonSettings: _*)
+  .settings(noPublishSettings)
   .enablePlugins(JmhPlugin)
   .settings(
     name := "benchmark",
     fork := true,
     libraryDependencies ++= Seq(
       sparkCore
-    ),
-    publish / skip := true
+    )
   )

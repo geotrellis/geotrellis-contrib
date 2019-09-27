@@ -1,0 +1,23 @@
+.PHONY: all
+
+
+all: ../archives/imageio-ext-1.1.24-jars.zip \
+   ../archives/gdal192-Ubuntu12-gcc4.6.3-x86_64.tar.gz \
+   ../archives/gdal-data.zip \
+   ../archives/libgdal-java_1.10.1+dfsg-5ubuntu1_amd64.deb \
+   src/main/resources/LC08_L1GT_001003_20170921_20170921_01_RT_B1.TIF
+
+../archives/imageio-ext-1.1.24-jars.zip:
+	curl -L "https://demo.geo-solutions.it/share/github/imageio-ext/releases/1.1.X/1.1.24/imageio-ext-1.1.24-jars.zip" -o $@
+
+../archives/gdal192-Ubuntu12-gcc4.6.3-x86_64.tar.gz:
+	curl -L "https://demo.geo-solutions.it/share/github/imageio-ext/releases/1.1.X/1.1.24/native/gdal/linux/gdal192-Ubuntu12-gcc4.6.3-x86_64.tar.gz" -o $@
+
+../archives/gdal-data.zip:
+	curl -L "https://demo.geo-solutions.it/share/github/imageio-ext/releases/1.1.X/1.1.24/native/gdal/gdal-data.zip" -o $@
+
+../archives/libgdal-java_1.10.1+dfsg-5ubuntu1_amd64.deb:
+	curl -L "http://mirrors.kernel.org/ubuntu/pool/universe/g/gdal/libgdal-java_1.10.1+dfsg-5ubuntu1_amd64.deb" -o $@
+
+src/main/resources/LC08_L1GT_001003_20170921_20170921_01_RT_B1.TIF:
+	curl -L "http://landsat-pds.s3.amazonaws.com/c1/L8/001/003/LC08_L1GT_001003_20170921_20170921_01_RT/LC08_L1GT_001003_20170921_20170921_01_RT_B1.TIF" -o $@
