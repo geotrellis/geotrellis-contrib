@@ -34,15 +34,26 @@ aliases:
         command: ./scripts/cipublish
 
   # Build environments
-  - &openjdk8-scala2_11_12_environment
+  - &machine-openjdk8-scala2_11_12-environment
     machine:
       image: ubuntu-1604:201903-01
     environment:
       SCALA_VERSION: 2.11.12
 
-  - &openjdk8-scala2_12_8_environment
+  - &machine-openjdk8-scala2_12_8-environment
     machine:
       image: ubuntu-1604:201903-01
+    environment:
+      SCALA_VERSION: 2.12.8
+  - &openjdk8-scala2_11_12-environment
+    docker:
+      - image: circleci/openjdk:8-jdk
+    environment:
+      SCALA_VERSION: 2.11.12
+
+  - &openjdk8-scala2_12_8-environment
+    docker:
+      - image: circleci/openjdk:8-jdk
     environment:
       SCALA_VERSION: 2.12.8
 
@@ -87,18 +98,20 @@ workflows:
                 - /hotfix\/.*/
 
 jobs:
+  # Execute cibuild in machine executor so we can use our existing
+  # docker-compose test setup
   "openjdk8-scala2.11.12":
-    <<: *openjdk8-scala2_11_12_environment
+    <<: *machine-openjdk8-scala2_11_12-environment
     steps: *run_cibuild
 
   "openjdk8-scala2.12.8":
-    <<: *openjdk8-scala2_12_8_environment
+    <<: *machine-openjdk8-scala2_12_8-environment
     steps: *run_cibuild
 
   "openjdk8-scala2.11.12_deploy":
-    <<: *openjdk8-scala2_11_12_environment
+    <<: *openjdk8-scala2_11_12-environment
     steps: *run_cipublish
 
   "openjdk8-scala2.12.8_deploy":
-    <<: *openjdk8-scala2_12_8_environment
+    <<: *openjdk8-scala2_12_8-environment
     steps: *run_cipublish
