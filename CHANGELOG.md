@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Receive GPG key while publishing artifacts [#243](https://github.com/geotrellis/geotrellis-contrib/pull/243)
+
 ### Changed
 
 - Artifacts are published to https://oss.sonatype.org automatically via CircleCI
